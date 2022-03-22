@@ -40,7 +40,7 @@ func TestRanker(t *testing.T) {
 }
 
 func TestRanker_allCards(t *testing.T) {
-	if strings.Contains(os.Getenv("TESTS"), "allCards") {
+	if !strings.Contains(os.Getenv("TESTS"), "allCards") {
 		t.Logf("skipping: $ENV{TESTS} does not contain 'allCards'")
 		return
 	}
