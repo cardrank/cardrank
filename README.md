@@ -7,4 +7,8 @@ and evaluating poker hands.
 
 See [Go documentation][pkg].
 
+```sh
+go get cardrank.io/cardrank
+```
+
 [pkg]: https://pkg.go.dev/cardrank.io/cardrank
