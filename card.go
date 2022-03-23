@@ -587,6 +587,14 @@ func min(a, b uint16) uint16 {
 	return b
 }
 
+// max returns the max of a, b.
+func max(a, b uint16) uint16 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 func init() {
 	s, h, d, c := make([]rune, 14), make([]rune, 14), make([]rune, 14), make([]rune, 14)
 	for i := 0; i < 14; i++ {

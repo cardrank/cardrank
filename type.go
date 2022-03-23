@@ -82,7 +82,7 @@ func (typ Type) Deal(shuffle func(int, func(int, int)), hands int) ([][]Card, []
 func (typ Type) RankHand(pocket, board []Card) *Hand {
 	f := ranker
 	if typ == ShortDeck {
-		f = ShortDeckFast.Rank
+		f = CactusFastSixPlus.Rank
 	}
 	return NewHandOf(typ, pocket, board, f)
 }
@@ -92,6 +92,20 @@ func (typ Type) RankHands(pockets [][]Card, board []Card) []*Hand {
 	hands := make([]*Hand, len(pockets))
 	for i := 0; i < len(pockets); i++ {
 		hands[i] = typ.RankHand(pockets[i], board)
+	}
+	return hands
+}
+
+// LowRankHand ranks the low hand.
+func (typ Type) LowRankHand(pocket, board []Card) *Hand {
+	return NewHandOf(typ, pocket, board, EightOrBetter.Rank)
+}
+
+// LowRankHands ranks the hands.
+func (typ Type) LowRankHands(pockets [][]Card, board []Card) []*Hand {
+	hands := make([]*Hand, len(pockets))
+	for i := 0; i < len(pockets); i++ {
+		hands[i] = typ.LowRankHand(pockets[i], board)
 	}
 	return hands
 }

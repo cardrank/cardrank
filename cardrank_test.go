@@ -39,6 +39,23 @@ func TestRanker(t *testing.T) {
 	}
 }
 
+func TestEightOrBetter_Rank(t *testing.T) {
+	v := Must("Ah 2h 3h 4h 5h 6h 7h 8h")
+	for c0 := 0; c0 < len(v); c0++ {
+		for c1 := c0 + 1; c1 < len(v); c1++ {
+			for c2 := c1 + 1; c2 < len(v); c2++ {
+				for c3 := c2 + 1; c3 < len(v); c3++ {
+					for c4 := c3 + 1; c4 < len(v); c4++ {
+						hand := []Card{v[c0], v[c1], v[c2], v[c3], v[c4]}
+						r := EightOrBetter.Rank(hand)
+						t.Logf("%b: %d", hand, r)
+					}
+				}
+			}
+		}
+	}
+}
+
 func TestRanker_allCards(t *testing.T) {
 	if !strings.Contains(os.Getenv("TESTS"), "allCards") {
 		t.Logf("skipping: $ENV{TESTS} does not contain 'allCards'")

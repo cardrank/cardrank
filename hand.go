@@ -118,9 +118,28 @@ func (h *Hand) Best() []Card {
 	return h.best
 }
 
+// LowBest returns the poker hand's best-five low cards.
+func (h Hand) LowBest() []Card {
+	if h.rank < 31 {
+		sort.Slice(h.best, func(i, j int) bool {
+			return ((h.best[i].Rank()+1)%13)+1 > ((h.best[j].Rank()+1)%13)+1
+		})
+		return h.best
+	}
+	return nil
+}
+
 // Unused returns the hand's unused cards.
 func (h *Hand) Unused() []Card {
 	return h.unused
+}
+
+// LowUnused returns the poker hand's unused-five low cards.
+func (h Hand) LowUnused() []Card {
+	if h.rank < 31 {
+		return h.unused
+	}
+	return append(h.pocket, h.board...)
 }
 
 // Format satisfies the fmt.Formatter interface.
@@ -193,6 +212,18 @@ func (h *Hand) Description() string {
 		return fmt.Sprintf("Pair, %P, kickers %N, %N, %N", h.best[0], h.best[2], h.best[3], h.best[4])
 	}
 	return fmt.Sprintf("Nothing, %N-high, kickers %N, %N, %N, %N", h.best[0], h.best[1], h.best[2], h.best[3], h.best[4])
+}
+
+// LowDescription describes the hands best-five low cards.
+func (h *Hand) LowDescription() string {
+	if h.rank < 31 {
+		r := uint16(0)
+		for _, c := range h.best {
+			r = max(uint16(((c.Rank()+1)%13)+1), r)
+		}
+		return Rank((r+10)%12).Name() + "-low"
+	}
+	return "Invalid Low Hand"
 }
 
 // Compare compares the hand ranks.
@@ -355,7 +386,7 @@ func orderRanks(hand []Card) []Rank {
 }
 
 // OrderHands orders hands by rank, low to high, returning 'pivot' of winning
-// vs losing hands.
+// vs losing hands. Pivot will always be 1 or higher.
 func OrderHands(hands []*Hand) ([]int, int) {
 	i, n := 0, len(hands)
 	m, h := make(map[int]*Hand, n), make([]int, n)
@@ -368,4 +399,14 @@ func OrderHands(hands []*Hand) ([]int, int) {
 	for i = 1; i < n && m[h[i-1]].Rank() == m[h[i]].Rank(); i++ {
 	}
 	return h, i
+}
+
+// LowOrderHands orders hands by rank, low to high, returning 'pivot' of
+// winning vs losing hands. If there are no low hands the pivot will be 0.
+func LowOrderHands(hands []*Hand) ([]int, int) {
+	h, i := OrderHands(hands)
+	if hands[h[i-1]].Rank() < 31 {
+		return h, i
+	}
+	return h, 0
 }

@@ -3,7 +3,8 @@ package cardrank
 func init() {
 	cactusFast := NewCactusFastRanker()
 	rankers[CactusFast] = cactusFast.Rank
-	rankers[ShortDeckFast] = NewShortDeckRanker(cactusFast).Rank
+	rankers[CactusFastSixPlus] = NewCactusFastSixPlusRanker(cactusFast).Rank
+	rankers[EightOrBetter] = NewEightOrBetterRanker()
 }
 
 // NewCactusFastRanker creates a new cactus fast short deck hand ranker.
@@ -25,8 +26,9 @@ func NewCactusFastRanker() RankerFunc {
 	}
 }
 
-// NewShortDeckRanker creates a new cactus fast short deck hand ranker.
-func NewShortDeckRanker(f RankerFunc) RankerFunc {
+// NewCactusFastSixPlusRanker creates a new cactus fast short deck (6-plus)
+// hand ranker.
+func NewCactusFastSixPlusRanker(f RankerFunc) RankerFunc {
 	return func(c0, c1, c2, c3, c4 Card) uint16 {
 		r := f(c0, c1, c2, c3, c4)
 		switch r {
@@ -36,6 +38,19 @@ func NewShortDeckRanker(f RankerFunc) RankerFunc {
 			return 1605
 		}
 		return r
+	}
+}
+
+// NewEightOrBetterRanker creates a new 8-or-better low hand ranker.
+func NewEightOrBetterRanker() func([]Card) HandRank {
+	return func(hand []Card) HandRank {
+		mask, sum := uint16(0x1f00), uint16(0)
+		for _, c := range hand {
+			r := uint16(((c.Rank() + 1) % 13) + 1)
+			sum += uint16(r + (mask&(1<<r)>>r&1)*(30+r))
+			mask |= 1 << r
+		}
+		return HandRank(sum)
 	}
 }
 

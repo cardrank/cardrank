@@ -15,11 +15,12 @@ const (
 	CactusFast
 	TwoPlus
 	Hybrid
-	ShortDeckFast
+	CactusFastSixPlus
+	EightOrBetter
 )
 
 // rankers are the available card rankers.
-var rankers = [...]func([]Card) HandRank{nil, nil, nil, nil, nil}
+var rankers = [...]func([]Card) HandRank{nil, nil, nil, nil, nil, nil}
 
 // String satisfies the fmt.Stringer interface.
 func (r Ranker) String() string {
@@ -32,8 +33,10 @@ func (r Ranker) String() string {
 		return "TwoPlus"
 	case Hybrid:
 		return "Hybrid"
-	case ShortDeckFast:
+	case CactusFastSixPlus:
 		return "ShortDeckFast"
+	case EightOrBetter:
+		return "EightOrBetter"
 	}
 	return fmt.Sprintf("Ranker(%d)", r)
 }

@@ -360,3 +360,157 @@ func Example_omaha() {
 	// Player 6: [3♠ 7♣ 2♠ 2♥] Straight, Seven-high [7♣ 6♦ 5♠ 4♣ 3♠] [2♠ 2♥ K♣ 9♦]
 	// Result:   Players 1, 3, 6 push with Straight, Seven-high [7♦ 6♦ 5♠ 4♣ 3♦], [7♠ 6♦ 5♠ 4♣ 3♣], [7♣ 6♦ 5♠ 4♣ 3♠]
 }
+
+func Example_omahaHiLo() {
+	for i, game := range []struct {
+		seed    int64
+		players int
+	}{
+		{119, 2},
+		{321, 5},
+		{408, 6},
+		{455, 6},
+		{1113, 6},
+	} {
+		// note: use a real random source
+		rnd := rand.New(rand.NewSource(game.seed))
+		pockets, board := cardrank.OmahaHiLo.Deal(rnd.Shuffle, game.players)
+		highs := cardrank.OmahaHiLo.RankHands(pockets, board)
+		lows := cardrank.OmahaHiLo.LowRankHands(pockets, board)
+		fmt.Printf("------ OmahaHiLo %d ------\n", i+1)
+		fmt.Printf("Board: %b\n", board)
+		for j := 0; j < game.players; j++ {
+			fmt.Printf("Player %d: %b\n", j+1, pockets[j])
+			fmt.Printf("  Hi: %s %b %b\n", highs[j].Description(), highs[j].Best(), highs[j].Unused())
+			if lows[j].Rank() < 31 {
+				fmt.Printf("  Lo: %s %b %b\n", lows[j].LowDescription(), lows[j].LowBest(), lows[j].LowUnused())
+			} else {
+				fmt.Printf("  Lo: None\n")
+			}
+		}
+		h, hPivot := cardrank.OrderHands(highs)
+		l, lPivot := cardrank.LowOrderHands(lows)
+		typ := "wins"
+		if lPivot == 0 {
+			typ = "scoops"
+		}
+		if hPivot == 1 {
+			fmt.Printf("Result (Hi): Player %d %s with %s %b\n", h[0]+1, typ, highs[h[0]].Description(), highs[h[0]].Best())
+		} else {
+			var s, b []string
+			for j := 0; j < hPivot; j++ {
+				s = append(s, strconv.Itoa(h[j]+1))
+				b = append(b, fmt.Sprintf("%b", highs[h[j]].Best()))
+			}
+			fmt.Printf("Result (Hi): Players %s push with %s %s\n", strings.Join(s, ", "), highs[h[0]].Description(), strings.Join(b, ", "))
+		}
+		if lPivot == 1 {
+			fmt.Printf("Result (Lo): Player %d wins with %s %b\n", l[0]+1, lows[l[0]].LowDescription(), lows[l[0]].LowBest())
+		} else if lPivot > 1 {
+			var s, b []string
+			for j := 0; j < lPivot; j++ {
+				s = append(s, strconv.Itoa(l[j]+1))
+				b = append(b, fmt.Sprintf("%b", lows[l[j]].LowBest()))
+			}
+			fmt.Printf("Result (Lo): Players %s push with %s %s\n", strings.Join(s, ", "), lows[l[0]].LowDescription(), strings.Join(b, ", "))
+		} else {
+			fmt.Printf("Result (Lo): no player made a low hand\n")
+		}
+	}
+	// Output:
+	// ------ OmahaHiLo 1 ------
+	// Board: [3♥ 5♥ 4♥ 7♥ K♣]
+	// Player 1: [K♥ 7♣ J♣ 4♣]
+	//   Hi: Two Pair, Kings over Sevens, kicker Five [K♣ K♥ 7♣ 7♥ 5♥] [J♣ 4♣ 3♥ 4♥]
+	//   Lo: None
+	// Player 2: [A♥ 5♠ Q♠ 2♠]
+	//   Hi: Straight, Five-high [5♥ 4♥ 3♥ 2♠ A♥] [5♠ Q♠ 7♥ K♣]
+	//   Lo: Five-low [5♥ 4♥ 3♥ 2♠ A♥] [5♠ Q♠ 7♥ K♣]
+	// Result (Hi): Player 2 wins with Straight, Five-high [5♥ 4♥ 3♥ 2♠ A♥]
+	// Result (Lo): Player 2 wins with Five-low [5♥ 4♥ 3♥ 2♠ A♥]
+	// ------ OmahaHiLo 2 ------
+	// Board: [3♥ 7♣ 3♣ 9♠ 9♣]
+	// Player 1: [3♠ 6♦ Q♦ K♦]
+	//   Hi: Three of a Kind, Threes, kickers King, Nine [3♣ 3♥ 3♠ K♦ 9♠] [6♦ Q♦ 7♣ 9♣]
+	//   Lo: None
+	// Player 2: [J♦ 3♦ Q♣ K♠]
+	//   Hi: Three of a Kind, Threes, kickers King, Nine [3♣ 3♦ 3♥ K♠ 9♠] [J♦ Q♣ 7♣ 9♣]
+	//   Lo: None
+	// Player 3: [T♦ 2♥ T♠ 8♥]
+	//   Hi: Two Pair, Tens over Nines, kicker Seven [T♦ T♠ 9♣ 9♠ 7♣] [2♥ 8♥ 3♥ 3♣]
+	//   Lo: None
+	// Player 4: [8♣ 8♦ Q♥ Q♠]
+	//   Hi: Two Pair, Queens over Nines, kicker Seven [Q♥ Q♠ 9♣ 9♠ 7♣] [8♣ 8♦ 3♥ 3♣]
+	//   Lo: None
+	// Player 5: [6♣ A♥ 4♥ 6♠]
+	//   Hi: Two Pair, Nines over Sixes, kicker Seven [9♣ 9♠ 6♣ 6♠ 7♣] [A♥ 4♥ 3♥ 3♣]
+	//   Lo: None
+	// Result (Hi): Players 1, 2 push with Three of a Kind, Threes, kickers King, Nine [3♣ 3♥ 3♠ K♦ 9♠], [3♣ 3♦ 3♥ K♠ 9♠]
+	// Result (Lo): no player made a low hand
+	// ------ OmahaHiLo 3 ------
+	// Board: [J♣ T♥ 4♥ K♣ Q♣]
+	// Player 1: [K♠ J♠ 3♠ 5♣]
+	//   Hi: Two Pair, Kings over Jacks, kicker Queen [K♣ K♠ J♣ J♠ Q♣] [3♠ 5♣ T♥ 4♥]
+	//   Lo: None
+	// Player 2: [7♠ 4♠ Q♠ 3♣]
+	//   Hi: Two Pair, Queens over Fours, kicker King [Q♣ Q♠ 4♥ 4♠ K♣] [7♠ 3♣ J♣ T♥]
+	//   Lo: None
+	// Player 3: [T♠ 5♥ 3♥ 8♦]
+	//   Hi: Pair, Tens, kickers King, Queen, Eight [T♥ T♠ K♣ Q♣ 8♦] [5♥ 3♥ J♣ 4♥]
+	//   Lo: None
+	// Player 4: [4♣ 8♥ 2♣ T♦]
+	//   Hi: Flush, King-high [K♣ Q♣ J♣ 4♣ 2♣] [8♥ T♦ T♥ 4♥]
+	//   Lo: None
+	// Player 5: [6♠ K♦ J♦ 2♠]
+	//   Hi: Two Pair, Kings over Jacks, kicker Queen [K♣ K♦ J♣ J♦ Q♣] [6♠ 2♠ T♥ 4♥]
+	//   Lo: None
+	// Player 6: [Q♦ 2♦ A♣ T♣]
+	//   Hi: Straight Flush, Ace-high, Royal [A♣ K♣ Q♣ J♣ T♣] [Q♦ 2♦ T♥ 4♥]
+	//   Lo: None
+	// Result (Hi): Player 6 scoops with Straight Flush, Ace-high, Royal [A♣ K♣ Q♣ J♣ T♣]
+	// Result (Lo): no player made a low hand
+	// ------ OmahaHiLo 4 ------
+	// Board: [2♦ 6♦ 6♣ Q♣ 7♣]
+	// Player 1: [6♠ Q♥ 2♣ 9♠]
+	//   Hi: Full House, Sixes full of Queens [6♣ 6♦ 6♠ Q♣ Q♥] [2♣ 9♠ 2♦ 7♣]
+	//   Lo: None
+	// Player 2: [3♦ T♣ K♥ 4♥]
+	//   Hi: Pair, Sixes, kickers King, Queen, Ten [6♣ 6♦ K♥ Q♣ T♣] [3♦ 4♥ 2♦ 7♣]
+	//   Lo: Seven-low [7♣ 6♦ 4♥ 3♦ 2♦] [T♣ K♥ 6♣ Q♣]
+	// Player 3: [6♥ J♥ 4♦ Q♦]
+	//   Hi: Full House, Sixes full of Queens [6♣ 6♦ 6♥ Q♣ Q♦] [J♥ 4♦ 2♦ 7♣]
+	//   Lo: None
+	// Player 4: [A♣ J♣ 5♣ K♠]
+	//   Hi: Flush, Ace-high [A♣ Q♣ J♣ 7♣ 6♣] [5♣ K♠ 2♦ 6♦]
+	//   Lo: Seven-low [7♣ 6♦ 5♣ 2♦ A♣] [J♣ K♠ 6♣ Q♣]
+	// Player 5: [K♣ A♠ 8♣ 5♥]
+	//   Hi: Flush, King-high [K♣ Q♣ 8♣ 7♣ 6♣] [A♠ 5♥ 2♦ 6♦]
+	//   Lo: Seven-low [7♣ 6♦ 5♥ 2♦ A♠] [K♣ 8♣ 6♣ Q♣]
+	// Player 6: [Q♠ J♠ 8♦ 7♥]
+	//   Hi: Two Pair, Queens over Sevens, kicker Six [Q♣ Q♠ 7♣ 7♥ 6♦] [J♠ 8♦ 2♦ 6♣]
+	//   Lo: None
+	// Result (Hi): Players 1, 3 push with Full House, Sixes full of Queens [6♣ 6♦ 6♠ Q♣ Q♥], [6♣ 6♦ 6♥ Q♣ Q♦]
+	// Result (Lo): Players 4, 5 push with Seven-low [7♣ 6♦ 5♣ 2♦ A♣], [7♣ 6♦ 5♥ 2♦ A♠]
+	// ------ OmahaHiLo 5 ------
+	// Board: [4♣ K♣ 6♦ 9♦ 5♠]
+	// Player 1: [3♦ T♥ A♣ 7♦]
+	//   Hi: Straight, Seven-high [7♦ 6♦ 5♠ 4♣ 3♦] [T♥ A♣ K♣ 9♦]
+	//   Lo: Six-low [6♦ 5♠ 4♣ 3♦ A♣] [T♥ 7♦ K♣ 9♦]
+	// Player 2: [5♣ 6♠ 4♦ J♠]
+	//   Hi: Two Pair, Sixes over Fives, kicker King [6♦ 6♠ 5♣ 5♠ K♣] [4♦ J♠ 4♣ 9♦]
+	//   Lo: None
+	// Player 3: [9♠ 3♣ Q♠ 7♠]
+	//   Hi: Straight, Seven-high [7♠ 6♦ 5♠ 4♣ 3♣] [9♠ Q♠ K♣ 9♦]
+	//   Lo: Seven-low [7♠ 6♦ 5♠ 4♣ 3♣] [9♠ Q♠ K♣ 9♦]
+	// Player 4: [5♦ K♠ T♠ 8♠]
+	//   Hi: Two Pair, Kings over Fives, kicker Nine [K♣ K♠ 5♦ 5♠ 9♦] [T♠ 8♠ 4♣ 6♦]
+	//   Lo: None
+	// Player 5: [J♥ 7♥ J♣ 2♣]
+	//   Hi: Pair, Jacks, kickers King, Nine, Six [J♣ J♥ K♣ 9♦ 6♦] [7♥ 2♣ 4♣ 5♠]
+	//   Lo: Seven-low [7♥ 6♦ 5♠ 4♣ 2♣] [J♥ J♣ K♣ 9♦]
+	// Player 6: [3♠ 7♣ 2♠ 2♥]
+	//   Hi: Straight, Seven-high [7♣ 6♦ 5♠ 4♣ 3♠] [2♠ 2♥ K♣ 9♦]
+	//   Lo: Six-low [6♦ 5♠ 4♣ 3♠ 2♠] [7♣ 2♥ K♣ 9♦]
+	// Result (Hi): Players 1, 3, 6 push with Straight, Seven-high [7♦ 6♦ 5♠ 4♣ 3♦], [7♠ 6♦ 5♠ 4♣ 3♣], [7♣ 6♦ 5♠ 4♣ 3♠]
+	// Result (Lo): Player 1 wins with Six-low [6♦ 5♠ 4♣ 3♦ A♣]
+}
