@@ -1,5 +1,7 @@
-// Package cardrank provides types and utilities for working with playing cards
-// and evaluating poker hands.
+// Package `cardrank` provides a library of types, funcs, and utilities for
+// working with playing cards, decks, and evaluating poker hands.
+//
+// Supports Texas Holdem, Texas Holdem Short Deck (6-plus), Omaha, Omaha Hi/Lo.
 package cardrank
 
 import (

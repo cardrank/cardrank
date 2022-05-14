@@ -44,7 +44,7 @@ func NewCactusFastSixPlusRanker(f RankerFunc) RankerFunc {
 // NewEightOrBetterRanker creates a new 8-or-better low hand ranker.
 func NewEightOrBetterRanker() func([]Card) HandRank {
 	return func(hand []Card) HandRank {
-		mask, sum := uint16(0x1f00), uint16(0)
+		mask, sum := uint16(0xfe00), uint16(0)
 		for _, c := range hand {
 			r := uint16(((c.Rank() + 1) % 13) + 1)
 			sum += uint16(r + (mask&(1<<r)>>r&1)*(30+r))
