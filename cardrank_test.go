@@ -39,13 +39,6 @@ func TestRanker(t *testing.T) {
 	}
 }
 
-func TestEightOrBetter(t *testing.T) {
-	for i := Eight; i <= King; i++ {
-		r := EightOrBetter.Rank(Must(i.String() + "h 4h 3h 2h Ah"))
-		t.Logf("blah: %d", r)
-	}
-}
-
 func TestEightOrBetter_Rank(t *testing.T) {
 	v := Must("Ah 2h 3h 4h 5h 6h 7h 8h")
 	for c0 := 0; c0 < len(v); c0++ {
@@ -60,6 +53,10 @@ func TestEightOrBetter_Rank(t *testing.T) {
 				}
 			}
 		}
+	}
+	for i := Eight; i <= King; i++ {
+		r := EightOrBetter.Rank(Must(i.String() + "h 4h 3h 2h Ah"))
+		t.Logf("%d", r)
 	}
 }
 
