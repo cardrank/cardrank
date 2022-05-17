@@ -1,25 +1,27 @@
-//go:build !portable
-
 package cardrank
 
 func init() {
-	rankers[Cactus] = NewCactusRanker().Rank
+	flushes, unique5 = cactusMaps()
+	cactus = CactusRanker
 }
 
-// NewCactusRanker creates a cactus hand ranker.
-func NewCactusRanker() RankerFunc {
-	flush, unique5 := CactusMaps()
-	return func(c0, c1, c2, c3, c4 Card) uint16 {
-		if c0&c1&c2&c3&c4&0xf000 != 0 {
-			return flush[primeProductBits(uint32(c0|c1|c2|c3|c4)>>16)]
-		}
-		return unique5[primeProduct(c0, c1, c2, c3, c4)]
+// flushes is the flush map.
+var flushes map[uint32]uint16
+
+// unique5 is the unique5 map.
+var unique5 map[uint32]uint16
+
+// CactusRanker is a cactus-kev hand ranker.
+func CactusRanker(c0, c1, c2, c3, c4 Card) uint16 {
+	if c0&c1&c2&c3&c4&0xf000 != 0 {
+		return flushes[primeProductBits(uint32(c0|c1|c2|c3|c4)>>16)]
 	}
+	return unique5[primeProduct(c0, c1, c2, c3, c4)]
 }
 
-// CactusMaps builds the cactus flush and unique5 maps.
-func CactusMaps() (map[uint32]uint16, map[uint32]uint16) {
-	flush, unique5 := make(map[uint32]uint16), make(map[uint32]uint16)
+// cactusMaps builds the cactus flush and unique5 maps.
+func cactusMaps() (map[uint32]uint16, map[uint32]uint16) {
+	flushes, unique5 := make(map[uint32]uint16), make(map[uint32]uint16)
 	// rank orders
 	orders := [10]uint16{
 		0x1f00, // royal
@@ -52,13 +54,13 @@ func CactusMaps() (map[uint32]uint16, map[uint32]uint16) {
 	}
 	for i := 0; i < len(orders); i++ {
 		// straight flush
-		flush[primeProductBits(uint32(orders[i]))] = 1 + uint16(i)
+		flushes[primeProductBits(uint32(orders[i]))] = 1 + uint16(i)
 		// straight
 		unique5[primeProductBits(uint32(orders[i]))] = 1 + uint16(Flush) + uint16(i)
 	}
 	for i := 0; i < len(r); i++ {
 		// flush
-		flush[primeProductBits(r[i])] = 1 + uint16(FullHouse) + uint16(i)
+		flushes[primeProductBits(r[i])] = 1 + uint16(FullHouse) + uint16(i)
 		// nothing (high cards)
 		unique5[primeProductBits(r[i])] = 1 + uint16(Pair) + uint16(i)
 	}
@@ -106,7 +108,7 @@ func CactusMaps() (map[uint32]uint16, map[uint32]uint16) {
 			}
 		}
 	}
-	return flush, unique5
+	return flushes, unique5
 }
 
 // nextBitPermutation calculates the lexicographical next bit permutation.

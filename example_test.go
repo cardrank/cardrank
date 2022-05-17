@@ -55,7 +55,7 @@ func ExampleNewHand() {
 	rnd := rand.New(rand.NewSource(6265))
 	d.Shuffle(rnd.Shuffle)
 	hand := d.Draw(5)
-	h := cardrank.NewHand(hand, nil, cardrank.CactusFast.Rank)
+	h := cardrank.NewHand(cardrank.Holdem, hand, nil)
 	fmt.Printf("%b\n", h)
 	// Output:
 	// Four of a Kind, Eights, kicker Seven [8♣ 8♦ 8♥ 8♠ 7♠]
@@ -98,7 +98,7 @@ func Example_holdem() {
 		for j := 0; j < game.players; j++ {
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket(), hands[j].Description(), hands[j].Best(), hands[j].Unused())
 		}
-		h, pivot := cardrank.OrderHands(hands)
+		h, pivot := cardrank.Order(hands)
 		if pivot == 1 {
 			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
 		} else {
@@ -217,7 +217,7 @@ func Example_shortDeck() {
 		for j := 0; j < game.players; j++ {
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket(), hands[j].Description(), hands[j].Best(), hands[j].Unused())
 		}
-		h, pivot := cardrank.OrderHands(hands)
+		h, pivot := cardrank.Order(hands)
 		if pivot == 1 {
 			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
 		} else {
@@ -306,7 +306,7 @@ func Example_omaha() {
 		for j := 0; j < game.players; j++ {
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket(), hands[j].Description(), hands[j].Best(), hands[j].Unused())
 		}
-		h, pivot := cardrank.OrderHands(hands)
+		h, pivot := cardrank.Order(hands)
 		if pivot == 1 {
 			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
 		} else {
@@ -375,44 +375,43 @@ func Example_omahaHiLo() {
 		// note: use a real random source
 		rnd := rand.New(rand.NewSource(game.seed))
 		pockets, board := cardrank.OmahaHiLo.Deal(rnd.Shuffle, game.players)
-		highs := cardrank.OmahaHiLo.RankHands(pockets, board)
-		lows := cardrank.OmahaHiLo.LowRankHands(pockets, board)
+		hands := cardrank.OmahaHiLo.RankHands(pockets, board)
 		fmt.Printf("------ OmahaHiLo %d ------\n", i+1)
 		fmt.Printf("Board: %b\n", board)
 		for j := 0; j < game.players; j++ {
 			fmt.Printf("Player %d: %b\n", j+1, pockets[j])
-			fmt.Printf("  Hi: %s %b %b\n", highs[j].Description(), highs[j].Best(), highs[j].Unused())
-			if lows[j].Rank() < 31 {
-				fmt.Printf("  Lo: %s %b %b\n", lows[j].LowDescription(), lows[j].LowBest(), lows[j].LowUnused())
+			fmt.Printf("  Hi: %s %b %b\n", hands[j].Description(), hands[j].Best(), hands[j].Unused())
+			if hands[j].LowValid() {
+				fmt.Printf("  Lo: %s %b %b\n", hands[j].LowDescription(), hands[j].LowBest(), hands[j].LowUnused())
 			} else {
 				fmt.Printf("  Lo: None\n")
 			}
 		}
-		h, hPivot := cardrank.OrderHands(highs)
-		l, lPivot := cardrank.LowOrderHands(lows)
+		h, hPivot := cardrank.Order(hands)
+		l, lPivot := cardrank.LowOrder(hands)
 		typ := "wins"
 		if lPivot == 0 {
 			typ = "scoops"
 		}
 		if hPivot == 1 {
-			fmt.Printf("Result (Hi): Player %d %s with %s %b\n", h[0]+1, typ, highs[h[0]].Description(), highs[h[0]].Best())
+			fmt.Printf("Result (Hi): Player %d %s with %s %b\n", h[0]+1, typ, hands[h[0]].Description(), hands[h[0]].Best())
 		} else {
 			var s, b []string
 			for j := 0; j < hPivot; j++ {
 				s = append(s, strconv.Itoa(h[j]+1))
-				b = append(b, fmt.Sprintf("%b", highs[h[j]].Best()))
+				b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
 			}
-			fmt.Printf("Result (Hi): Players %s push with %s %s\n", strings.Join(s, ", "), highs[h[0]].Description(), strings.Join(b, ", "))
+			fmt.Printf("Result (Hi): Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
 		}
 		if lPivot == 1 {
-			fmt.Printf("Result (Lo): Player %d wins with %s %b\n", l[0]+1, lows[l[0]].LowDescription(), lows[l[0]].LowBest())
+			fmt.Printf("Result (Lo): Player %d wins with %s %b\n", l[0]+1, hands[l[0]].LowDescription(), hands[l[0]].LowBest())
 		} else if lPivot > 1 {
 			var s, b []string
 			for j := 0; j < lPivot; j++ {
 				s = append(s, strconv.Itoa(l[j]+1))
-				b = append(b, fmt.Sprintf("%b", lows[l[j]].LowBest()))
+				b = append(b, fmt.Sprintf("%b", hands[l[j]].LowBest()))
 			}
-			fmt.Printf("Result (Lo): Players %s push with %s %s\n", strings.Join(s, ", "), lows[l[0]].LowDescription(), strings.Join(b, ", "))
+			fmt.Printf("Result (Lo): Players %s push with %s %s\n", strings.Join(s, ", "), hands[l[0]].LowDescription(), strings.Join(b, ", "))
 		} else {
 			fmt.Printf("Result (Lo): no player made a low hand\n")
 		}
@@ -490,7 +489,7 @@ func Example_omahaHiLo() {
 	//   Hi: Two Pair, Queens over Sevens, kicker Six [Q♣ Q♠ 7♣ 7♥ 6♦] [J♠ 8♦ 2♦ 6♣]
 	//   Lo: None
 	// Result (Hi): Players 1, 3 push with Full House, Sixes full of Queens [6♣ 6♦ 6♠ Q♣ Q♥], [6♣ 6♦ 6♥ Q♣ Q♦]
-	// Result (Lo): Players 4, 5 push with Seven-low [7♣ 6♦ 5♣ 2♦ A♣], [7♣ 6♦ 5♥ 2♦ A♠]
+	// Result (Lo): Player 2 wins with Seven-low [7♣ 6♦ 4♥ 3♦ 2♦]
 	// ------ OmahaHiLo 5 ------
 	// Board: [4♣ K♣ 6♦ 9♦ 5♠]
 	// Player 1: [3♦ T♥ A♣ 7♦]
@@ -513,4 +512,254 @@ func Example_omahaHiLo() {
 	//   Lo: Six-low [6♦ 5♠ 4♣ 3♠ 2♠] [7♣ 2♥ K♣ 9♦]
 	// Result (Hi): Players 1, 3, 6 push with Straight, Seven-high [7♦ 6♦ 5♠ 4♣ 3♦], [7♠ 6♦ 5♠ 4♣ 3♣], [7♣ 6♦ 5♠ 4♣ 3♠]
 	// Result (Lo): Player 1 wins with Six-low [6♦ 5♠ 4♣ 3♦ A♣]
+}
+
+func Example_stud() {
+	for i, game := range []struct {
+		seed    int64
+		players int
+	}{
+		{119, 2},
+		{321, 5},
+		{408, 6},
+		{455, 6},
+		{1113, 6},
+	} {
+		// note: use a real random source
+		rnd := rand.New(rand.NewSource(game.seed))
+		pockets, _ := cardrank.Stud.Deal(rnd.Shuffle, game.players)
+		hands := cardrank.Stud.RankHands(pockets, nil)
+		fmt.Printf("------ Stud %d ------\n", i+1)
+		for j := 0; j < game.players; j++ {
+			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket(), hands[j].Description(), hands[j].Best(), hands[j].Unused())
+		}
+		h, pivot := cardrank.Order(hands)
+		if pivot == 1 {
+			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
+		} else {
+			var s, b []string
+			for j := 0; j < pivot; j++ {
+				s = append(s, strconv.Itoa(h[j]+1))
+				b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+			}
+			fmt.Printf("Result:   Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
+		}
+	}
+	// Output:
+	// ------ Stud 1 ------
+	// Player 1: [K♥ 7♣ J♣ 4♣ A♥ 5♠ Q♠] Nothing, Ace-high, kickers King, Queen, Jack, Seven [A♥ K♥ Q♠ J♣ 7♣] [5♠ 4♣]
+	// Player 2: [2♠ 6♣ 3♥ 5♥ 4♥ Q♦ 7♥] Straight, Seven-high [7♥ 6♣ 5♥ 4♥ 3♥] [Q♦ 2♠]
+	// Result:   Player 2 wins with Straight, Seven-high [7♥ 6♣ 5♥ 4♥ 3♥]
+	// ------ Stud 2 ------
+	// Player 1: [3♠ 6♦ Q♦ K♦ J♦ 3♦ Q♣] Flush, King-high [K♦ Q♦ J♦ 6♦ 3♦] [Q♣ 3♠]
+	// Player 2: [K♠ T♦ 2♥ T♠ 8♥ 8♣ 8♦] Full House, Eights full of Tens [8♣ 8♦ 8♥ T♦ T♠] [K♠ 2♥]
+	// Player 3: [Q♥ Q♠ 6♣ A♥ 4♥ 6♠ T♥] Two Pair, Queens over Sixes, kicker Ace [Q♥ Q♠ 6♣ 6♠ A♥] [T♥ 4♥]
+	// Player 4: [3♥ 7♣ 3♣ 5♦ 9♠ T♣ 9♣] Two Pair, Nines over Threes, kicker Ten [9♣ 9♠ 3♣ 3♥ T♣] [7♣ 5♦]
+	// Player 5: [J♠ 7♠ K♥ 7♥ 2♣ 2♦ A♦] Two Pair, Sevens over Twos, kicker Ace [7♥ 7♠ 2♣ 2♦ A♦] [K♥ J♠]
+	// Result:   Player 2 wins with Full House, Eights full of Tens [8♣ 8♦ 8♥ T♦ T♠]
+	// ------ Stud 3 ------
+	// Player 1: [K♠ J♠ 3♠ 5♣ 7♠ 4♠ Q♠] Flush, King-high [K♠ Q♠ J♠ 7♠ 4♠] [3♠ 5♣]
+	// Player 2: [3♣ T♠ 5♥ 3♥ 8♦ 4♣ 8♥] Two Pair, Eights over Threes, kicker Ten [8♦ 8♥ 3♣ 3♥ T♠] [5♥ 4♣]
+	// Player 3: [2♣ T♦ 6♠ K♦ J♦ 2♠ Q♦] Pair, Twos, kickers King, Queen, Jack [2♣ 2♠ K♦ Q♦ J♦] [T♦ 6♠]
+	// Player 4: [2♦ A♣ T♣ 7♥ J♣ T♥ 4♥] Pair, Tens, kickers Ace, Jack, Seven [T♣ T♥ A♣ J♣ 7♥] [4♥ 2♦]
+	// Player 5: [8♠ K♣ 7♣ Q♣ K♥ 9♦ 6♦] Pair, Kings, kickers Queen, Nine, Eight [K♣ K♥ Q♣ 9♦ 8♠] [7♣ 6♦]
+	// Player 6: [5♠ J♥ 7♦ 3♦ 2♥ A♦ 9♣] Nothing, Ace-high, kickers Jack, Nine, Seven, Five [A♦ J♥ 9♣ 7♦ 5♠] [3♦ 2♥]
+	// Result:   Player 1 wins with Flush, King-high [K♠ Q♠ J♠ 7♠ 4♠]
+	// ------ Stud 4 ------
+	// Player 1: [6♠ Q♥ 2♣ 9♠ 3♦ T♣ K♥] Nothing, King-high, kickers Queen, Ten, Nine, Six [K♥ Q♥ T♣ 9♠ 6♠] [3♦ 2♣]
+	// Player 2: [4♥ 6♥ J♥ 4♦ Q♦ A♣ J♣] Two Pair, Jacks over Fours, kicker Ace [J♣ J♥ 4♦ 4♥ A♣] [Q♦ 6♥]
+	// Player 3: [5♣ K♠ K♣ A♠ 8♣ 5♥ Q♠] Two Pair, Kings over Fives, kicker Ace [K♣ K♠ 5♣ 5♥ A♠] [Q♠ 8♣]
+	// Player 4: [J♠ 8♦ 7♥ 2♠ 2♦ 6♦ 6♣] Two Pair, Sixes over Twos, kicker Jack [6♣ 6♦ 2♦ 2♠ J♠] [8♦ 7♥]
+	// Player 5: [8♥ Q♣ 5♦ 7♣ 9♥ K♦ 9♣] Pair, Nines, kickers King, Queen, Eight [9♣ 9♥ K♦ Q♣ 8♥] [7♣ 5♦]
+	// Player 6: [7♦ A♥ 3♠ 3♣ T♠ T♥ 2♥] Two Pair, Tens over Threes, kicker Ace [T♥ T♠ 3♣ 3♠ A♥] [7♦ 2♥]
+	// Result:   Player 3 wins with Two Pair, Kings over Fives, kicker Ace [K♣ K♠ 5♣ 5♥ A♠]
+	// ------ Stud 5 ------
+	// Player 1: [3♦ T♥ A♣ 7♦ 5♣ 6♠ 4♦] Straight, Seven-high [7♦ 6♠ 5♣ 4♦ 3♦] [A♣ T♥]
+	// Player 2: [J♠ 9♠ 3♣ Q♠ 7♠ 5♦ K♠] Flush, King-high [K♠ Q♠ J♠ 9♠ 7♠] [5♦ 3♣]
+	// Player 3: [T♠ 8♠ J♥ 7♥ J♣ 2♣ 3♠] Pair, Jacks, kickers Ten, Eight, Seven [J♣ J♥ T♠ 8♠ 7♥] [3♠ 2♣]
+	// Player 4: [7♣ 2♠ 2♥ 4♥ 4♣ K♣ 6♦] Two Pair, Fours over Twos, kicker King [4♣ 4♥ 2♥ 2♠ K♣] [7♣ 6♦]
+	// Player 5: [A♠ 9♦ K♥ 5♠ 8♦ 6♥ 8♥] Pair, Eights, kickers Ace, King, Nine [8♦ 8♥ A♠ K♥ 9♦] [6♥ 5♠]
+	// Player 6: [K♦ 8♣ 2♦ A♥ 6♣ 4♠ T♦] Nothing, Ace-high, kickers King, Ten, Eight, Six [A♥ K♦ T♦ 8♣ 6♣] [4♠ 2♦]
+	// Result:   Player 2 wins with Flush, King-high [K♠ Q♠ J♠ 9♠ 7♠]
+}
+
+func Example_studHiLo() {
+	for i, game := range []struct {
+		seed    int64
+		players int
+	}{
+		{119, 2},
+		{321, 5},
+		{408, 6},
+		{455, 6},
+		{1113, 6},
+	} {
+		// note: use a real random source
+		rnd := rand.New(rand.NewSource(game.seed))
+		pockets, _ := cardrank.StudHiLo.Deal(rnd.Shuffle, game.players)
+		hands := cardrank.StudHiLo.RankHands(pockets, nil)
+		fmt.Printf("------ StudHiLo %d ------\n", i+1)
+		for j := 0; j < game.players; j++ {
+			fmt.Printf("Player %d: %b\n", j+1, pockets[j])
+			fmt.Printf("  Hi: %s %b %b\n", hands[j].Description(), hands[j].Best(), hands[j].Unused())
+			if hands[j].LowValid() {
+				fmt.Printf("  Lo: %s %b %b\n", hands[j].LowDescription(), hands[j].LowBest(), hands[j].LowUnused())
+			} else {
+				fmt.Printf("  Lo: None\n")
+			}
+		}
+		h, hPivot := cardrank.Order(hands)
+		l, lPivot := cardrank.LowOrder(hands)
+		typ := "wins"
+		if lPivot == 0 {
+			typ = "scoops"
+		}
+		if hPivot == 1 {
+			fmt.Printf("Result (Hi): Player %d %s with %s %b\n", h[0]+1, typ, hands[h[0]].Description(), hands[h[0]].Best())
+		} else {
+			var s, b []string
+			for j := 0; j < hPivot; j++ {
+				s = append(s, strconv.Itoa(h[j]+1))
+				b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+			}
+			fmt.Printf("Result (Hi): Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
+		}
+		if lPivot == 1 {
+			fmt.Printf("Result (Lo): Player %d wins with %s %b\n", l[0]+1, hands[l[0]].LowDescription(), hands[l[0]].LowBest())
+		} else if lPivot > 1 {
+			var s, b []string
+			for j := 0; j < lPivot; j++ {
+				s = append(s, strconv.Itoa(l[j]+1))
+				b = append(b, fmt.Sprintf("%b", hands[l[j]].LowBest()))
+			}
+			fmt.Printf("Result (Lo): Players %s push with %s %s\n", strings.Join(s, ", "), hands[l[0]].LowDescription(), strings.Join(b, ", "))
+		} else {
+			fmt.Printf("Result (Lo): no player made a low hand\n")
+		}
+	}
+	// Output:
+	// ------ StudHiLo 1 ------
+	// Player 1: [K♥ 7♣ J♣ 4♣ A♥ 5♠ Q♠]
+	//   Hi: Nothing, Ace-high, kickers King, Queen, Jack, Seven [A♥ K♥ Q♠ J♣ 7♣] [5♠ 4♣]
+	//   Lo: None
+	// Player 2: [2♠ 6♣ 3♥ 5♥ 4♥ Q♦ 7♥]
+	//   Hi: Straight, Seven-high [7♥ 6♣ 5♥ 4♥ 3♥] [Q♦ 2♠]
+	//   Lo: Six-low [6♣ 5♥ 4♥ 3♥ 2♠] [Q♦ 7♥]
+	// Result (Hi): Player 2 wins with Straight, Seven-high [7♥ 6♣ 5♥ 4♥ 3♥]
+	// Result (Lo): Player 2 wins with Six-low [6♣ 5♥ 4♥ 3♥ 2♠]
+	// ------ StudHiLo 2 ------
+	// Player 1: [3♠ 6♦ Q♦ K♦ J♦ 3♦ Q♣]
+	//   Hi: Flush, King-high [K♦ Q♦ J♦ 6♦ 3♦] [Q♣ 3♠]
+	//   Lo: None
+	// Player 2: [K♠ T♦ 2♥ T♠ 8♥ 8♣ 8♦]
+	//   Hi: Full House, Eights full of Tens [8♣ 8♦ 8♥ T♦ T♠] [K♠ 2♥]
+	//   Lo: None
+	// Player 3: [Q♥ Q♠ 6♣ A♥ 4♥ 6♠ T♥]
+	//   Hi: Two Pair, Queens over Sixes, kicker Ace [Q♥ Q♠ 6♣ 6♠ A♥] [T♥ 4♥]
+	//   Lo: None
+	// Player 4: [3♥ 7♣ 3♣ 5♦ 9♠ T♣ 9♣]
+	//   Hi: Two Pair, Nines over Threes, kicker Ten [9♣ 9♠ 3♣ 3♥ T♣] [7♣ 5♦]
+	//   Lo: None
+	// Player 5: [J♠ 7♠ K♥ 7♥ 2♣ 2♦ A♦]
+	//   Hi: Two Pair, Sevens over Twos, kicker Ace [7♥ 7♠ 2♣ 2♦ A♦] [K♥ J♠]
+	//   Lo: None
+	// Result (Hi): Player 2 scoops with Full House, Eights full of Tens [8♣ 8♦ 8♥ T♦ T♠]
+	// Result (Lo): no player made a low hand
+	// ------ StudHiLo 3 ------
+	// Player 1: [K♠ J♠ 3♠ 5♣ 7♠ 4♠ Q♠]
+	//   Hi: Flush, King-high [K♠ Q♠ J♠ 7♠ 4♠] [3♠ 5♣]
+	//   Lo: None
+	// Player 2: [3♣ T♠ 5♥ 3♥ 8♦ 4♣ 8♥]
+	//   Hi: Two Pair, Eights over Threes, kicker Ten [8♦ 8♥ 3♣ 3♥ T♠] [5♥ 4♣]
+	//   Lo: None
+	// Player 3: [2♣ T♦ 6♠ K♦ J♦ 2♠ Q♦]
+	//   Hi: Pair, Twos, kickers King, Queen, Jack [2♣ 2♠ K♦ Q♦ J♦] [T♦ 6♠]
+	//   Lo: None
+	// Player 4: [2♦ A♣ T♣ 7♥ J♣ T♥ 4♥]
+	//   Hi: Pair, Tens, kickers Ace, Jack, Seven [T♣ T♥ A♣ J♣ 7♥] [4♥ 2♦]
+	//   Lo: None
+	// Player 5: [8♠ K♣ 7♣ Q♣ K♥ 9♦ 6♦]
+	//   Hi: Pair, Kings, kickers Queen, Nine, Eight [K♣ K♥ Q♣ 9♦ 8♠] [7♣ 6♦]
+	//   Lo: None
+	// Player 6: [5♠ J♥ 7♦ 3♦ 2♥ A♦ 9♣]
+	//   Hi: Nothing, Ace-high, kickers Jack, Nine, Seven, Five [A♦ J♥ 9♣ 7♦ 5♠] [3♦ 2♥]
+	//   Lo: Seven-low [7♦ 5♠ 3♦ 2♥ A♦] [J♥ 9♣]
+	// Result (Hi): Player 1 wins with Flush, King-high [K♠ Q♠ J♠ 7♠ 4♠]
+	// Result (Lo): Player 6 wins with Seven-low [7♦ 5♠ 3♦ 2♥ A♦]
+	// ------ StudHiLo 4 ------
+	// Player 1: [6♠ Q♥ 2♣ 9♠ 3♦ T♣ K♥]
+	//   Hi: Nothing, King-high, kickers Queen, Ten, Nine, Six [K♥ Q♥ T♣ 9♠ 6♠] [3♦ 2♣]
+	//   Lo: None
+	// Player 2: [4♥ 6♥ J♥ 4♦ Q♦ A♣ J♣]
+	//   Hi: Two Pair, Jacks over Fours, kicker Ace [J♣ J♥ 4♦ 4♥ A♣] [Q♦ 6♥]
+	//   Lo: None
+	// Player 3: [5♣ K♠ K♣ A♠ 8♣ 5♥ Q♠]
+	//   Hi: Two Pair, Kings over Fives, kicker Ace [K♣ K♠ 5♣ 5♥ A♠] [Q♠ 8♣]
+	//   Lo: None
+	// Player 4: [J♠ 8♦ 7♥ 2♠ 2♦ 6♦ 6♣]
+	//   Hi: Two Pair, Sixes over Twos, kicker Jack [6♣ 6♦ 2♦ 2♠ J♠] [8♦ 7♥]
+	//   Lo: None
+	// Player 5: [8♥ Q♣ 5♦ 7♣ 9♥ K♦ 9♣]
+	//   Hi: Pair, Nines, kickers King, Queen, Eight [9♣ 9♥ K♦ Q♣ 8♥] [7♣ 5♦]
+	//   Lo: None
+	// Player 6: [7♦ A♥ 3♠ 3♣ T♠ T♥ 2♥]
+	//   Hi: Two Pair, Tens over Threes, kicker Ace [T♥ T♠ 3♣ 3♠ A♥] [7♦ 2♥]
+	//   Lo: None
+	// Result (Hi): Player 3 scoops with Two Pair, Kings over Fives, kicker Ace [K♣ K♠ 5♣ 5♥ A♠]
+	// Result (Lo): no player made a low hand
+	// ------ StudHiLo 5 ------
+	// Player 1: [3♦ T♥ A♣ 7♦ 5♣ 6♠ 4♦]
+	//   Hi: Straight, Seven-high [7♦ 6♠ 5♣ 4♦ 3♦] [A♣ T♥]
+	//   Lo: Six-low [6♠ 5♣ 4♦ 3♦ A♣] [T♥ 7♦]
+	// Player 2: [J♠ 9♠ 3♣ Q♠ 7♠ 5♦ K♠]
+	//   Hi: Flush, King-high [K♠ Q♠ J♠ 9♠ 7♠] [5♦ 3♣]
+	//   Lo: None
+	// Player 3: [T♠ 8♠ J♥ 7♥ J♣ 2♣ 3♠]
+	//   Hi: Pair, Jacks, kickers Ten, Eight, Seven [J♣ J♥ T♠ 8♠ 7♥] [3♠ 2♣]
+	//   Lo: None
+	// Player 4: [7♣ 2♠ 2♥ 4♥ 4♣ K♣ 6♦]
+	//   Hi: Two Pair, Fours over Twos, kicker King [4♣ 4♥ 2♥ 2♠ K♣] [7♣ 6♦]
+	//   Lo: None
+	// Player 5: [A♠ 9♦ K♥ 5♠ 8♦ 6♥ 8♥]
+	//   Hi: Pair, Eights, kickers Ace, King, Nine [8♦ 8♥ A♠ K♥ 9♦] [6♥ 5♠]
+	//   Lo: None
+	// Player 6: [K♦ 8♣ 2♦ A♥ 6♣ 4♠ T♦]
+	//   Hi: Nothing, Ace-high, kickers King, Ten, Eight, Six [A♥ K♦ T♦ 8♣ 6♣] [4♠ 2♦]
+	//   Lo: Eight-low [8♣ 6♣ 4♠ 2♦ A♥] [K♦ T♦]
+	// Result (Hi): Player 2 wins with Flush, King-high [K♠ Q♠ J♠ 9♠ 7♠]
+	// Result (Lo): Player 1 wins with Six-low [6♠ 5♣ 4♦ 3♦ A♣]
+}
+
+func Example_razz() {
+	for i, game := range []struct {
+		seed    int64
+		players int
+	}{
+		{119, 2},
+		{321, 5},
+		{408, 6},
+		{455, 6},
+		{1113, 6},
+	} {
+		// note: use a real random source
+		rnd := rand.New(rand.NewSource(game.seed))
+		pockets, _ := cardrank.Razz.Deal(rnd.Shuffle, game.players)
+		hands := cardrank.Razz.RankHands(pockets, nil)
+		fmt.Printf("------ Razz %d ------\n", i+1)
+		for j := 0; j < game.players; j++ {
+			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket(), hands[j].Description(), hands[j].Best(), hands[j].Unused())
+		}
+		h, pivot := cardrank.Order(hands)
+		if pivot == 1 {
+			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
+		} else {
+			var s, b []string
+			for j := 0; j < pivot; j++ {
+				s = append(s, strconv.Itoa(h[j]+1))
+				b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+			}
+			fmt.Printf("Result:   Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
+		}
+	}
+	// Output:
 }

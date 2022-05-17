@@ -47,7 +47,7 @@ func TestOrderHands(t *testing.T) {
 				t.Logf("  desc: %s", h.Description())
 				hands = append(hands, h)
 			}
-			v, pivot := OrderHands(hands)
+			v, pivot := Order(hands)
 			if pivot != test.p {
 				t.Errorf("test %d expected pivot %d, got: %d", i, test.p, pivot)
 			}

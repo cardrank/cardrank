@@ -54,11 +54,11 @@ func TestPrimeProductBits(t *testing.T) {
 }
 
 func TestCactusMaps(t *testing.T) {
-	flush, unique5 := CactusMaps()
-	if n, exp := len(flush), 1287; n != exp {
+	flushes, unique5 := cactusMaps()
+	if n, exp := len(flushes), 1287; n != exp {
 		t.Fatalf("expected len(flush) == %d, got: %d", exp, n)
 	}
-	flushTests := []struct {
+	flushesTests := []struct {
 		r   uint32
 		exp uint16
 	}{
@@ -88,8 +88,8 @@ func TestCactusMaps(t *testing.T) {
 		{0x00004e2a, 0x0580},
 		{0x0000310e, 0x0605},
 	}
-	for i, test := range flushTests {
-		if n := flush[test.r]; n != test.exp {
+	for i, test := range flushesTests {
+		if n := flushes[test.r]; n != test.exp {
 			t.Fatalf("test %d flush[%d] to be %d, got: %d", i, test.r, test.exp, n)
 		}
 	}

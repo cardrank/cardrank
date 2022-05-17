@@ -1,4 +1,4 @@
-//go:build !portable
+//go:build !portable && !embedded
 
 package cardrank
 
@@ -9,9 +9,7 @@ import (
 )
 
 func init() {
-	twoPlus, cactusFast := NewTwoPlusRanker().Rank, NewCactusFastRanker()
-	rankers[TwoPlus] = twoPlus
-	rankers[Hybrid] = NewHybridRanker(cactusFast, twoPlus)
+	twoPlus = NewTwoPlusRanker()
 }
 
 // TwoPlusRanker is a two plus hand ranker.
@@ -21,8 +19,8 @@ type TwoPlusRanker struct {
 	types [10]uint32
 }
 
-// NewTwoPlusRanker creates a new two plus hand ranker.
-func NewTwoPlusRanker() *TwoPlusRanker {
+// TwoPlusRanker creates a new two plus hand ranker.
+func NewTwoPlusRanker() RankerFunc {
 	var buf []byte
 	for _, v := range [][]byte{
 		handranks00,
@@ -56,7 +54,7 @@ func NewTwoPlusRanker() *TwoPlusRanker {
 			i++
 		}
 	}
-	return &TwoPlusRanker{
+	p := &TwoPlusRanker{
 		ranks: ranks,
 		cards: cards,
 		types: [10]uint32{
@@ -72,10 +70,11 @@ func NewTwoPlusRanker() *TwoPlusRanker {
 			uint32(StraightFlush),
 		},
 	}
+	return p.rank
 }
 
-// Rank satisfies the Ranker interface.
-func (p *TwoPlusRanker) Rank(hand []Card) HandRank {
+// rank satisfies the Ranker interface.
+func (p *TwoPlusRanker) rank(hand []Card) HandRank {
 	i := uint32(53)
 	for _, c := range hand {
 		i = p.ranks[i+p.cards[c]]
@@ -84,25 +83,6 @@ func (p *TwoPlusRanker) Rank(hand []Card) HandRank {
 		i = p.ranks[i]
 	}
 	return HandRank(p.types[i>>12] - i&0xfff + 1)
-}
-
-// NewHybridRanker creates a hybrid ranker.
-func NewHybridRanker(f RankerFunc, f7 func([]Card) HandRank) func([]Card) HandRank {
-	return func(hand []Card) HandRank {
-		switch len(hand) {
-		case 5:
-			return HandRank(f(hand[0], hand[1], hand[2], hand[3], hand[4]))
-		case 6:
-			r := f(hand[0], hand[1], hand[2], hand[3], hand[4])
-			r = min(r, f(hand[0], hand[1], hand[2], hand[3], hand[5]))
-			r = min(r, f(hand[0], hand[1], hand[2], hand[4], hand[5]))
-			r = min(r, f(hand[0], hand[1], hand[3], hand[4], hand[5]))
-			r = min(r, f(hand[0], hand[2], hand[3], hand[4], hand[5]))
-			r = min(r, f(hand[1], hand[2], hand[3], hand[4], hand[5]))
-			return HandRank(r)
-		}
-		return f7(hand)
-	}
 }
 
 //go:embed handranks00.dat

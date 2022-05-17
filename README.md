@@ -2,26 +2,25 @@
 
 Package `cardrank.io/cardrank` provides a library of types, funcs, and
 utilities for working with playing cards, decks, and evaluating poker hands.
-
-Supports Texas Holdem, Texas Holdem Short Deck (aka 6-plus), Omaha, and Omaha
-Hi/Lo.
+Supports [Texas Holdem][holdem], [Texas Holdem Short Deck (6-plus)][short-deck],
+[Omaha][omaha], [Omaha Hi/Lo][omaha-hi-lo], [Stud][stud], and [Stud Hi/Lo][stud-hi-lo].
 
 ## Overview
 
 High-level types, funcs, and standardized interfaces are included in the
 package to deal and evaluate hands of poker, including all necessary types for
-representing and working with [card suits][suit], [card ranks][rank], and [card
-decks][deck].
+representing and working with [cards][card], [card suits][suit], [card
+ranks][rank], [card decks][deck], and [hands of cards][hand]. Hand evaluation
+is achieved with pure Go implementations of [common poker hand rank
+evaluators][hand-ranking].
 
-Additionally, full, complete, pure Go implementations of [poker hand rank
-evaluators][ranker] are provided.
+[Hands][hand] of [Texas Holdem][holdem], [Texas Holdem Short Deck (aka
+6-Plus)][short-deck], [Omaha][omaha], and [Omaha Hi/Lo][omaha-hi-lo],
+[Stud][stud], and [Stud Hi/Lo][stud-hi-lo] are easily created and dealt using
+standardized interfaces and logic, with winners [being easily determined and ordered][order].
 
-Through high-level APIs, games of Texas Holdem, Texas Holdem Short Deck (aka
-6-Plus), Omaha, and Omaha Hi/Lo are easily created using standardized
-interfaces and logic.
-
-[Future development](#future) will build out support for most common
-poker variants, such as Razz and Badugi.
+[Future development](#future) of Razz and Badugi is planned, as well as for
+other poker variants.
 
 ## Using
 
@@ -33,12 +32,15 @@ go get cardrank.io/cardrank
 
 ### Examples
 
-See all [examples][] in the Go documentation for quick overviews of using the
-high-level APIs.
+Complete examples for [Holdem][holdem], [6-plus (ie, short deck
+Holdem)][short-deck], [Omaha][omaha], [Omaha Hi/Lo][omaha-hi-lo], [Stud][stud],
+[Stud Hi/Lo][stud-hi-lo] are available in the source repository. [Further
+examples][examples] are available in the [Go package documentation][pkg] for
+overviews of using most commonly used types, funcs and interfaces.
+
+Below are quick examples for Texas Holdem and Omaha Hi/Lo:
 
 #### Texas Holdem
-
-Dealing a game of Texas Holdem and determining the winner(s):
 
 ```go
 package main
@@ -65,7 +67,7 @@ func main() {
 	for i := 0; i < players; i++ {
 		fmt.Printf("Player %d: %b %s %b %b\n", i+1, hands[i].Pocket(), hands[i].Description(), hands[i].Best(), hands[i].Unused())
 	}
-	h, pivot := cardrank.OrderHands(hands)
+	h, pivot := cardrank.Order(hands)
 	if pivot == 1 {
 		fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
 	} else {
@@ -80,8 +82,6 @@ func main() {
 ```
 
 #### Omaha Hi/Lo
-
-Dealing a game of Omaha Hi/Lo and determining the winner(s):
 
 ```go
 package main
@@ -102,69 +102,79 @@ func main() {
 	// note: use a better pseudo-random number generator
 	rnd := rand.New(rand.NewSource(seed))
 	pockets, board := cardrank.OmahaHiLo.Deal(rnd.Shuffle, players)
-	highs := cardrank.OmahaHiLo.RankHands(pockets, board)
-	lows := cardrank.OmahaHiLo.LowRankHands(pockets, board)
+	hands := cardrank.OmahaHiLo.RankHands(pockets, board)
 	fmt.Printf("------ OmahaHiLo %d ------\n", seed)
 	fmt.Printf("Board: %b\n", board)
 	for i := 0; i < players; i++ {
 		fmt.Printf("Player %d: %b\n", i+1, pockets[i])
-		fmt.Printf("  Hi: %s %b %b\n", highs[i].Description(), highs[i].Best(), highs[i].Unused())
-		if lows[i].Rank() < 31 {
-			fmt.Printf("  Lo: %s %b %b\n", lows[i].LowDescription(), lows[i].LowBest(), lows[i].LowUnused())
+		fmt.Printf("  Hi: %s %b %b\n", hands[i].Description(), hands[i].Best(), hands[i].Unused())
+		if hands[i].LowValid() {
+			fmt.Printf("  Lo: %s %b %b\n", hands[i].LowDescription(), hands[i].LowBest(), hands[i].LowUnused())
 		} else {
 			fmt.Printf("  Lo: None\n")
 		}
 	}
-	h, hPivot := cardrank.OrderHands(highs)
-	l, lPivot := cardrank.LowOrderHands(lows)
+	h, hPivot := cardrank.Order(hands)
+	l, lPivot := cardrank.LowOrder(hands)
 	typ := "wins"
 	if lPivot == 0 {
 		typ = "scoops"
 	}
 	if hPivot == 1 {
-		fmt.Printf("Result (Hi): Player %d %s with %s %b\n", h[0]+1, typ, highs[h[0]].Description(), highs[h[0]].Best())
+		fmt.Printf("Result (Hi): Player %d %s with %s %b\n", h[0]+1, typ, hands[h[0]].Description(), hands[h[0]].Best())
 	} else {
 		var s, b []string
 		for i := 0; i < hPivot; i++ {
 			s = append(s, strconv.Itoa(h[i]+1))
-			b = append(b, fmt.Sprintf("%b", highs[h[i]].Best()))
+			b = append(b, fmt.Sprintf("%b", hands[h[i]].Best()))
 		}
-		fmt.Printf("Result (Hi): Players %s push with %s %s\n", strings.Join(s, ", "), highs[h[0]].Description(), strings.Join(b, ", "))
+		fmt.Printf("Result (Hi): Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
 	}
 	if lPivot == 1 {
-		fmt.Printf("Result (Lo): Player %d wins with %s %b\n", l[0]+1, lows[l[0]].LowDescription(), lows[l[0]].LowBest())
+		fmt.Printf("Result (Lo): Player %d wins with %s %b\n", l[0]+1, hands[l[0]].LowDescription(), hands[l[0]].LowBest())
 	} else if lPivot > 1 {
 		var s, b []string
 		for j := 0; j < lPivot; j++ {
 			s = append(s, strconv.Itoa(l[j]+1))
-			b = append(b, fmt.Sprintf("%b", lows[l[j]].LowBest()))
+			b = append(b, fmt.Sprintf("%b", hands[l[j]].LowBest()))
 		}
-		fmt.Printf("Result (Lo): Players %s push with %s %s\n", strings.Join(s, ", "), lows[l[0]].LowDescription(), strings.Join(b, ", "))
+		fmt.Printf("Result (Lo): Players %s push with %s %s\n", strings.Join(s, ", "), hands[l[0]].LowDescription(), strings.Join(b, ", "))
 	} else {
 		fmt.Printf("Result (Lo): no player made a low hand\n")
 	}
 }
 ```
 
-### Rankers
+### Hand Ranking
 
-The `cardrank.io/cardrank` package includes pure Go implementations for the
-well-known [Cactus Kev][cactus], [Fast Cactus][cactus-fast], and
-[Two-Plus][two-plus] poker hand evaluators. A [hybrid][hybrid] implementation
-is provided that uses will use either the Fast Cactus or Two-Plus evaluators
-dependent on if the evaluated poker hand has 5, 6, or 7 cards.
+A `HandRank` type is used to determine the relative rank of a [`Hand`][hand],
+on a low-to-high basis.Higher hands will have a lower value than low hands. For
+example, a Straight Flush will have a lower `HandRank` than Full House.
 
-Additionally a [Six Plus][six-plus] and a [Eight-or-Better][eight-or-better]
-hand evaluator is provided, useful for Short Deck and Eight-or-Better (Omaha
-Lo) evaluations.
+For regular poker hands (ie, Holdem, Omaha, and Stud), pure Go implementations
+for the well-known [Cactus Kev][cactus], [Fast Cactus][cactus-fast], and
+[Two-Plus][two-plus] poker hand evaluators are provided for hand evaluation.
 
-All poker hand rank evaluators (ie, a `Ranker` or `RankerFunc`) rank hands
-based from low-to-high value, meaning that lower hand values beat hands with
-higher ranks.
+#### Rankers
 
-## Portablility
+The package's [`DefaultRanker`][default] is a [`HybridRanker`][hybrid] using
+either the [`CactusFastRanker`][cactus-fast] or [`TwoPlusRanker`][two-plus]
+depending on the [`Hand`][hand] having 5, 6, or 7 cards, providing the best
+possible evaluation speed in most cases.
 
-The [Two Plus][two-plus] ranker implementation requires embedding the
+Additionally a [`SixPlusRanker`][six-plus] and a [`EightOrBetterRanker`][eight-or-better]
+rankers are provided, used for Short Deck and Omaha/Stud Lo evaluation
+respectively.
+
+#### Ordering and Winner Determination
+
+Hands can be compared to each other using `Compare` or can be [ordered][order]
+using the package level `Order` and `LowOrder` funcs. See [the examples][examples]
+for overviews on winner determination.
+
+#### Portablility
+
+The [Two-Plus][two-plus] ranker implementation requires embedding the
 `handranks*.dat` files, which adds approximately 130 MiB to any Go binary. This
 can be disabled by using the `portable` build tag:
 
@@ -180,21 +190,49 @@ slimmer WASM binaries:
 GOOS=js GOARCH=wasm go build -tags portable
 ```
 
+Alternately, the `embedded` tag can be used to create even slimmer builds:
+
+```sh
+go build -tags 'portable embedded'
+```
+
+This has the effect of disaling the Cactus Fast ranker in favor of a generative
+Cactus ranker.
+
+## Development Status
+
+A partially complete Razz ranker is available, however it currently does not
+work with hands having a set (i.e., pair, two pair, three-of-a-kind, full
+house, or four-of-a-kind).
+
 ### Future
 
-Eventually, rankers for Stud, Stud Hi/Lo, Razz, Badugi, and other poker
-variants will be added to this package in addition to standardized interfaces
-for managing poker tables and games.
-
-## Links
+Rankers for Badugi, and other poker variants will be added to this package in
+addition to standardized interfaces for managing poker tables and games.
 
 [pkg]: https://pkg.go.dev/cardrank.io/cardrank
 [examples]: https://pkg.go.dev/cardrank.io/cardrank#pkg-examples
+[hand-ranking]: #hand-ranking
 
-[cactus]: https://pkg.go.dev/cardrank.io/cardrank#NewCactusRanker
-[cactus-fast]: https://pkg.go.dev/cardrank.io/cardrank#NewCactusFastRanker
-[two-plus]: https://pkg.go.dev/cardrank.io/cardrank#NewTwoPlusRanker
-[hybrid]: https://pkg.go.dev/cardrank.io/cardrank#NewHybridRanker
+[card]: https://pkg.go.dev/cardrank.io/cardrank#Card
+[suit]: https://pkg.go.dev/cardrank.io/cardrank#Suit
+[rank]: https://pkg.go.dev/cardrank.io/cardrank#Rank
+[deck]: https://pkg.go.dev/cardrank.io/cardrank#Deck
+[hand]: https://pkg.go.dev/cardrank.io/cardrank#Hand
+[order]: https://pkg.go.dev/cardrank.io/cardrank#Order
+[default]: https://pkg.go.dev/cardrank.io/cardrank#DefaultRanker
 
-[six-plus]: https://pkg.go.dev/cardrank.io/cardrank#NewCactusFastSixPlusRanker
-[eight-or-better]: https://pkg.go.dev/cardrank.io/cardrank#NewEightOrBetterRanker
+[holdem]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Holdem
+[short-deck]: https://pkg.go.dev/cardrank.io/cardrank#example-package-ShortDeck
+[omaha]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Omaha
+[omaha-hi-lo]: https://pkg.go.dev/cardrank.io/cardrank#example-package-OmahaHiLo
+[stud]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Stud
+[stud-hi-lo]: https://pkg.go.dev/cardrank.io/cardrank#example-package-StudHiLo
+
+[hand-ranker]: https://pkg.go.dev/cardrank.io/cardrank#HandRanker
+[cactus]: https://pkg.go.dev/cardrank.io/cardrank#CactusRanker
+[cactus-fast]: https://pkg.go.dev/cardrank.io/cardrank#CactusFastRanker
+[two-plus]: https://pkg.go.dev/cardrank.io/cardrank#TwoPlusRanker
+[hybrid]: https://pkg.go.dev/cardrank.io/cardrank#HybridRanker
+[six-plus]: https://pkg.go.dev/cardrank.io/cardrank#SixPlusRanker
+[eight-or-better]: https://pkg.go.dev/cardrank.io/cardrank#EightOrBetter

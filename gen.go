@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 )
 
 // references:
@@ -103,7 +104,7 @@ func run(verbose bool, out, sum string) error {
 	logf("%16s: matches!\n", "Hash")
 	for i := 0; i < len(b); i += TenMiB {
 		n, name := min(uint32(len(b)), uint32(i+TenMiB)), fmt.Sprintf(out, i/TenMiB)
-		if err := ioutil.WriteFile(name, b[i:n], 0644); err != nil {
+		if err := ioutil.WriteFile(name, b[i:n], 0o644); err != nil {
 			return fmt.Errorf("unable to write %s: %w", name, err)
 		}
 	}
@@ -462,7 +463,7 @@ func (g *TwoPlusGenerator) eval(id int64) uint32 {
 		rank = eval_7(h)
 	default:
 		// problem!!  shouldn't hit this...
-		panic(fmt.Errorf("invalid number of cards %d", n))
+		panic("invalid number of cards " + strconv.Itoa(n))
 	}
 
 	// (eval)

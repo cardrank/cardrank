@@ -4,34 +4,36 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 )
 
 func TestRanker(t *testing.T) {
-	for _, r := range []Ranker{Cactus, CactusFast, TwoPlus, Hybrid} {
-		if !r.Available() {
-			continue
-		}
+	for _, r := range rankers(true) {
 		for i, f := range []func() []test{
 			fiveCardTests,
 			sixCardTests,
 			sevenCardTests,
 		} {
 			ranker, tests := r, f()
-			t.Run(fmt.Sprintf("%s/%d", ranker, i+5), func(t *testing.T) {
+			rankerName := runtime.FuncForPC(reflect.ValueOf(ranker).Pointer()).Name()
+			t.Run(fmt.Sprintf("%s/%d", rankerName, i+5), func(t *testing.T) {
 				for j, test := range tests {
-					h := NewHand(test.hand[:5], test.hand[5:], r.Rank)
-					rank := h.Rank()
+					hand := make([]Card, len(test.hand))
+					copy(hand, test.hand)
+					rank := ranker(hand)
 					if rank != test.r {
-						t.Errorf("test %s %d %d expected %d, got: %d", ranker, i, j, test.r, rank)
+						t.Errorf("test %d %d expected %d, got: %d", i, j, test.r, rank)
 					}
 					if fixed := rank.Fixed(); fixed != test.exp {
-						t.Errorf("test %s %d %d expected %s, got: %s", ranker, i, j, test.exp, fixed)
+						t.Errorf("test %d %d expected %s, got: %s", i, j, test.exp, fixed)
 					}
+					h := NewHand(Holdem, test.hand[:5], test.hand[5:])
 					if s := fmt.Sprintf("%b %b", h, h.Unused()); s != test.v {
-						t.Errorf("test %s %d %d expected %q, got: %q", ranker, i, j, test.v, s)
+						t.Errorf("test %d %d expected %q, got: %q", i, j, test.v, s)
 					}
 				}
 			})
@@ -39,36 +41,57 @@ func TestRanker(t *testing.T) {
 	}
 }
 
-func TestEightOrBetter_Rank(t *testing.T) {
-	v := Must("Ah 2h 3h 4h 5h 6h 7h 8h")
-	for c0 := 0; c0 < len(v); c0++ {
-		for c1 := c0 + 1; c1 < len(v); c1++ {
-			for c2 := c1 + 1; c2 < len(v); c2++ {
-				for c3 := c2 + 1; c3 < len(v); c3++ {
-					for c4 := c3 + 1; c4 < len(v); c4++ {
-						hand := []Card{v[c0], v[c1], v[c2], v[c3], v[c4]}
-						r := EightOrBetter.Rank(hand)
-						t.Logf("%b: %d", hand, r)
+func TestLow(t *testing.T) {
+	king1 := Must("Kh Qh Jh Th 9h")
+	t.Logf("king1 %s: %d", king1, LowRanker(king1[0], king1[1], king1[2], king1[3], king1[4]))
+	eight1 := Must("9h 7h 6h 5h 4h")
+	t.Logf("eight1 %s: %d", eight1, EightOrBetterRanker(eight1[0], eight1[1], eight1[2], eight1[3], eight1[4]))
+	p0 := Must("Ah 2h 3h 4h 5h 6h 7h 8h")
+	for i := Nine; i <= King; i++ {
+		p1 := Must(i.String() + "h 4h 3h 2h Ah")
+		r1 := EightOrBetterRanker(p1[0], p1[1], p1[2], p1[3], p1[4])
+		for c0 := 0; c0 < len(p0); c0++ {
+			for c1 := c0 + 1; c1 < len(p0); c1++ {
+				for c2 := c1 + 1; c2 < len(p0); c2++ {
+					for c3 := c2 + 1; c3 < len(p0); c3++ {
+						for c4 := c3 + 1; c4 < len(p0); c4++ {
+							h0 := []Card{p0[c0], p0[c1], p0[c2], p0[c3], p0[c4]}
+							r0 := EightOrBetterRanker(h0[0], h0[1], h0[2], h0[3], h0[4])
+							if r0 >= r1 {
+								t.Errorf("%s does not have lower rank than %s", h0, p1)
+							}
+						}
 					}
 				}
 			}
 		}
 	}
-	for i := Eight; i <= King; i++ {
-		r := EightOrBetter.Rank(Must(i.String() + "h 4h 3h 2h Ah"))
-		t.Logf("%d", r)
-	}
 }
 
-func TestRanker_allCards(t *testing.T) {
+func TestRazz(t *testing.T) {
+	/*
+		for i := King; i > Four; i-- {
+			last := Ace
+			if i != Five {
+				last = i - 4
+			}
+			h := []Card{New(i, Heart), New(i-1, Heart), New(i-2, Heart), New(i-3, Heart), New(last, Heart), New(Ace, Spade), New(Ace, Diamond)}
+			hand := NewHandOf(Razz, h, nil, Low.Rank)
+			t.Logf("%s %d %s", hand.LowDescription(), hand.Rank(), hand.LowBest())
+		}
+	*/
+}
+
+func TestAllCards(t *testing.T) {
 	if !strings.Contains(os.Getenv("TESTS"), "allCards") {
 		t.Logf("skipping: $ENV{TESTS} does not contain 'allCards'")
 		return
 	}
-	if !Cactus.Available() {
+	if cactus == nil {
 		t.Logf("skipping: Cactus ranker is not available")
 		return
 	}
+	ranker := HandRanker(cactus)
 	for c0 := 0; c0 < 52; c0++ {
 		for c1 := c0 + 1; c1 < 52; c1++ {
 			for c2 := c1 + 1; c2 < 52; c2++ {
@@ -77,10 +100,11 @@ func TestRanker_allCards(t *testing.T) {
 						for c5 := c4 + 1; c5 < 52; c5++ {
 							for c6 := c5 + 1; c6 < 52; c6++ {
 								hand := []Card{allCards[c0], allCards[c1], allCards[c2], allCards[c3], allCards[c4], allCards[c5], allCards[c6]}
-								exp := Cactus.Rank(hand)
-								for _, ranker := range []Ranker{CactusFast, TwoPlus, Hybrid} {
-									if r := ranker.Rank(hand); r != exp {
-										t.Errorf("test %s.Rank(%b) expected %d (%s), got: %d (%s)", ranker, hand, exp, exp.Fixed(), r, r.Fixed())
+								exp := ranker(hand)
+								for _, ranker := range rankers(false) {
+									rankerName := runtime.FuncForPC(reflect.ValueOf(ranker).Pointer()).Name()
+									if r := ranker(hand); r != exp {
+										t.Errorf("test %s(%b) expected %d (%s), got: %d (%s)", rankerName, hand, exp, exp.Fixed(), r, r.Fixed())
 									}
 								}
 							}
@@ -178,4 +202,21 @@ func sevenCardTests() []test {
 		{Must("7♦ J♦ 9♦ 6♦ 8♦ 5♦ 2♦"), 0x0006, StraightFlush, "Straight Flush, Nine-high [9♦ 8♦ 7♦ 6♦ 5♦] [J♦ 2♦]"},
 		{Must("2d 3d As Ks Qs Js Ts"), 0x0001, StraightFlush, "Straight Flush, Ace-high, Royal [A♠ K♠ Q♠ J♠ T♠] [3♦ 2♦]"},
 	}
+}
+
+func rankers(base bool) []RankerFunc {
+	var rankers []RankerFunc
+	if base && cactus != nil {
+		rankers = append(rankers, HandRanker(cactus))
+	}
+	if cactusFast != nil {
+		rankers = append(rankers, HandRanker(cactusFast))
+	}
+	if twoPlus != nil {
+		rankers = append(rankers, twoPlus)
+	}
+	if cactusFast != nil && twoPlus != nil {
+		rankers = append(rankers, HybridRanker(cactusFast, twoPlus))
+	}
+	return rankers
 }

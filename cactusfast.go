@@ -1,57 +1,26 @@
+//go:build !embedded
+
 package cardrank
 
 func init() {
-	cactusFast := NewCactusFastRanker()
-	rankers[CactusFast] = cactusFast.Rank
-	rankers[CactusFastSixPlus] = NewCactusFastSixPlusRanker(cactusFast).Rank
-	rankers[EightOrBetter] = NewEightOrBetterRanker()
+	cactusFast = CactusFastRanker
 }
 
-// NewCactusFastRanker creates a new cactus fast short deck hand ranker.
-func NewCactusFastRanker() RankerFunc {
-	return func(c0, c1, c2, c3, c4 Card) uint16 {
-		// check for flushes and straight flushes
-		if c0&c1&c2&c3&c4&0xf000 != 0 {
-			return flushes[uint16((c0|c1|c2|c3|c4)>>16)]
-		}
-		// check for straights and high card hands
-		if r := unique5[(c0|c1|c2|c3|c4)>>16]; r != 0 {
-			return r
-		}
-		u := 0xe91aaa35 + uint32((c0&0xff)*(c1&0xff)*(c2&0xff)*(c3&0xff)*(c4&0xff))
-		u ^= u >> 16
-		u += u << 8
-		u ^= u >> 4
-		return hash[(u+(u<<2))>>19^uint32(hashAdjust[(u>>8)&0x1ff])]
+// CactusFastRanker is a cactus fast hand ranker.
+func CactusFastRanker(c0, c1, c2, c3, c4 Card) uint16 {
+	// check for flushes and straight flushes
+	if c0&c1&c2&c3&c4&0xf000 != 0 {
+		return fastFlushes[uint16((c0|c1|c2|c3|c4)>>16)]
 	}
-}
-
-// NewCactusFastSixPlusRanker creates a new cactus fast short deck (6-plus)
-// hand ranker.
-func NewCactusFastSixPlusRanker(f RankerFunc) RankerFunc {
-	return func(c0, c1, c2, c3, c4 Card) uint16 {
-		r := f(c0, c1, c2, c3, c4)
-		switch r {
-		case 747: // Straight Flush, 9, 8, 7, 6, Ace
-			return 6
-		case 6610: // Straight, 9, 8, 7, 6, Ace
-			return 1605
-		}
+	// check for straights and high card hands
+	if r := fastUnique5[(c0|c1|c2|c3|c4)>>16]; r != 0 {
 		return r
 	}
-}
-
-// NewEightOrBetterRanker creates a new 8-or-better low hand ranker.
-func NewEightOrBetterRanker() func([]Card) HandRank {
-	return func(hand []Card) HandRank {
-		mask, sum := uint16(0xfe00), uint16(0)
-		for _, c := range hand {
-			r := uint16(((c.Rank() + 1) % 13) + 1)
-			sum += uint16(r + (mask&(1<<r)>>r&1)*(30+r))
-			mask |= 1 << r
-		}
-		return HandRank(sum)
-	}
+	u := 0xe91aaa35 + uint32((c0&0xff)*(c1&0xff)*(c2&0xff)*(c3&0xff)*(c4&0xff))
+	u ^= u >> 16
+	u += u << 8
+	u ^= u >> 4
+	return hash[(u+(u<<2))>>19^uint32(hashAdjust[(u>>8)&0x1ff])]
 }
 
 var hash = [...]uint16{
@@ -569,10 +538,10 @@ var hash = [...]uint16{
 	166, 5438, 2627, 2266, 2320, 166, 2588, 4790, 4290, 166, 4767, 5829, 2925, 5916, 2133, 166,
 }
 
-// flushes is a table lookup for all "flush" hands (e.g.  both flushes and
-// straight-flushes. entries containing a zero mean that combination is not
+// fastFlushes is a table lookup for all "flush" hands (e.g.  both fastFlushes and
+// straight-fastFlushes. entries containing a zero mean that combination is not
 // possible with a five-card flush hand.
-var flushes = [...]uint16{
+var fastFlushes = [...]uint16{
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 1599, 0, 0, 0, 0, 0, 0, 0, 1598, 0, 0, 0, 1597, 0, 1596,
@@ -994,7 +963,7 @@ var flushes = [...]uint16{
 ** of five unique ranks (i.e.  either Straights or High Card
 ** hands).  it's similar to the above "flushes" array.
  */
-var unique5 = [...]uint16{
+var fastUnique5 = [...]uint16{
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 1608, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 7462, 0, 0, 0, 0, 0, 0, 0, 7461, 0, 0, 0, 7460, 0,

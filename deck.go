@@ -207,3 +207,15 @@ func (d *Deck) Omaha(hands int) ([][]Card, []Card) {
 func (d *Deck) OmahaSimple(hands int) ([][]Card, []Card) {
 	return d.Simple(5, hands, 4)
 }
+
+// Stud draws hands for Stud, returning the sets of pockets (one per hand).
+// Deals no board cards.
+func (d *Deck) Stud(hands int) ([][]Card, []Card) {
+	return d.Deal(hands, 7), nil
+}
+
+// Badugi draws hands for Badugi, returning the sets of pockets (one per hand).
+// Deals no board cards.
+func (d *Deck) Badugi(hands int) ([][]Card, []Card) {
+	return d.Deal(hands, 4), nil
+}

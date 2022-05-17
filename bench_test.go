@@ -2,26 +2,26 @@ package cardrank
 
 import (
 	"fmt"
+	"reflect"
+	"runtime"
 	"testing"
 )
 
 func BenchmarkRanker(b *testing.B) {
-	for _, r := range []Ranker{Cactus, CactusFast, TwoPlus, Hybrid} {
-		if !r.Available() {
-			continue
-		}
-		for i, ff := range []func(*testing.B, func([]Card) HandRank, int){
+	for _, r := range rankers(true) {
+		for i, ff := range []func(*testing.B, RankerFunc, int){
 			bench5, bench6, bench7,
 		} {
 			ranker, f := r, ff
-			b.Run(fmt.Sprintf("%s/%d", ranker, i+5), func(b *testing.B) {
-				f(b, ranker.Rank, b.N)
+			rankerName := runtime.FuncForPC(reflect.ValueOf(ranker).Pointer()).Name()
+			b.Run(fmt.Sprintf("%s/%d", rankerName, i+5), func(b *testing.B) {
+				f(b, ranker, b.N)
 			})
 		}
 	}
 }
 
-func bench5(b *testing.B, f func([]Card) HandRank, n int) {
+func bench5(b *testing.B, f RankerFunc, n int) {
 	count := 0
 	for c0 := 0; c0 < 52; c0++ {
 		for c1 := c0 + 1; c1 < 52; c1++ {
@@ -43,7 +43,7 @@ func bench5(b *testing.B, f func([]Card) HandRank, n int) {
 	}
 }
 
-func bench6(b *testing.B, f func([]Card) HandRank, n int) {
+func bench6(b *testing.B, f RankerFunc, n int) {
 	count := 0
 	for c0 := 0; c0 < 52; c0++ {
 		for c1 := c0 + 1; c1 < 52; c1++ {
@@ -67,7 +67,7 @@ func bench6(b *testing.B, f func([]Card) HandRank, n int) {
 	}
 }
 
-func bench7(b *testing.B, f func([]Card) HandRank, n int) {
+func bench7(b *testing.B, f RankerFunc, n int) {
 	count := 0
 	for c0 := 0; c0 < 52; c0++ {
 		for c1 := c0 + 1; c1 < 52; c1++ {

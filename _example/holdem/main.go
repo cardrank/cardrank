@@ -22,7 +22,7 @@ func main() {
 	for i := 0; i < players; i++ {
 		fmt.Printf("Player %d: %b %s %b %b\n", i+1, hands[i].Pocket(), hands[i].Description(), hands[i].Best(), hands[i].Unused())
 	}
-	h, pivot := cardrank.OrderHands(hands)
+	h, pivot := cardrank.Order(hands)
 	if pivot == 1 {
 		fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
 	} else {
