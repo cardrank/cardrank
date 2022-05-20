@@ -90,6 +90,20 @@ func main() {
 }
 ```
 
+Output:
+
+```txt
+------ Holdem 1653086388531833787 ------
+Board:    [A♣ 3♥ Q♥ J♣ J♠]
+Player 1: [5♣ 5♦] Two Pair, Jacks over Fives, kicker Ace [J♣ J♠ 5♣ 5♦ A♣] [Q♥ 3♥]
+Player 2: [A♥ 7♠] Two Pair, Aces over Jacks, kicker Queen [A♣ A♥ J♣ J♠ Q♥] [7♠ 3♥]
+Player 3: [8♥ 3♣] Two Pair, Jacks over Threes, kicker Ace [J♣ J♠ 3♣ 3♥ A♣] [Q♥ 8♥]
+Player 4: [9♣ T♠] Pair, Jacks, kickers Ace, Queen, Ten [J♣ J♠ A♣ Q♥ T♠] [9♣ 3♥]
+Player 5: [6♣ J♥] Three of a Kind, Jacks, kickers Ace, Queen [J♣ J♥ J♠ A♣ Q♥] [6♣ 3♥]
+Player 6: [2♣ T♦] Pair, Jacks, kickers Ace, Queen, Ten [J♣ J♠ A♣ Q♥ T♦] [3♥ 2♣]
+Result:   Player 5 wins with Three of a Kind, Jacks, kickers Ace, Queen [J♣ J♥ J♠ A♣ Q♥]
+```
+
 #### Omaha Hi/Lo
 
 ```go
@@ -154,6 +168,33 @@ func main() {
 }
 ```
 
+Output:
+
+```txt
+------ OmahaHiLo 1653086518494356973 ------
+Board: [2♣ K♥ 6♠ 5♣ 8♠]
+Player 1: [A♣ 9♦ J♦ T♣]
+  Hi: Nothing, Ace-high, kickers King, Jack, Eight, Six [A♣ K♥ J♦ 8♠ 6♠] [9♦ T♣ 2♣ 5♣]
+  Lo: None
+Player 2: [7♣ 5♥ 6♣ T♦]
+  Hi: Two Pair, Sixes over Fives, kicker King [6♣ 6♠ 5♣ 5♥ K♥] [7♣ T♦ 2♣ 8♠]
+  Lo: Eight-low [8♠ 7♣ 6♠ 5♥ 2♣] [6♣ T♦ K♥ 5♣]
+Player 3: [4♣ Q♥ K♣ Q♦]
+  Hi: Pair, Kings, kickers Queen, Eight, Six [K♣ K♥ Q♥ 8♠ 6♠] [4♣ Q♦ 2♣ 5♣]
+  Lo: None
+Player 4: [5♦ 3♦ 9♠ 9♣]
+  Hi: Pair, Nines, kickers King, Eight, Six [9♣ 9♠ K♥ 8♠ 6♠] [5♦ 3♦ 2♣ 5♣]
+  Lo: Eight-low [8♠ 6♠ 5♦ 3♦ 2♣] [9♠ 9♣ K♥ 5♣]
+Player 5: [2♠ K♦ 2♥ 8♦]
+  Hi: Three of a Kind, Twos, kickers King, Eight [2♣ 2♥ 2♠ K♥ 8♠] [K♦ 8♦ 6♠ 5♣]
+  Lo: None
+Player 6: [J♠ 3♣ K♠ J♥]
+  Hi: Pair, Kings, kickers Jack, Eight, Six [K♥ K♠ J♠ 8♠ 6♠] [3♣ J♥ 2♣ 5♣]
+  Lo: None
+Result (Hi): Player 5 wins with Three of a Kind, Twos, kickers King, Eight [2♣ 2♥ 2♠ K♥ 8♠]
+Result (Lo): Player 4 wins with Eight-low [8♠ 6♠ 5♦ 3♦ 2♣]
+```
+
 ### Hand Ranking
 
 A `HandRank` type is used to determine the relative rank of a [`Hand`][hand],
@@ -167,7 +208,8 @@ for the well-known [Cactus Kev (`CactusRanker`)][cactus-ranker], [Fast Cactus
 (`CactusFastRanker`)][cactus-fast-ranker], and [Two-Plus
 (`TwoPlusRanker`)][two-plus-ranker] poker hand evaluators are provided.
 Additionally a [`SixPlusRanker`][six-plus-ranker] and a [`EightOrBetterRanker`][eight-or-better-ranker]
-rankers are provided, used for Short Deck and Omaha/Stud Lo evaluation respectively.
+are available for use with Texas Holdem Short Deck and Omaha/Stud Lo
+evaluation, respectively.
 
 ##### Default and Hybrid Rankers
 
