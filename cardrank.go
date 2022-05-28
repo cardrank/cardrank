@@ -240,14 +240,6 @@ func min(a, b uint16) uint16 {
 	return b
 }
 
-// max returns the max of a, b.
-func max(a, b uint16) uint16 {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 // t4c2 is used for taking 4, choosing 2.
 var t4c2 = [6][4]int{
 	{0, 1, 2, 3},

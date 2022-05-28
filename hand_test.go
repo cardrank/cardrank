@@ -212,10 +212,3 @@ func TestHandRankCompare(t *testing.T) {
 		}
 	}
 }
-
-func TestBestRazz(t *testing.T) {
-	tests := [][]Card{
-		Must(""),
-	}
-	tests = tests
-}

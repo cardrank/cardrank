@@ -437,12 +437,6 @@ func best(typ Type, pocket, board []Card) (HandRank, []Card, []Card) {
 	return rank, best, unused
 }
 
-// bestRazz returns the best low hand.
-func bestRazz(typ Type, pocket, board []Card) (HandRank, []Card, []Card, HandRank, []Card, []Card) {
-	rank, best, unused := bestLow(pocket, board, LowRanker, uint16(Invalid))
-	return rank, best, unused, 0, nil, nil
-}
-
 // bestLow uses f to determine the best low hand of a 7 card hand.
 func bestLow(pocket, board []Card, f RankFiveFunc, maxRank uint16) (HandRank, []Card, []Card) {
 	hand := make([]Card, len(pocket)+len(board))
