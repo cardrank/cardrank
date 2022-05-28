@@ -11,7 +11,10 @@ var flushes map[uint32]uint16
 // unique5 is the unique5 map.
 var unique5 map[uint32]uint16
 
-// CactusRanker is a cactus-kev hand ranker.
+// CactusRanker is a Cactus Kev hand ranker that generates the lookup maps on
+// the fly.
+//
+// See: https://archive.is/G6GZg
 func CactusRanker(c0, c1, c2, c3, c4 Card) uint16 {
 	if c0&c1&c2&c3&c4&0xf000 != 0 {
 		return flushes[primeProductBits(uint32(c0|c1|c2|c3|c4)>>16)]

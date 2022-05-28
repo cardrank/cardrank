@@ -68,18 +68,25 @@ func TestLow(t *testing.T) {
 	}
 }
 
-func TestRazz(t *testing.T) {
-	/*
-		for i := King; i > Four; i-- {
-			last := Ace
-			if i != Five {
-				last = i - 4
-			}
-			h := []Card{New(i, Heart), New(i-1, Heart), New(i-2, Heart), New(i-3, Heart), New(last, Heart), New(Ace, Spade), New(Ace, Diamond)}
-			hand := NewHandOf(Razz, h, nil, Low.Rank)
-			t.Logf("%s %d %s", hand.LowDescription(), hand.Rank(), hand.LowBest())
-		}
-	*/
+func TestRazzRanker(t *testing.T) {
+	ranker := HandRanker(RazzRanker)
+	tests := []struct {
+		v string
+	}{
+		{"Kh Qh Jh Th 9h"},
+		{"Ah Kh Qh Jh Th"},
+		{"2h 2c 2d 2s As"},
+		{"Ah Ac Ad Ks Kh"},
+		{"Ah Ac Ad Ks Qh"},
+		{"Kh Kd Qd Qs Jh"},
+		{"3h 3c Kh Qd Jd"},
+		{"2h 2c Kh Qd Jd"},
+		{"3h 2c Kh Qd Jd"},
+	}
+	for _, test := range tests {
+		r := ranker(Must(test.v))
+		t.Logf("%v: %d", test.v, r)
+	}
 }
 
 func TestAllCards(t *testing.T) {
@@ -212,11 +219,11 @@ func rankers(base bool) []RankerFunc {
 	if cactusFast != nil {
 		rankers = append(rankers, HandRanker(cactusFast))
 	}
-	if twoPlus != nil {
-		rankers = append(rankers, twoPlus)
+	if twoPlusTwo != nil {
+		rankers = append(rankers, twoPlusTwo)
 	}
-	if cactusFast != nil && twoPlus != nil {
-		rankers = append(rankers, HybridRanker(cactusFast, twoPlus))
+	if cactusFast != nil && twoPlusTwo != nil {
+		rankers = append(rankers, HybridRanker(cactusFast, twoPlusTwo))
 	}
 	return rankers
 }

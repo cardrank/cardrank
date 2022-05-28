@@ -6,7 +6,10 @@ func init() {
 	cactusFast = CactusFastRanker
 }
 
-// CactusFastRanker is a cactus fast hand ranker.
+// CactusFastRanker is a fast Cactus Kev hand ranker, implementing Paul
+// Senzee's perfect hash lookup.
+//
+// See: http://senzee.blogspot.com/2006/06/some-perfect-hash.html
 func CactusFastRanker(c0, c1, c2, c3, c4 Card) uint16 {
 	// check for flushes and straight flushes
 	if c0&c1&c2&c3&c4&0xf000 != 0 {

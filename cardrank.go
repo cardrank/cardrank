@@ -1,14 +1,19 @@
-// Package `cardrank` provides a library of types, funcs, and utilities for
-// working with playing cards, decks, and evaluating poker hands.
+// Package `cardrank.io/cardrank` provides a library of types, funcs, and
+// utilities for working with playing cards, decks, and evaluating poker hands.
 //
 // Supports Texas Holdem, Texas Holdem Short Deck (6-plus), Omaha, Omaha Hi/Lo,
-// Stud, and Stud Hi/Lo.
+// Stud, Stud Hi/Lo, and Razz (everything needed for HORSE).
 package cardrank
 
 // HandRank is a poker hand rank.
+//
+// Hand ranks should be ordered low-to-high in order to determine the
+// winner(s).
 type HandRank uint16
 
 // Poker hand rank values.
+//
+// See: https://archive.is/G6GZg
 const (
 	StraightFlush HandRank = 10
 	FourOfAKind   HandRank = 166
@@ -115,6 +120,14 @@ func EightOrBetterRanker(c0, c1, c2, c3, c4 Card) uint16 {
 	return low(0xff00, c0, c1, c2, c3, c4)
 }
 
+// RazzRanker is a razz low hand ranker.
+func RazzRanker(c0, c1, c2, c3, c4 Card) uint16 {
+	if r := low(0, c0, c1, c2, c3, c4); r < lowMaxRank {
+		return r
+	}
+	return ^uint16(0) - DefaultCactus(c0, c1, c2, c3, c4)
+}
+
 // LowRanker is a low hand ranker.
 func LowRanker(c0, c1, c2, c3, c4 Card) uint16 {
 	return low(0, c0, c1, c2, c3, c4)
@@ -209,11 +222,14 @@ var DefaultRanker RankerFunc
 // DefaultSixPlusRanker is the default 6-plus (short deck) hand ranker.
 var DefaultSixPlusRanker RankerFunc
 
-// Rankers.
+// DefaultCactus is the default Cactus Kev implementation.
+var DefaultCactus RankFiveFunc
+
+// Package rankers set by z.go.
 var (
 	cactus     RankFiveFunc
 	cactusFast RankFiveFunc
-	twoPlus    RankerFunc
+	twoPlusTwo RankerFunc
 )
 
 // min returns the min of a, b.
@@ -281,8 +297,11 @@ var t7c5 = [21][7]uint8{
 	{2, 3, 4, 5, 6, 0, 1},
 }
 
-// EightOrBetterMaxRank is the eight-or-better max rank.
-const EightOrBetterMaxRank = 512
+// primes are the first 13 prime numbers (one per card rank).
+var primes = [...]uint8{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41}
 
-// LowMaxRank is the low max rank.
-const LowMaxRank = 16384
+// eightOrBetterMaxRank is the eight-or-better max rank.
+const eightOrBetterMaxRank = 512
+
+// lowMaxRank is the low max rank.
+const lowMaxRank = 16384

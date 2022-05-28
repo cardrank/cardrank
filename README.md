@@ -1,11 +1,12 @@
 # cardrank.io/cardrank
 
 Package `cardrank.io/cardrank` provides a library of types, funcs, and
-utilities for working with playing cards, decks, and evaluating poker hands.
-Supports [Texas Holdem][holdem-example], [Texas Holdem Short Deck
+utilities for working with playing cards, card decks, and evaluating poker hand
+ranks. Supports [Texas Holdem][holdem-example], [Texas Holdem Short Deck
 (6-plus)][short-deck-example], [Omaha][omaha-example], [Omaha
-Hi/Lo][omaha-hi-lo-example], [Stud][stud-example], and [Stud
-Hi/Lo][stud-hi-lo-example].
+Hi/Lo][omaha-hi-lo-example], [Stud][stud-example], [Stud
+Hi/Lo][stud-hi-lo-example], and [Razz][razz-example] (everything needed for
+HORSE).
 
 [![GoDoc](https://godoc.org/cardrank.io/cardrank?status.svg)](https://godoc.org/cardrank.io/cardrank)
 [![Tests on Linux, MacOS and Windows](https://github.com/cardrank/cardrank/workflows/Test/badge.svg)](https://github.com/cardrank/cardrank/actions?query=workflow%3ATest)
@@ -22,13 +23,13 @@ evaluators][hand-ranking].
 
 Hands of [Texas Holdem][holdem-example], [Texas Holdem Short Deck
 (6-Plus)][short-deck-example], [Omaha][omaha-example], [Omaha
-Hi/Lo][omaha-hi-lo-example], [Stud][stud-example], and [Stud
-Hi/Lo][stud-hi-lo-example] are easily created and dealt using standardized
-interfaces and logic, with winners [being easily determined and
-ordered][order].
+Hi/Lo][omaha-hi-lo-example], [Stud][stud-example], [Stud
+Hi/Lo][stud-hi-lo-example], and [Razz][razz-example] are easily created and
+dealt using standardized interfaces and logic, with winners [being easily
+determined and ordered][order].
 
-[Development of additional poker variants](#future), including Razz and Badugi,
-is planned.
+[Development of additional poker variants][future], such as Badugi and Candian
+Stud (Sökö), is planned.
 
 ## Using
 
@@ -205,16 +206,16 @@ For example, a Straight Flush will have a lower `HandRank` than Full House.
 
 For regular poker hands (ie, Holdem, Omaha, and Stud), pure Go implementations
 for the well-known [Cactus Kev (`CactusRanker`)][cactus-ranker], [Fast Cactus
-(`CactusFastRanker`)][cactus-fast-ranker], and [Two-Plus
-(`TwoPlusRanker`)][two-plus-ranker] poker hand evaluators are provided.
-Additionally a [`SixPlusRanker`][six-plus-ranker] and a [`EightOrBetterRanker`][eight-or-better-ranker]
-are available for use with Texas Holdem Short Deck and Omaha/Stud Lo
-evaluation, respectively.
+(`CactusFastRanker`)][cactus-fast-ranker], and [Two-Plus-Two
+(`TwoPlusTwoRanker`)][two-plus-two-ranker] poker hand evaluators are provided.
+Additionally a [`SixPlusRanker`][six-plus-ranker], a [`EightOrBetterRanker`][eight-or-better-ranker],
+and a [`RazzRanker`][razz-ranker] are available for use with Texas Holdem Short
+Deck and Omaha/Stud Lo evaluation, respectively.
 
 ##### Default and Hybrid Rankers
 
 The package's [`DefaultRanker`][default-ranker] is a [`HybridRanker`][hybrid-ranker]
-using either the [`CactusFastRanker`][cactus-fast-ranker] or [`TwoPlusRanker`][two-plus-ranker]
+using either the [`CactusFastRanker`][cactus-fast-ranker] or [`TwoPlusTwoRanker`][two-plus-two-ranker]
 depending on the [`Hand`][hand] having 5, 6, or 7 cards. The `HybridRanker`
 provides the best possible evaluation speed in most cases.
 
@@ -231,7 +232,7 @@ package:
 
 #### `portable`
 
-The `portable` build tag can be used to disable the `TwoPlusRanker`, which
+The `portable` build tag can be used to disable the `TwoPlusTwoRanker`, which
 requires embedding a large (approximately 130 Mib) look-up table.
 
 This is useful when using this package in a portable or embedded application.
@@ -245,7 +246,7 @@ GOOS=js GOARCH=wasm go build -tags portable
 #### `embedded`
 
 The `embedded` tag can be used to disable the `CactusFastRanker` and the
-`TwoPlusRanker`, creating the smallest possible binaries:
+`TwoPlusTwoRanker`, creating the smallest possible binaries:
 
 ```sh
 GOOS=js GOARCH=wasm go build -tags embedded
@@ -271,20 +272,28 @@ cardrank.DefaultSixPlusRanker = cardrank.HandRanker(cardrank.SixPlusRanker(cardr
 
 [See `z.go` for initialization logic.](/z.go)
 
-## Development Status
+## Future Development
 
-A partially complete Razz ranker is available, however it currently does not
-work with hands having a set (i.e., pair, two pair, three-of-a-kind, full
-house, or four-of-a-kind).
+Rankers for Badugi, Sökö, and other poker variants will be added to this
+package in addition to standardized interfaces for managing poker tables and
+games.
 
-### Future
+## Links
 
-Rankers for Badugi and other poker variants will be added to this package in
-addition to standardized interfaces for managing poker tables and games.
+* [Overview of Cactus Kev][cactus-kev] - original Cactus Kev article
+* [Coding the Wheel][coding-the-wheel] - article covering various poker hand evaluators
+* [Paul Senzee Perfect Hash for Cactus Kev][senzee] - overview of the "Fast Cactus" perfect hash by Paul Senszee
+* [TwoPlusTwoHandEvaluator][tangentforks] - original implementation of the Two-Plus-Two evaluator
+
+[cactus-kev]: https://archive.is/G6GZg
+[coding-the-wheel]: https://www.codingthewheel.com/archives/poker-hand-evaluator-roundup/
+[senzee]: http://senzee.blogspot.com/2006/06/some-perfect-hash.html
+[tangentforks]: https://github.com/tangentforks/TwoPlusTwoHandEvaluator
 
 [pkg]: https://pkg.go.dev/cardrank.io/cardrank
 [examples]: https://pkg.go.dev/cardrank.io/cardrank#pkg-examples
 [hand-ranking]: #hand-ranking
+[future]: #future-development
 
 [card]: https://pkg.go.dev/cardrank.io/cardrank#Card
 [suit]: https://pkg.go.dev/cardrank.io/cardrank#Suit
@@ -299,12 +308,14 @@ addition to standardized interfaces for managing poker tables and games.
 [omaha-hi-lo-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-OmahaHiLo
 [stud-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Stud
 [stud-hi-lo-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-StudHiLo
+[razz-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Razz
 
 [default-ranker]: https://pkg.go.dev/cardrank.io/cardrank#DefaultRanker
 [hand-ranker]: https://pkg.go.dev/cardrank.io/cardrank#HandRanker
 [cactus-ranker]: https://pkg.go.dev/cardrank.io/cardrank#CactusRanker
 [cactus-fast-ranker]: https://pkg.go.dev/cardrank.io/cardrank#CactusFastRanker
-[two-plus-ranker]: https://pkg.go.dev/cardrank.io/cardrank#TwoPlusRanker
+[two-plus-two-ranker]: https://pkg.go.dev/cardrank.io/cardrank#TwoPlusTwoRanker
 [hybrid-ranker]: https://pkg.go.dev/cardrank.io/cardrank#HybridRanker
 [six-plus-ranker]: https://pkg.go.dev/cardrank.io/cardrank#SixPlusRanker
-[eight-or-better-ranker]: https://pkg.go.dev/cardrank.io/cardrank#EightOrBetter
+[eight-or-better-ranker]: https://pkg.go.dev/cardrank.io/cardrank#EightOrBetterRanker
+[razz-ranker]: https://pkg.go.dev/cardrank.io/cardrank#RazzRanker

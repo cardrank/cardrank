@@ -28,6 +28,13 @@ func ExampleMustCard() {
 	// Ace of Hearts (A♥)
 }
 
+func ExampleMust() {
+	hand := cardrank.Must("Ah K♠ 🃍 J♤ 10h")
+	fmt.Printf("%b", hand)
+	// Output:
+	// [A♥ K♠ Q♦ J♠ T♥]
+}
+
 func ExampleCard_unmarshal() {
 	var hand []cardrank.Card
 	if err := json.Unmarshal([]byte(`["3s", "4c", "5c", "Ah", "2d"]`), &hand); err != nil {
@@ -731,8 +738,6 @@ func Example_studHiLo() {
 }
 
 func Example_razz() {
-	// not currently working
-	return
 	for i, game := range []struct {
 		seed    int64
 		players int
@@ -764,4 +769,39 @@ func Example_razz() {
 		}
 	}
 	// Output:
+	// ------ Razz 1 ------
+	// Player 1: [K♥ 7♣ J♣ 4♣ A♥ 5♠ Q♠] Jack-low [J♣ 7♣ 5♠ 4♣ A♥] [K♥ Q♠]
+	// Player 2: [2♠ 6♣ 3♥ 5♥ 4♥ Q♦ 7♥] Six-low [6♣ 5♥ 4♥ 3♥ 2♠] [Q♦ 7♥]
+	// Result:   Player 2 wins with Six-low [6♣ 5♥ 4♥ 3♥ 2♠]
+	// ------ Razz 2 ------
+	// Player 1: [3♠ 6♦ Q♦ K♦ J♦ 3♦ Q♣] King-low [K♦ Q♦ J♦ 6♦ 3♠] [3♦ Q♣]
+	// Player 2: [K♠ T♦ 2♥ T♠ 8♥ 8♣ 8♦] Pair, Eights, kickers King, Ten, Two [8♥ 8♣ K♠ T♦ 2♥] [T♠ 8♦]
+	// Player 3: [Q♥ Q♠ 6♣ A♥ 4♥ 6♠ T♥] Queen-low [Q♥ T♥ 6♣ 4♥ A♥] [Q♠ 6♠]
+	// Player 4: [3♥ 7♣ 3♣ 5♦ 9♠ T♣ 9♣] Ten-low [T♣ 9♠ 7♣ 5♦ 3♥] [3♣ 9♣]
+	// Player 5: [J♠ 7♠ K♥ 7♥ 2♣ 2♦ A♦] King-low [K♥ J♠ 7♠ 2♣ A♦] [7♥ 2♦]
+	// Result:   Player 4 wins with Ten-low [T♣ 9♠ 7♣ 5♦ 3♥]
+	// ------ Razz 3 ------
+	// Player 1: [K♠ J♠ 3♠ 5♣ 7♠ 4♠ Q♠] Jack-low [J♠ 7♠ 5♣ 4♠ 3♠] [K♠ Q♠]
+	// Player 2: [3♣ T♠ 5♥ 3♥ 8♦ 4♣ 8♥] Ten-low [T♠ 8♦ 5♥ 4♣ 3♣] [3♥ 8♥]
+	// Player 3: [2♣ T♦ 6♠ K♦ J♦ 2♠ Q♦] Queen-low [Q♦ J♦ T♦ 6♠ 2♣] [K♦ 2♠]
+	// Player 4: [2♦ A♣ T♣ 7♥ J♣ T♥ 4♥] Ten-low [T♣ 7♥ 4♥ 2♦ A♣] [J♣ T♥]
+	// Player 5: [8♠ K♣ 7♣ Q♣ K♥ 9♦ 6♦] Queen-low [Q♣ 9♦ 8♠ 7♣ 6♦] [K♣ K♥]
+	// Player 6: [5♠ J♥ 7♦ 3♦ 2♥ A♦ 9♣] Seven-low [7♦ 5♠ 3♦ 2♥ A♦] [J♥ 9♣]
+	// Result:   Player 6 wins with Seven-low [7♦ 5♠ 3♦ 2♥ A♦]
+	// ------ Razz 4 ------
+	// Player 1: [6♠ Q♥ 2♣ 9♠ 3♦ T♣ K♥] Ten-low [T♣ 9♠ 6♠ 3♦ 2♣] [Q♥ K♥]
+	// Player 2: [4♥ 6♥ J♥ 4♦ Q♦ A♣ J♣] Queen-low [Q♦ J♥ 6♥ 4♥ A♣] [4♦ J♣]
+	// Player 3: [5♣ K♠ K♣ A♠ 8♣ 5♥ Q♠] King-low [K♠ Q♠ 8♣ 5♣ A♠] [K♣ 5♥]
+	// Player 4: [J♠ 8♦ 7♥ 2♠ 2♦ 6♦ 6♣] Jack-low [J♠ 8♦ 7♥ 6♦ 2♠] [2♦ 6♣]
+	// Player 5: [8♥ Q♣ 5♦ 7♣ 9♥ K♦ 9♣] Queen-low [Q♣ 9♥ 8♥ 7♣ 5♦] [K♦ 9♣]
+	// Player 6: [7♦ A♥ 3♠ 3♣ T♠ T♥ 2♥] Ten-low [T♠ 7♦ 3♠ 2♥ A♥] [3♣ T♥]
+	// Result:   Player 6 wins with Ten-low [T♠ 7♦ 3♠ 2♥ A♥]
+	// ------ Razz 5 ------
+	// Player 1: [3♦ T♥ A♣ 7♦ 5♣ 6♠ 4♦] Six-low [6♠ 5♣ 4♦ 3♦ A♣] [T♥ 7♦]
+	// Player 2: [J♠ 9♠ 3♣ Q♠ 7♠ 5♦ K♠] Jack-low [J♠ 9♠ 7♠ 5♦ 3♣] [Q♠ K♠]
+	// Player 3: [T♠ 8♠ J♥ 7♥ J♣ 2♣ 3♠] Ten-low [T♠ 8♠ 7♥ 3♠ 2♣] [J♥ J♣]
+	// Player 4: [7♣ 2♠ 2♥ 4♥ 4♣ K♣ 6♦] King-low [K♣ 7♣ 6♦ 4♥ 2♠] [2♥ 4♣]
+	// Player 5: [A♠ 9♦ K♥ 5♠ 8♦ 6♥ 8♥] Nine-low [9♦ 8♦ 6♥ 5♠ A♠] [K♥ 8♥]
+	// Player 6: [K♦ 8♣ 2♦ A♥ 6♣ 4♠ T♦] Eight-low [8♣ 6♣ 4♠ 2♦ A♥] [K♦ T♦]
+	// Result:   Player 1 wins with Six-low [6♠ 5♣ 4♦ 3♦ A♣]
 }

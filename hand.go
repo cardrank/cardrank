@@ -16,8 +16,8 @@ const (
 	OmahaHiLo
 	Stud
 	StudHiLo
-	Razz // FIXME: not yet working
-	Badugi
+	Razz
+	Badugi // FIXME: not yet available
 )
 
 // String satisfies the fmt.Stringer interface.
@@ -96,8 +96,8 @@ func (typ Type) Best(pocket, board []Card) (HandRank, []Card, []Card, HandRank, 
 	case Holdem, ShortDeck, Stud, StudHiLo:
 		rank, best, unused := best(typ, pocket, board)
 		if typ == StudHiLo {
-			lowRank, lowBest, lowUnused := bestLow(pocket, board, EightOrBetterRanker, EightOrBetterMaxRank)
-			if lowRank < EightOrBetterMaxRank {
+			lowRank, lowBest, lowUnused := bestLow(pocket, board, EightOrBetterRanker, eightOrBetterMaxRank)
+			if lowRank < eightOrBetterMaxRank {
 				return rank, best, unused, lowRank, lowBest, lowUnused
 			}
 		}
@@ -105,7 +105,17 @@ func (typ Type) Best(pocket, board []Card) (HandRank, []Card, []Card, HandRank, 
 	case Omaha, OmahaHiLo:
 		return bestOmaha(typ, pocket, board)
 	case Razz:
-		return bestRazz(typ, pocket, board)
+		rank, best, unused := bestLow(pocket, board, RazzRanker, ^uint16(0))
+		if rank >= lowMaxRank {
+			r := Invalid - rank
+			switch r.Fixed() {
+			case FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, Pair:
+				best, _ = bestSet(best)
+			default:
+				panic("invalid hand rank")
+			}
+		}
+		return rank, best, unused, 0, nil, nil
 	}
 	panic("invalid type")
 }
@@ -242,11 +252,14 @@ func (h *Hand) Format(f fmt.State, verb rune) {
 //	Nothing, Seven-high, kickers Six, Five, Three, Two
 //
 func (h *Hand) Description() string {
-	if h.typ == Razz {
-		return "nothing"
+	r := h.rank
+	switch {
+	case h.typ == Razz && h.rank < lowMaxRank:
 		return h.best[0].Rank().Name() + "-low"
+	case h.typ == Razz:
+		r = Invalid - r
 	}
-	switch h.rank.Fixed() {
+	switch r.Fixed() {
 	case StraightFlush:
 		switch r := h.best[0].Rank(); {
 		case r == Ace:
@@ -344,7 +357,7 @@ func bestOmaha(typ Type, pocket, board []Card) (HandRank, []Card, []Card, HandRa
 				unused[0], unused[1], unused[2], unused[3] = pocket[t4c2[i][2]], pocket[t4c2[i][3]], board[t5c3[j][3]], board[t5c3[j][4]]
 			}
 			if typ == OmahaHiLo {
-				if r = HandRank(EightOrBetterRanker(hand[0], hand[1], hand[2], hand[3], hand[4])); r < lowRank && r < EightOrBetterMaxRank {
+				if r = HandRank(EightOrBetterRanker(hand[0], hand[1], hand[2], hand[3], hand[4])); r < lowRank && r < eightOrBetterMaxRank {
 					lowRank = r
 					copy(lowBest, hand)
 					lowUnused[0], lowUnused[1], lowUnused[2], lowUnused[3] = pocket[t4c2[i][2]], pocket[t4c2[i][3]], board[t5c3[j][3]], board[t5c3[j][4]]
@@ -363,25 +376,17 @@ func bestOmaha(typ Type, pocket, board []Card) (HandRank, []Card, []Card, HandRa
 	switch rank.Fixed() {
 	case StraightFlush:
 		best, _ = bestStraightFlush(best, Five)
-	case FourOfAKind:
-		best, _ = bestSet(best)
-	case FullHouse:
-		best, _ = bestSet(best)
 	case Flush:
 		best, _ = bestFlush(best)
 	case Straight:
 		best, _ = bestStraight(best, Five)
-	case ThreeOfAKind:
-		best, _ = bestSet(best)
-	case TwoPair:
-		best, _ = bestSet(best)
-	case Pair:
+	case FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, Pair:
 		best, _ = bestSet(best)
 	case Nothing:
 	default:
 		panic("invalid hand rank")
 	}
-	if typ == OmahaHiLo && lowRank < EightOrBetterMaxRank {
+	if typ == OmahaHiLo && lowRank < eightOrBetterMaxRank {
 		sort.Slice(lowBest, func(i, j int) bool {
 			return (lowBest[i].Rank()+1)%13 > (lowBest[j].Rank()+1)%13
 		})
@@ -418,19 +423,11 @@ func best(typ Type, pocket, board []Card) (HandRank, []Card, []Card) {
 	switch rank.Fixed() {
 	case StraightFlush:
 		best, unused = bestStraightFlush(hand, high)
-	case FourOfAKind:
-		best, unused = bestSet(hand)
-	case FullHouse:
-		best, unused = bestSet(hand)
 	case Flush:
 		best, unused = bestFlush(hand)
 	case Straight:
 		best, unused = bestStraight(hand, high)
-	case ThreeOfAKind:
-		best, unused = bestSet(hand)
-	case TwoPair:
-		best, unused = bestSet(hand)
-	case Pair:
+	case FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, Pair:
 		best, unused = bestSet(hand)
 	case Nothing:
 		best, unused = hand[:5], hand[5:]
@@ -441,8 +438,6 @@ func best(typ Type, pocket, board []Card) (HandRank, []Card, []Card) {
 }
 
 // bestRazz returns the best low hand.
-//
-// TODO: incomplete, not working.
 func bestRazz(typ Type, pocket, board []Card) (HandRank, []Card, []Card, HandRank, []Card, []Card) {
 	rank, best, unused := bestLow(pocket, board, LowRanker, uint16(Invalid))
 	return rank, best, unused, 0, nil, nil

@@ -101,7 +101,7 @@ func (r Rank) Byte() byte {
 	return 0
 }
 
-// Index the int index for the card rank (0-13 for Two-Ace).
+// Index the int index for the card rank (0-12 for Two-Ace).
 func (r Rank) Index() int {
 	return int(r)
 }
@@ -358,7 +358,13 @@ func FromString(str string) (Card, error) {
 	return 0, ErrInvalidCard
 }
 
-// Parse parses card representations in v.
+// Parse parses strings of Card representations from v. Ignores whitespace
+// between cards and case. Combines all parsed representations into a single
+// Card slice.
+//
+// Cards can described using common text strings (such as "Ah", "ah", "aH", or
+// "AH"), or having a white or black unicode pip for the suit (such as "J♤" or
+// "K♠"), or single unicode playing card runes (such as "🃆" or "🂣").
 func Parse(v ...string) ([]Card, error) {
 	var hand []Card
 	for _, s := range v {
@@ -396,7 +402,7 @@ func Parse(v ...string) ([]Card, error) {
 	return hand, nil
 }
 
-// MustCard creates card from s.
+// MustCard creates a Card from s.
 func MustCard(s string) Card {
 	c, err := FromString(s)
 	if err == nil {
@@ -405,7 +411,9 @@ func MustCard(s string) Card {
 	panic(err)
 }
 
-// Must creates a hand from v.
+// Must creates a Card slice from v.
+//
+// See Parse for overview of accepted string representations of cards.
 func Must(v ...string) []Card {
 	hand, err := Parse(v...)
 	if err == nil {
@@ -568,15 +576,15 @@ const (
 )
 
 // runeCardRank converts the unicode rune offset to a card rank.
-func runeCardRank(r, ace rune) Rank {
-	i := Rank(r - ace)
+func runeCardRank(rank, ace rune) Rank {
+	r := Rank(rank - ace)
 	switch {
-	case i == 0:
+	case r == 0:
 		return Ace
-	case i >= 11:
-		return i - 2
+	case r >= 11:
+		return r - 2
 	}
-	return i - 1
+	return r - 1
 }
 
 func init() {
@@ -620,6 +628,3 @@ const (
 	// ErrInvalidCardSuit is the invalid card suit error.
 	ErrInvalidCardSuit Error = "invalid card suit"
 )
-
-// primes are the first 13 prime numbers (one per card rank).
-var primes = [...]uint8{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41}

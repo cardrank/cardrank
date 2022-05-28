@@ -1,5 +1,7 @@
 //go:build ignore
 
+// go implementation of the two-plus-two handrank table generator.
+// from https://github.com/tangentforks/TwoPlusTwoHandEvaluator
 package main
 
 import (
@@ -19,7 +21,7 @@ import (
 
 func main() {
 	verbose := flag.Bool("v", true, "verbose")
-	out := flag.String("out", "handranks%02d.dat", "out")
+	out := flag.String("out", "twoplustwo%02d.dat", "out")
 	sum := flag.String("sum", "5de2fa6f53f4340d7d91ad605a6400fb", "md5 sum")
 	flag.Parse()
 	if err := run(*verbose, *out, *sum); err != nil {
@@ -38,7 +40,7 @@ func run(verbose bool, out, sum string) error {
 	// step through the ID array - always shifting the current ID and adding 52
 	// cards to the end of the array. when I am at 7 cards put the Hand Rank
 	// in!! stepping through the ID array is perfect!!
-	ranks := NewTwoPlusGenerator(logf)
+	ranks := NewTwoPlusTwoGenerator(logf)
 	counts := make([]int, 10)
 	// Store the count of each type of hand (One Pair, Flush, etc)
 	// another algorithm right off the thread
@@ -204,15 +206,15 @@ func (r HandRank) Name() string {
 	return "Nothing"
 }
 
-type TwoPlusGenerator struct {
+type TwoPlusTwoGenerator struct {
 	ids   []int64
 	ranks []uint32
 	count uint32
 	maxID int64
 }
 
-func NewTwoPlusGenerator(logf func(string, ...interface{})) []uint32 {
-	g := &TwoPlusGenerator{
+func NewTwoPlusTwoGenerator(logf func(string, ...interface{})) []uint32 {
+	g := &TwoPlusTwoGenerator{
 		ids:   make([]int64, 612978),
 		ranks: make([]uint32, 32487834),
 		count: 1,
@@ -268,7 +270,7 @@ func NewTwoPlusGenerator(logf func(string, ...interface{})) []uint32 {
 
 // id creates an id for card returning the number of cards and created id.
 // generated id is a 64 bit value with each card represented by 8 bits.
-func (g *TwoPlusGenerator) id(id int64, card uint32) (int, int64) {
+func (g *TwoPlusTwoGenerator) id(id int64, card uint32) (int, int64) {
 	hand := make([]uint32, 8) // intentionally keeping one as a 0 end
 	// add first card. formats card to rrrr00ss
 	hand[0] = (((card >> 2) + 1) << 4) + (card & 3) + 1
@@ -351,7 +353,7 @@ func (g *TwoPlusGenerator) id(id int64, card uint32) (int, int64) {
 }
 
 // insert inserts a hand ID into ids.
-func (g *TwoPlusGenerator) insert(id int64) uint32 {
+func (g *TwoPlusTwoGenerator) insert(id int64) uint32 {
 	switch {
 	case id == 0:
 		// don't use up a record for a 0!
@@ -392,7 +394,7 @@ func (g *TwoPlusGenerator) insert(id int64) uint32 {
 // http://www.suffecool.net/poker/evaluator.html I Love the pokersource for
 // speed, but I needed to do some tweaking to get it my way and Cactus Kevs
 // stuff was easy to tweak ;-)
-func (g *TwoPlusGenerator) eval(id int64) uint32 {
+func (g *TwoPlusTwoGenerator) eval(id int64) uint32 {
 	// bail if bad id
 	if id == 0 {
 		return 0
