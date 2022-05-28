@@ -302,8 +302,8 @@ func (g *TwoPlusTwoGenerator) id(id int64, card uint32) (int, int64) {
 			}
 		}
 	}
-	// However in the ID process I prefered that 2s = 0x21, 3s = 0x31,.... Kc =
-	// 0xD4, Ac = 0xE4 This allows me to sort in Rank then Suit order
+	// However in the ID process I preferred that 2s = 0x21, 3s = 0x31,....
+	// Kc = 0xD4, Ac = 0xE4 This allows me to sort in Rank then Suit order
 
 	// for suit to be significant, need to have n-2 of same suit if we don't
 	// have at least 2 cards of the same suit for 4, we make this card suit 0.
