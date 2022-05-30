@@ -263,7 +263,18 @@ GOOS=js GOARCH=wasm go build -tags 'embedded noinit'
 ```
 
 When using the `noinit` build tag, the user will need to manually set the
-`DefaultCactus`, `DefaultRanker` and `DefaultSixPlusRanker` variables:
+`DefaultCactus`, `DefaultRanker` and `DefaultSixPlusRanker` variables in order
+to use the package. The convenience func `Init` is provided to do this
+automatically, or the package user can manually  set all package level
+variables:
+
+##### Automatic
+
+```go
+cardrank.Init()
+```
+
+##### Manually
 
 ```go
 cardrank.DefaultCactus = cardrank.CactusRanker
@@ -271,7 +282,7 @@ cardrank.DefaultRanker = cardrank.HandRanker(cardrank.CactusRanker)
 cardrank.DefaultSixPlusRanker = cardrank.HandRanker(cardrank.SixPlusRanker(cardrank.CactusRanker))
 ```
 
-[See `z.go` for initialization logic.](/z.go)
+[See `z.go` for init logic.](/z.go)
 
 ## Future Development
 
