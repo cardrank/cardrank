@@ -2,11 +2,11 @@
 
 Package `cardrank.io/cardrank` provides a library of types, funcs, and
 utilities for working with playing cards, card decks, and evaluating poker hand
-ranks. Supports [Texas Holdem][holdem-example], [Texas Holdem Short Deck
-(6-plus)][short-deck-example], [Omaha][omaha-example], [Omaha
-Hi/Lo][omaha-hi-lo-example], [Stud][stud-example], [Stud
-Hi/Lo][stud-hi-lo-example], and [Razz][razz-example] (everything needed for
-HORSE).
+ranks. Supports [Texas Holdem][holdem-example], [Texas Holdem Short
+(6-plus)][short-example], [Texas Holdem Royal (10-plus)][royal-example],
+[Omaha][omaha-example], [Omaha Hi/Lo][omaha-hi-lo-example],
+[Stud][stud-example], [Stud Hi/Lo][stud-hi-lo-example], and
+[Razz][razz-example] (everything needed for HORSE).
 
 [![GoDoc](https://godoc.org/cardrank.io/cardrank?status.svg)](https://godoc.org/cardrank.io/cardrank)
 [![Tests on Linux, MacOS and Windows](https://github.com/cardrank/cardrank/workflows/Test/badge.svg)](https://github.com/cardrank/cardrank/actions?query=workflow%3ATest)
@@ -21,10 +21,10 @@ ranks][rank], [card decks][deck], and [hands of cards][hand]. Hand evaluation
 is achieved with pure Go implementations of [common poker hand rank
 evaluators][hand-ranking].
 
-Hands of [Texas Holdem][holdem-example], [Texas Holdem Short Deck
-(6-Plus)][short-deck-example], [Omaha][omaha-example], [Omaha
-Hi/Lo][omaha-hi-lo-example], [Stud][stud-example], [Stud
-Hi/Lo][stud-hi-lo-example], and [Razz][razz-example] are easily created and
+Hands of [Texas Holdem][holdem-example], [Texas Holdem Short (6-plus)][short-example],
+[Texas Holdem Royal (10-plus)][royal-example], [Omaha][omaha-example], [Omaha
+Hi/Lo][omaha-hi-lo-example], [Stud][stud-example],
+[Stud Hi/Lo][stud-hi-lo-example], and [Razz][razz-example] are easily created and
 dealt using standardized interfaces and logic, with winners [being easily
 determined and ordered][order].
 
@@ -42,7 +42,7 @@ go get cardrank.io/cardrank
 ### Examples
 
 Complete examples for [Texas Holdem][holdem-example], [Texas Holdem Short Deck
-(6-plus)][short-deck-example], [Omaha][omaha-example], [Omaha
+(6-plus)][short-example], [Omaha][omaha-example], [Omaha
 Hi/Lo][omaha-hi-lo-example], [Stud][stud-example], [Stud
 Hi/Lo][stud-hi-lo-example] are available in the source repository. [Further
 examples][examples] are available in the [Go package documentation][pkg] for
@@ -315,7 +315,8 @@ games.
 [order]: https://pkg.go.dev/cardrank.io/cardrank#Order
 
 [holdem-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Holdem
-[short-deck-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-ShortDeck
+[short-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Short
+[royal-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Royal
 [omaha-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Omaha
 [omaha-hi-lo-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-OmahaHiLo
 [stud-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Stud

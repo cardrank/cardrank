@@ -11,7 +11,8 @@ type Type uint32
 // Hand types.
 const (
 	Holdem Type = iota
-	ShortDeck
+	Short
+	Royal
 	Omaha
 	OmahaHiLo
 	Stud
@@ -25,8 +26,10 @@ func (typ Type) String() string {
 	switch typ {
 	case Holdem:
 		return "Holdem"
-	case ShortDeck:
-		return "ShortDeck"
+	case Short:
+		return "Short"
+	case Royal:
+		return "Royal"
 	case Omaha:
 		return "Omaha"
 	case OmahaHiLo:
@@ -45,20 +48,25 @@ func (typ Type) String() string {
 
 // NewDeck returns a new deck for the type.
 func (typ Type) Deck() *Deck {
-	if typ == ShortDeck {
+	switch typ {
+	case Short:
 		return NewShortDeck()
+	case Royal:
+		return NewRoyalDeck()
 	}
 	return NewDeck()
 }
 
-// MultiShuffleDeal shuffles a deck multiple times and deals cards for the type.
-func (typ Type) MultiShuffleDeal(shuffle func(int, func(int, int)), count, hands int) ([][]Card, []Card) {
+// DealShuffle creates a new deck for the type and shuffles the deck count
+// number of times, returning the pockets and board for the number of hands
+// specified.
+func (typ Type) DealShuffle(shuffle func(int, func(int, int)), count, hands int) ([][]Card, []Card) {
 	d := typ.Deck()
 	for i := 0; i < count; i++ {
 		d.Shuffle(shuffle)
 	}
 	switch typ {
-	case Holdem, ShortDeck:
+	case Holdem, Short, Royal:
 		return d.Holdem(hands)
 	case Omaha, OmahaHiLo:
 		return d.Omaha(hands)
@@ -70,9 +78,12 @@ func (typ Type) MultiShuffleDeal(shuffle func(int, func(int, int)), count, hands
 	return nil, nil
 }
 
-// Deal deals cards for the type.
+// Deal creates a new deck for the type, shuffling it once, returning the
+// pockets and board for the number of hands specified.
+//
+// Use DealShuffle when needing to shuffle the deck more than once.
 func (typ Type) Deal(shuffle func(int, func(int, int)), hands int) ([][]Card, []Card) {
-	return typ.MultiShuffleDeal(shuffle, 1, hands)
+	return typ.DealShuffle(shuffle, 1, hands)
 }
 
 // RankHand ranks the hand.
@@ -93,7 +104,7 @@ func (typ Type) RankHands(pockets [][]Card, board []Card) []*Hand {
 // the rank of the best available hand, its best cards, and its unused cards.
 func (typ Type) Best(pocket, board []Card) (HandRank, []Card, []Card, HandRank, []Card, []Card) {
 	switch typ {
-	case Holdem, ShortDeck, Stud, StudHiLo:
+	case Holdem, Short, Royal, Stud, StudHiLo:
 		rank, best, unused := best(typ, pocket, board)
 		if typ == StudHiLo {
 			lowRank, lowBest, lowUnused := bestLow(pocket, board, EightOrBetterRanker, eightOrBetterMaxRank)
@@ -123,8 +134,10 @@ func (typ Type) Best(pocket, board []Card) (HandRank, []Card, []Card, HandRank, 
 // MaxPlayers returns the max players for the type.
 func (typ Type) MaxPlayers() int {
 	switch typ {
-	case Holdem, ShortDeck, Omaha, OmahaHiLo:
+	case Holdem, Short, Omaha, OmahaHiLo:
 		return 10
+	case Royal:
+		return 5
 	case Stud, StudHiLo, Razz:
 		return 7
 	case Badugi:
@@ -264,7 +277,7 @@ func (h *Hand) Description() string {
 		switch r := h.best[0].Rank(); {
 		case r == Ace:
 			return fmt.Sprintf("Straight Flush, %N-high, Royal", h.best[0])
-		case r == Nine && h.typ == ShortDeck:
+		case r == Nine && h.typ == Short:
 			return fmt.Sprintf("Straight Flush, %N-high, Iron Maiden", h.best[0])
 		case r == Five:
 			return fmt.Sprintf("Straight Flush, %N-high, Steel Wheel", h.best[0])
@@ -299,9 +312,9 @@ func (h *Hand) LowDescription() string {
 // Compare compares the hand ranks.
 func (h *Hand) Compare(b *Hand) int {
 	switch hf, bf := h.rank.Fixed(), b.rank.Fixed(); {
-	case h.typ == ShortDeck && hf == Flush && bf == FullHouse:
+	case h.typ == Short && hf == Flush && bf == FullHouse:
 		return -1
-	case h.typ == ShortDeck && hf == FullHouse && bf == Flush:
+	case h.typ == Short && hf == FullHouse && bf == Flush:
 		return +1
 	case h.rank < b.rank:
 		return -1
@@ -398,7 +411,7 @@ func bestOmaha(typ Type, pocket, board []Card) (HandRank, []Card, []Card, HandRa
 // best returns the best hand for the pocket, board.
 func best(typ Type, pocket, board []Card) (HandRank, []Card, []Card) {
 	f := DefaultRanker
-	if typ == ShortDeck {
+	if typ == Short {
 		f = DefaultSixPlusRanker
 	}
 	// copy
@@ -416,7 +429,7 @@ func best(typ Type, pocket, board []Card) (HandRank, []Card, []Card) {
 	})
 	// determine high for straights
 	high := Five
-	if typ == ShortDeck {
+	if typ == Short {
 		high = Nine
 	}
 	var best, unused []Card

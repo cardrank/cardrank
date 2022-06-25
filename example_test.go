@@ -201,7 +201,7 @@ func Example_holdem() {
 	// Result:   Player 3 wins with Three of a Kind, Sixes, kickers Ace, Jack [6♣ 6♦ 6♠ A♠ J♥]
 }
 
-func Example_shortDeck() {
+func Example_short() {
 	for i, game := range []struct {
 		seed    int64
 		players int
@@ -217,9 +217,9 @@ func Example_shortDeck() {
 	} {
 		// note: use a real random source
 		rnd := rand.New(rand.NewSource(game.seed))
-		pockets, board := cardrank.ShortDeck.Deal(rnd.Shuffle, game.players)
-		hands := cardrank.ShortDeck.RankHands(pockets, board)
-		fmt.Printf("------ ShortDeck %d ------\n", i+1)
+		pockets, board := cardrank.Short.Deal(rnd.Shuffle, game.players)
+		hands := cardrank.Short.RankHands(pockets, board)
+		fmt.Printf("------ Short %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
 		for j := 0; j < game.players; j++ {
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket(), hands[j].Description(), hands[j].Best(), hands[j].Unused())
@@ -237,19 +237,19 @@ func Example_shortDeck() {
 		}
 	}
 	// Output:
-	// ------ ShortDeck 1 ------
+	// ------ Short 1 ------
 	// Board:    [9♥ A♦ A♥ 8♣ A♣]
 	// Player 1: [8♥ 7♥] Full House, Aces full of Eights [A♣ A♦ A♥ 8♣ 8♥] [9♥ 7♥]
 	// Player 2: [A♠ J♦] Four of a Kind, Aces, kicker Jack [A♣ A♦ A♥ A♠ J♦] [9♥ 8♣]
 	// Result:   Player 2 wins with Four of a Kind, Aces, kicker Jack [A♣ A♦ A♥ A♠ J♦]
-	// ------ ShortDeck 2 ------
+	// ------ Short 2 ------
 	// Board:    [9♣ 6♦ A♠ J♠ 6♠]
 	// Player 1: [T♥ 6♣] Three of a Kind, Sixes, kickers Ace, Jack [6♣ 6♦ 6♠ A♠ J♠] [T♥ 9♣]
 	// Player 2: [6♥ 9♥] Full House, Sixes full of Nines [6♦ 6♥ 6♠ 9♣ 9♥] [A♠ J♠]
 	// Player 3: [A♣ 7♣] Two Pair, Aces over Sixes, kicker Jack [A♣ A♠ 6♦ 6♠ J♠] [9♣ 7♣]
 	// Player 4: [T♠ K♠] Flush, Ace-high [A♠ K♠ J♠ T♠ 6♠] [9♣ 6♦]
 	// Result:   Player 4 wins with Flush, Ace-high [A♠ K♠ J♠ T♠ 6♠]
-	// ------ ShortDeck 3 ------
+	// ------ Short 3 ------
 	// Board:    [T♥ J♣ 7♥ 9♥ K♣]
 	// Player 1: [8♥ T♠] Straight, Jack-high [J♣ T♥ 9♥ 8♥ 7♥] [K♣ T♠]
 	// Player 2: [J♠ 6♣] Pair, Jacks, kickers King, Ten, Nine [J♣ J♠ K♣ T♥ 9♥] [7♥ 6♣]
@@ -260,37 +260,127 @@ func Example_shortDeck() {
 	// Player 7: [6♠ 8♦] Straight, Jack-high [J♣ T♥ 9♥ 8♦ 7♥] [K♣ 6♠]
 	// Player 8: [K♥ K♦] Three of a Kind, Kings, kickers Jack, Ten [K♣ K♦ K♥ J♣ T♥] [9♥ 7♥]
 	// Result:   Players 5, 6 push with Straight, King-high [K♣ Q♠ J♣ T♣ 9♥], [K♣ Q♦ J♣ T♥ 9♥]
-	// ------ ShortDeck 4 ------
+	// ------ Short 4 ------
 	// Board:    [T♦ 9♣ 9♦ Q♦ 8♦]
 	// Player 1: [J♠ T♥] Straight, Queen-high [Q♦ J♠ T♦ 9♣ 8♦] [T♥ 9♦]
 	// Player 2: [6♣ A♣] Pair, Nines, kickers Ace, Queen, Ten [9♣ 9♦ A♣ Q♦ T♦] [8♦ 6♣]
 	// Player 3: [9♥ 8♠] Full House, Nines full of Eights [9♣ 9♦ 9♥ 8♦ 8♠] [Q♦ T♦]
 	// Player 4: [J♦ A♦] Straight Flush, Queen-high [Q♦ J♦ T♦ 9♦ 8♦] [9♣ A♦]
 	// Result:   Player 4 wins with Straight Flush, Queen-high [Q♦ J♦ T♦ 9♦ 8♦]
-	// ------ ShortDeck 5 ------
+	// ------ Short 5 ------
 	// Board:    [6♠ A♣ 7♦ A♠ 6♦]
 	// Player 1: [9♣ T♠] Two Pair, Aces over Sixes, kicker Ten [A♣ A♠ 6♦ 6♠ T♠] [9♣ 7♦]
 	// Player 2: [J♥ T♦] Two Pair, Aces over Sixes, kicker Jack [A♣ A♠ 6♦ 6♠ J♥] [T♦ 7♦]
 	// Player 3: [K♠ A♥] Full House, Aces full of Sixes [A♣ A♥ A♠ 6♦ 6♠] [K♠ 7♦]
 	// Result:   Player 3 wins with Full House, Aces full of Sixes [A♣ A♥ A♠ 6♦ 6♠]
-	// ------ ShortDeck 6 ------
+	// ------ Short 6 ------
 	// Board:    [A♣ 6♣ 9♣ T♦ 8♣]
 	// Player 1: [6♥ 7♣] Straight Flush, Nine-high, Iron Maiden [9♣ 8♣ 7♣ 6♣ A♣] [T♦ 6♥]
 	// Player 2: [6♠ 9♠] Two Pair, Nines over Sixes, kicker Ace [9♣ 9♠ 6♣ 6♠ A♣] [T♦ 8♣]
 	// Player 3: [J♥ Q♠] Straight, Queen-high [Q♠ J♥ T♦ 9♣ 8♣] [A♣ 6♣]
 	// Result:   Player 1 wins with Straight Flush, Nine-high, Iron Maiden [9♣ 8♣ 7♣ 6♣ A♣]
-	// ------ ShortDeck 7 ------
+	// ------ Short 7 ------
 	// Board:    [K♥ K♦ K♠ K♣ J♣]
 	// Player 1: [7♦ T♦] Four of a Kind, Kings, kicker Jack [K♣ K♦ K♥ K♠ J♣] [T♦ 7♦]
 	// Player 2: [8♦ 6♥] Four of a Kind, Kings, kicker Jack [K♣ K♦ K♥ K♠ J♣] [8♦ 6♥]
 	// Result:   Players 1, 2 push with Four of a Kind, Kings, kicker Jack [K♣ K♦ K♥ K♠ J♣], [K♣ K♦ K♥ K♠ J♣]
-	// ------ ShortDeck 8 ------
+	// ------ Short 8 ------
 	// Board:    [8♦ 8♥ 8♠ Q♠ T♦]
 	// Player 1: [J♦ T♣] Full House, Eights full of Tens [8♦ 8♥ 8♠ T♣ T♦] [Q♠ J♦]
 	// Player 2: [K♠ T♠] Full House, Eights full of Tens [8♦ 8♥ 8♠ T♦ T♠] [K♠ Q♠]
 	// Player 3: [9♣ J♣] Straight, Queen-high [Q♠ J♣ T♦ 9♣ 8♦] [8♥ 8♠]
 	// Player 4: [T♥ 7♥] Full House, Eights full of Tens [8♦ 8♥ 8♠ T♦ T♥] [Q♠ 7♥]
 	// Result:   Players 1, 2, 4 push with Full House, Eights full of Tens [8♦ 8♥ 8♠ T♣ T♦], [8♦ 8♥ 8♠ T♦ T♠], [8♦ 8♥ 8♠ T♦ T♥]
+}
+
+func Example_royal() {
+	for i, game := range []struct {
+		seed    int64
+		players int
+	}{
+		{119, 2},
+		{155, 3},
+		{384, 4},
+		{880, 5},
+		{3453, 2},
+		{5662, 3},
+		{65481, 4},
+		{27947, 5},
+	} {
+		// note: use a real random source
+		rnd := rand.New(rand.NewSource(game.seed))
+		pockets, board := cardrank.Royal.Deal(rnd.Shuffle, game.players)
+		hands := cardrank.Royal.RankHands(pockets, board)
+		fmt.Printf("------ Royal %d ------\n", i+1)
+		fmt.Printf("Board:    %b\n", board)
+		for j := 0; j < game.players; j++ {
+			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket(), hands[j].Description(), hands[j].Best(), hands[j].Unused())
+		}
+		h, pivot := cardrank.Order(hands)
+		if pivot == 1 {
+			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
+		} else {
+			var s, b []string
+			for j := 0; j < pivot; j++ {
+				s = append(s, strconv.Itoa(h[j]+1))
+				b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+			}
+			fmt.Printf("Result:   Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
+		}
+	}
+	// Output:
+	// ------ Royal 1 ------
+	// Board:    [K♦ A♦ T♥ T♣ J♠]
+	// Player 1: [A♠ A♥] Full House, Aces full of Tens [A♦ A♥ A♠ T♣ T♥] [K♦ J♠]
+	// Player 2: [T♠ K♠] Full House, Tens full of Kings [T♣ T♥ T♠ K♦ K♠] [A♦ J♠]
+	// Result:   Player 1 wins with Full House, Aces full of Tens [A♦ A♥ A♠ T♣ T♥]
+	// ------ Royal 2 ------
+	// Board:    [A♣ K♠ J♦ Q♣ J♣]
+	// Player 1: [A♠ T♠] Straight, Ace-high [A♣ K♠ Q♣ J♣ T♠] [A♠ J♦]
+	// Player 2: [K♣ Q♠] Two Pair, Kings over Queens, kicker Ace [K♣ K♠ Q♣ Q♠ A♣] [J♣ J♦]
+	// Player 3: [J♥ T♥] Straight, Ace-high [A♣ K♠ Q♣ J♣ T♥] [J♦ J♥]
+	// Result:   Players 1, 3 push with Straight, Ace-high [A♣ K♠ Q♣ J♣ T♠], [A♣ K♠ Q♣ J♣ T♥]
+	// ------ Royal 3 ------
+	// Board:    [K♠ T♦ T♣ Q♦ A♥]
+	// Player 1: [T♠ J♣] Straight, Ace-high [A♥ K♠ Q♦ J♣ T♣] [T♦ T♠]
+	// Player 2: [A♦ K♥] Two Pair, Aces over Kings, kicker Queen [A♦ A♥ K♥ K♠ Q♦] [T♣ T♦]
+	// Player 3: [T♥ Q♣] Full House, Tens full of Queens [T♣ T♦ T♥ Q♣ Q♦] [A♥ K♠]
+	// Player 4: [K♦ K♣] Full House, Kings full of Tens [K♣ K♦ K♠ T♣ T♦] [A♥ Q♦]
+	// Result:   Player 4 wins with Full House, Kings full of Tens [K♣ K♦ K♠ T♣ T♦]
+	// ------ Royal 4 ------
+	// Board:    [J♥ A♠ T♥ T♣ K♠]
+	// Player 1: [Q♦ K♥] Straight, Ace-high [A♠ K♥ Q♦ J♥ T♣] [K♠ T♥]
+	// Player 2: [A♣ A♦] Full House, Aces full of Tens [A♣ A♦ A♠ T♣ T♥] [K♠ J♥]
+	// Player 3: [K♦ T♠] Full House, Tens full of Kings [T♣ T♥ T♠ K♦ K♠] [A♠ J♥]
+	// Player 4: [T♦ Q♠] Straight, Ace-high [A♠ K♠ Q♠ J♥ T♣] [T♦ T♥]
+	// Player 5: [J♠ J♦] Full House, Jacks full of Tens [J♦ J♥ J♠ T♣ T♥] [A♠ K♠]
+	// Result:   Player 2 wins with Full House, Aces full of Tens [A♣ A♦ A♠ T♣ T♥]
+	// ------ Royal 5 ------
+	// Board:    [J♣ K♥ K♠ J♥ Q♣]
+	// Player 1: [A♥ J♦] Full House, Jacks full of Kings [J♣ J♦ J♥ K♥ K♠] [A♥ Q♣]
+	// Player 2: [T♦ Q♠] Two Pair, Kings over Queens, kicker Jack [K♥ K♠ Q♣ Q♠ J♣] [J♥ T♦]
+	// Result:   Player 1 wins with Full House, Jacks full of Kings [J♣ J♦ J♥ K♥ K♠]
+	// ------ Royal 6 ------
+	// Board:    [K♥ A♠ K♦ K♠ A♣]
+	// Player 1: [J♥ Q♦] Full House, Kings full of Aces [K♦ K♥ K♠ A♣ A♠] [Q♦ J♥]
+	// Player 2: [Q♠ J♠] Full House, Kings full of Aces [K♦ K♥ K♠ A♣ A♠] [Q♠ J♠]
+	// Player 3: [A♥ T♣] Full House, Aces full of Kings [A♣ A♥ A♠ K♦ K♥] [K♠ T♣]
+	// Result:   Player 3 wins with Full House, Aces full of Kings [A♣ A♥ A♠ K♦ K♥]
+	// ------ Royal 7 ------
+	// Board:    [J♥ T♦ Q♠ K♣ K♥]
+	// Player 1: [K♦ T♥] Full House, Kings full of Tens [K♣ K♦ K♥ T♦ T♥] [Q♠ J♥]
+	// Player 2: [A♠ Q♣] Straight, Ace-high [A♠ K♣ Q♣ J♥ T♦] [K♥ Q♠]
+	// Player 3: [J♣ T♠] Two Pair, Kings over Jacks, kicker Queen [K♣ K♥ J♣ J♥ Q♠] [T♦ T♠]
+	// Player 4: [A♥ A♦] Straight, Ace-high [A♦ K♣ Q♠ J♥ T♦] [A♥ K♥]
+	// Result:   Player 1 wins with Full House, Kings full of Tens [K♣ K♦ K♥ T♦ T♥]
+	// ------ Royal 8 ------
+	// Board:    [A♠ K♦ Q♦ A♦ A♣]
+	// Player 1: [Q♠ T♦] Full House, Aces full of Queens [A♣ A♦ A♠ Q♦ Q♠] [K♦ T♦]
+	// Player 2: [J♥ Q♥] Full House, Aces full of Queens [A♣ A♦ A♠ Q♦ Q♥] [K♦ J♥]
+	// Player 3: [K♣ J♠] Full House, Aces full of Kings [A♣ A♦ A♠ K♣ K♦] [Q♦ J♠]
+	// Player 4: [A♥ K♠] Four of a Kind, Aces, kicker King [A♣ A♦ A♥ A♠ K♦] [K♠ Q♦]
+	// Player 5: [J♦ T♥] Straight, Ace-high [A♣ K♦ Q♦ J♦ T♥] [A♦ A♠]
+	// Result:   Player 4 wins with Four of a Kind, Aces, kicker King [A♣ A♦ A♥ A♠ K♦]
 }
 
 func Example_omaha() {

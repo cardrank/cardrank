@@ -5,13 +5,18 @@ const (
 	UnshuffledSize = 52
 	// UnshuffledShortSize is the unshuffled short deck size.
 	UnshuffledShortSize = 36
+	// UnshuffledRoyalSize is the unshuffled royal size.
+	UnshuffledRoyalSize = 20
 )
 
-// unshuffled is an unshuffled set of cards.
-var unshuffled = Unshuffled()
-
-// unshuffledShortDeck is an unshuffled set of shortdeck (6+) cards.
-var unshuffledShortDeck = UnshuffledShortDeck()
+var (
+	// unshuffled is an unshuffled set of cards.
+	unshuffled = Unshuffled()
+	// unshuffledShort is an unshuffled set of short (6+) cards.
+	unshuffledShort = UnshuffledShort()
+	// unshuffledRoyal is an shuffled set of royal (10+) cards.
+	unshuffledRoyal = UnshuffledRoyal()
+)
 
 // Unshuffled generates an unshuffled set of standard playing cards.
 func Unshuffled() []Card {
@@ -26,13 +31,27 @@ func Unshuffled() []Card {
 	return v
 }
 
-// UnshuffledShortDeck generates an unshuffled set of short deck cards (ie,
+// UnshuffledShort generates an unshuffled set of short deck cards (ie,
 // excluding card ranks 2 through 5).
-func UnshuffledShortDeck() []Card {
+func UnshuffledShort() []Card {
 	v := make([]Card, UnshuffledShortSize)
 	var i int
 	for _, s := range []Suit{Spade, Heart, Diamond, Club} {
 		for r := Six; r <= Ace; r++ {
+			v[i] = New(r, s)
+			i++
+		}
+	}
+	return v
+}
+
+// UnshuffledRoyal generates an royal set of short deck cards (ie,
+// excluding card ranks 2 through 5).
+func UnshuffledRoyal() []Card {
+	v := make([]Card, UnshuffledRoyalSize)
+	var i int
+	for _, s := range []Suit{Spade, Heart, Diamond, Club} {
+		for r := Ten; r <= Ace; r++ {
 			v[i] = New(r, s)
 			i++
 		}
@@ -81,12 +100,17 @@ func NewDeck(cards ...Card) *Deck {
 
 // NewShortDeck creates a new deck of short cards.
 func NewShortDeck() *Deck {
-	return NewDeck(unshuffledShortDeck...)
+	return NewDeck(unshuffledShort...)
 }
 
-// NewDeckShoe creates a card deck "shoe" composed of n decks of
+// NewRoyalDeck creates a new deck of short cards.
+func NewRoyalDeck() *Deck {
+	return NewDeck(unshuffledRoyal...)
+}
+
+// NewShoeDeck creates a card deck "shoe" composed of n decks of
 // unshuffled cards.
-func NewDeckShoe(n int) *Deck {
+func NewShoeDeck(n int) *Deck {
 	cards := make([]Card, len(unshuffled)*n)
 	for i := 0; i < n; i++ {
 		copy(cards[i*len(unshuffled):], unshuffled)

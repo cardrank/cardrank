@@ -148,14 +148,14 @@ func TestShortDeckRankHand(t *testing.T) {
 		r   HandRank
 		s   string
 	}{
-		{"9d 8d 7d 6d Ad", ShortDeck, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♦ 8♦ 7♦ 6♦ A♦]"},
-		{"9c 8c 7c 6c Ac", ShortDeck, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♣ 8♣ 7♣ 6♣ A♣]"},
-		{"9h 8h 7h 6h Ah", ShortDeck, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♥ 8♥ 7♥ 6♥ A♥]"},
-		{"9s 8s 7s 6s As", ShortDeck, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♠ 8♠ 7♠ 6♠ A♠]"},
-		{"9d 8d 7d 6d Ac", ShortDeck, Straight, "Straight, Nine-high [9♦ 8♦ 7♦ 6♦ A♣]"},
-		{"9c 8c 7c 6c Ad", ShortDeck, Straight, "Straight, Nine-high [9♣ 8♣ 7♣ 6♣ A♦]"},
-		{"9h 8h 7h 6h As", ShortDeck, Straight, "Straight, Nine-high [9♥ 8♥ 7♥ 6♥ A♠]"},
-		{"9s 8s 7s 6s Ah", ShortDeck, Straight, "Straight, Nine-high [9♠ 8♠ 7♠ 6♠ A♥]"},
+		{"9d 8d 7d 6d Ad", Short, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♦ 8♦ 7♦ 6♦ A♦]"},
+		{"9c 8c 7c 6c Ac", Short, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♣ 8♣ 7♣ 6♣ A♣]"},
+		{"9h 8h 7h 6h Ah", Short, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♥ 8♥ 7♥ 6♥ A♥]"},
+		{"9s 8s 7s 6s As", Short, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♠ 8♠ 7♠ 6♠ A♠]"},
+		{"9d 8d 7d 6d Ac", Short, Straight, "Straight, Nine-high [9♦ 8♦ 7♦ 6♦ A♣]"},
+		{"9c 8c 7c 6c Ad", Short, Straight, "Straight, Nine-high [9♣ 8♣ 7♣ 6♣ A♦]"},
+		{"9h 8h 7h 6h As", Short, Straight, "Straight, Nine-high [9♥ 8♥ 7♥ 6♥ A♠]"},
+		{"9s 8s 7s 6s Ah", Short, Straight, "Straight, Nine-high [9♠ 8♠ 7♠ 6♠ A♥]"},
 	}
 	for i, test := range tests {
 		hand := test.typ.RankHand(Must(test.h), nil)
@@ -178,14 +178,14 @@ func TestHandRankCompare(t *testing.T) {
 		k     HandRank
 		exp   int
 	}{
-		{ShortDeck, "As 7d Ad 6s 6d", "8d Td", "Ac 5h", Flush, FullHouse, -1},
-		{ShortDeck, "As 7d Ad 6s 6d", "Ac 5h", "8d Td", FullHouse, Flush, +1},
-		{ShortDeck, "Kc Qh Jc Td 8d", "Ac 5h", "Ah 6c", Straight, Straight, 0},
-		{ShortDeck, "Kc Qh Jc Td 8d", "Ah 6c", "Ac 5h", Straight, Straight, 0},
-		{ShortDeck, "9c 7d 8d As Qs", "Ac 6s", "Tc Ts", Straight, Pair, -1},
-		{ShortDeck, "9c 7d 8d As Qs", "Tc Ts", "Ac 6s", Pair, Straight, +1},
-		{ShortDeck, "9s 7s 8s Ac Qs", "As 6s", "Tc Ts", StraightFlush, Flush, -1},
-		{ShortDeck, "9s 7s 8s Ac Qs", "Tc Ts", "As 6s", Flush, StraightFlush, +1},
+		{Short, "As 7d Ad 6s 6d", "8d Td", "Ac 5h", Flush, FullHouse, -1},
+		{Short, "As 7d Ad 6s 6d", "Ac 5h", "8d Td", FullHouse, Flush, +1},
+		{Short, "Kc Qh Jc Td 8d", "Ac 5h", "Ah 6c", Straight, Straight, 0},
+		{Short, "Kc Qh Jc Td 8d", "Ah 6c", "Ac 5h", Straight, Straight, 0},
+		{Short, "9c 7d 8d As Qs", "Ac 6s", "Tc Ts", Straight, Pair, -1},
+		{Short, "9c 7d 8d As Qs", "Tc Ts", "Ac 6s", Pair, Straight, +1},
+		{Short, "9s 7s 8s Ac Qs", "As 6s", "Tc Ts", StraightFlush, Flush, -1},
+		{Short, "9s 7s 8s Ac Qs", "Tc Ts", "As 6s", Flush, StraightFlush, +1},
 		{Omaha, "Td 2c Jd 4c 5c", "As Ah Qh 3s", "Ad Ac 7d 4d", Straight, Pair, -1},
 		{Omaha, "Td 2c Jd 4c 5c", "Ad Ac 7d 4d", "As Ah Qh 3s", Pair, Straight, +1},
 		{Omaha, "Kc Qh Jc 8d 4s", "Ac Td 3h 6c", "Ah Tc 2c 3c", Straight, Straight, 0},
@@ -209,6 +209,19 @@ func TestHandRankCompare(t *testing.T) {
 		}
 		if n := a.Compare(b); n != test.exp {
 			t.Errorf("test %d %s compare expected %d, got: %d", i, test.typ, test.exp, n)
+		}
+	}
+}
+
+func TestMaxPlayers(t *testing.T) {
+	rnd := rand.New(rand.NewSource(0))
+	for typ := Holdem; typ <= Razz; typ++ {
+		maxPlayers := typ.MaxPlayers()
+		for i := 2; i <= maxPlayers; i++ {
+			pockets, _ := typ.Deal(rnd.Shuffle, i)
+			if len(pockets) != i {
+				t.Errorf("%s was not able to deal pockets for %d players", typ, i)
+			}
 		}
 	}
 }

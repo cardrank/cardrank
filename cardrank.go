@@ -1,8 +1,9 @@
 // Package `cardrank.io/cardrank` provides a library of types, funcs, and
 // utilities for working with playing cards, decks, and evaluating poker hands.
 //
-// Supports Texas Holdem, Texas Holdem Short Deck (6-plus), Omaha, Omaha Hi/Lo,
-// Stud, Stud Hi/Lo, and Razz (everything needed for HORSE).
+// Supports Texas Holdem, Texas Holdem Short (6-plus), Texas Holdem Royal
+// (10-plus), Omaha, Omaha Hi/Lo, Stud, Stud Hi/Lo, and Razz (everything needed
+// for HORSE).
 package cardrank
 
 // HandRank is a poker hand rank.
@@ -101,7 +102,7 @@ func (r HandRank) Name() string {
 	return "Nothing"
 }
 
-// SixPlusRanker creates a short deck (6-plus) hand ranker.
+// SixPlusRanker creates a 6-plus hand ranker.
 func SixPlusRanker(f RankFiveFunc) RankFiveFunc {
 	return func(c0, c1, c2, c3, c4 Card) uint16 {
 		r := f(c0, c1, c2, c3, c4)
@@ -115,7 +116,7 @@ func SixPlusRanker(f RankFiveFunc) RankFiveFunc {
 	}
 }
 
-// EightOrBetterRanker is a eight-or-better low hand ranker.
+// EightOrBetterRanker is a 8-or-better low hand ranker.
 func EightOrBetterRanker(c0, c1, c2, c3, c4 Card) uint16 {
 	return low(0xff00, c0, c1, c2, c3, c4)
 }
@@ -225,7 +226,7 @@ var DefaultSixPlusRanker RankerFunc
 // DefaultCactus is the default Cactus Kev implementation.
 var DefaultCactus RankFiveFunc
 
-// Package rankers set by z.go.
+// Package rankers (set in z.go).
 var (
 	cactus     RankFiveFunc
 	cactusFast RankFiveFunc

@@ -43,7 +43,7 @@ func TestNewDeck(t *testing.T) {
 
 func TestNewDeckShoe(t *testing.T) {
 	const decks = 7
-	d := NewDeckShoe(decks)
+	d := NewShoeDeck(decks)
 	d.Shuffle(rand.New(rand.NewSource(time.Now().UnixNano())).Shuffle)
 	if n, exp := len(d.v), UnshuffledSize*decks; n != exp {
 		t.Fatalf("expected len(d.v) == %d, got: %d", exp, n)
@@ -144,10 +144,24 @@ func TestUnshuffled(t *testing.T) {
 			}
 		}
 	}
-	if n, exp := len(unshuffledShortDeck), UnshuffledShortSize; n != exp {
+	if n, exp := len(unshuffledShort), UnshuffledShortSize; n != exp {
 		t.Fatalf("expected len(unshuffledShort) == %d, got: %d", exp, n)
 	}
 	for _, r := range "6789TJQKA" {
+		for _, s := range "shdc" {
+			c, err := FromString(string(r) + string(s))
+			if err != nil {
+				t.Fatalf("expected no error for %c%c, got: %v", r, s, err)
+			}
+			if !contains(unshuffled, c) {
+				t.Errorf("unshuffled does not contain %s", c)
+			}
+		}
+	}
+	if n, exp := len(unshuffledRoyal), UnshuffledRoyalSize; n != exp {
+		t.Fatalf("expected len(unshuffledRoyal) == %d, got: %d", exp, n)
+	}
+	for _, r := range "TJQKA" {
 		for _, s := range "shdc" {
 			c, err := FromString(string(r) + string(s))
 			if err != nil {
