@@ -2,14 +2,13 @@
 // interfaces for working with playing cards, card decks, and evaluating poker
 // hand ranks.
 //
-// Supports Texas Holdem, Texas Holdem Short (6+), Texas Holdem Royal
-// (10-plus), Omaha, Omaha Hi/Lo, Stud, Stud Hi/Lo, and Razz.
+// Supports Texas Holdem, Texas Holdem Short (6+), Texas Holdem Royal (10+),
+// Omaha, Omaha Hi/Lo, Stud, Stud Hi/Lo, and Razz.
 package cardrank
 
 // HandRank is a poker hand rank.
 //
-// Hand ranks should be ordered low-to-high in order to determine the
-// winner(s).
+// Ranks are ordered low-to-high.
 type HandRank uint16
 
 // Poker hand rank values.
@@ -121,7 +120,7 @@ func EightOrBetterRanker(c0, c1, c2, c3, c4 Card) uint16 {
 	return low(0xff00, c0, c1, c2, c3, c4)
 }
 
-// RazzRanker is a razz low hand ranker.
+// RazzRanker is a Razz low hand ranker.
 func RazzRanker(c0, c1, c2, c3, c4 Card) uint16 {
 	if r := low(0, c0, c1, c2, c3, c4); r < lowMaxRank {
 		return r
@@ -134,7 +133,7 @@ func LowRanker(c0, c1, c2, c3, c4 Card) uint16 {
 	return low(0, c0, c1, c2, c3, c4)
 }
 
-// low is a low card ranker.
+// low is a low hand ranker.
 func low(mask uint16, c0, c1, c2, c3, c4 Card) uint16 {
 	rank := uint16(0)
 	// c0
@@ -159,8 +158,7 @@ func low(mask uint16, c0, c1, c2, c3, c4 Card) uint16 {
 	return rank
 }
 
-// HandRanker creates a new hand ranker for 5, 6, or 7 cards that brute forces
-// ranks for 6 and 7 using f.
+// HandRanker creates a new hand ranker for 5, 6, or 7 cards using f.
 func HandRanker(f RankFiveFunc) RankerFunc {
 	return func(hand []Card) HandRank {
 		switch n := len(hand); {
@@ -312,8 +310,9 @@ var t7c5 = [21][7]uint8{
 // primes are the first 13 prime numbers (one per card rank).
 var primes = [...]uint8{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41}
 
-// eightOrBetterMaxRank is the eight-or-better max rank.
-const eightOrBetterMaxRank = 512
-
-// lowMaxRank is the low max rank.
-const lowMaxRank = 16384
+const (
+	// eightOrBetterMaxRank is the eight-or-better max rank.
+	eightOrBetterMaxRank = 512
+	// lowMaxRank is the low max rank.
+	lowMaxRank = 16384
+)

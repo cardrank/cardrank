@@ -4,7 +4,7 @@ Package `cardrank.io/cardrank` is a library of types, utilities, and interfaces
 for working with playing cards, card decks, and evaluating poker hand ranks.
 
 Supports [Texas Holdem][holdem-example], [Texas Holdem Short (6+)][short-example],
-[Texas Holdem Royal (10-plus)][royal-example], [Omaha][omaha-example],
+[Texas Holdem Royal (10+)][royal-example], [Omaha][omaha-example],
 [Omaha Hi/Lo][omaha-hi-lo-example], [Stud][stud-example], [Stud Hi/Lo][stud-hi-lo-example],
 and [Razz][razz-example].
 
@@ -22,8 +22,8 @@ A single [package level type][type] provides a standard interface for dealing
 cards for, and evaluating [poker hands][hand] of the following:
 
 * [Texas Holdem][holdem-example]
-* [Texas Holdem Short (6-plus)][short-example]
-* [Texas Holdem Royal (10-plus)][royal-example]
+* [Texas Holdem Short (6+)][short-example]
+* [Texas Holdem Royal (10+)][royal-example]
 * [Omaha][omaha-example]
 * [Omaha Hi/Lo][omaha-hi-lo-example]
 * [Stud][stud-example]
@@ -50,8 +50,8 @@ See package level [Go documentation][pkg].
 
 ### Quickstart
 
-Complete examples for [Texas Holdem][holdem-example], [Texas Holdem Short (6-plus)][short-example],
-[Texas Holdem Royal][royal-example], [Omaha][omaha-example], [Omaha Hi/Lo][omaha-hi-lo-example],
+Complete examples for [Texas Holdem][holdem-example], [Texas Holdem Short (6+)][short-example],
+[Texas Holdem Royal (10+)][royal-example], [Omaha][omaha-example], [Omaha Hi/Lo][omaha-hi-lo-example],
 [Stud][stud-example], [Stud Hi/Lo][stud-hi-lo-example], and [Razz][razz-example]
 are available in the source repository. [Other examples][examples] are
 available in the [Go package documentation][pkg] showing use of the package's
@@ -227,17 +227,17 @@ used to determine the best Hi/Lo hands based on the [poker hand's type][type]:
 
 #### Cactus Kev
 
-For regular poker hand types (ie, [`Holdem`][type], [`Royal`][type],
-[`Omaha`][type], and [`Stud`][type]) their poker hand rank is determined by pure
-Go versions of different [Cactus Kev][cactus-kev] implementations:
+For regular poker hand types ([`Holdem`][type], [`Royal`][type],
+[`Omaha`][type], and [`Stud`][type]), poker hand rank is determined by Go
+implementations of different [Cactus Kev][cactus-kev] evaluators:
 
 * [`CactusRanker`][cactus-ranker] - the original [Cactus Kev][cactus-kev] poker hand evaluator
 * [`CactusFastRanker`][cactus-fast-ranker] - the [Fast Cactus][senzee] poker hand evaluator, using Paul Senzee's perfect hash lookup
-* [`TwoPlusTwoRanker`][two-plus-two-ranker] - the [2+2 poker forum evaluator][tangentforks], using a 130 MiB lookup table
+* [`TwoPlusTwoRanker`][two-plus-two-ranker] - the [2+2 forum][tangentforks] poker hand evaluator, using a 130 MiB lookup table
 
-See [below for more information](#default-ranker) on the default implementation
-in use by the package, and for information on [using build tags to
-disable][build-tags] for different scenarios.
+See [below for more information](#default-ranker) on the default ranker in use
+by the package, and for information on [using build tags to disable][build-tags]
+for different scenarios.
 
 #### Default Ranker
 
@@ -267,9 +267,9 @@ the [`Hand`][hand] having 5, 6, or 7 cards.
 #### Other Variants
 
 For the [`Short`][type], [`OmahaHiLo`][type], [`StudHiLo`][type], and
-[`Razz`][type] poker hand types, [6-plus][six-plus-ranker],
+[`Razz`][type] poker hand types, a [6-plus][six-plus-ranker],
 [8-or-better][eight-or-better-ranker], and a [Razz][razz-ranker] poker hand
-rank evaluator are used.
+rank evaluators are used.
 
 ### Winner Determination
 
