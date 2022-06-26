@@ -239,13 +239,6 @@ See [below for more information](#default-ranker) on the default implementation
 in use by the package, and for information on [using build tags to
 disable][build-tags] for different scenarios.
 
-#### Low and Other Variants
-
-For the [`Short`][type], [`OmahaHiLo`][type], [`StudHiLo`][type], and
-[`Razz`][type] poker hand types,pure Go implementations of a
-[6-plus][six-plus-ranker], [8-or-better][eight-or-better-ranker], and a
-[Razz][razz-ranker] poker hand rank evaluator are used for Hi/Lo evaluation.
-
 #### Default Ranker
 
 The package-level [`DefaultRanker`][default-ranker] is used for regular poker
@@ -271,18 +264,31 @@ The [`HybridRanker`][hybrid-ranker] uses either the [`CactusFastRanker`][cactus-
 or an instance of the [`TwoPlusTwoRanker`][two-plus-two-ranker] depending on
 the [`Hand`][hand] having 5, 6, or 7 cards.
 
+#### Other Variants
+
+For the [`Short`][type], [`OmahaHiLo`][type], [`StudHiLo`][type], and
+[`Razz`][type] poker hand types, [6-plus][six-plus-ranker],
+[8-or-better][eight-or-better-ranker], and a [Razz][razz-ranker] poker hand
+rank evaluator are used.
+
 ### Winner Determination
 
 Winner(s) are determined by the lowest possible [`HandRank`][hand-rank] when
-comparing a `Hand`'s' [`Rank`][hand.rank] or [`LowRank`][hand.low-rank]
+comparing a `Hand`'s [`Rank`][hand.rank] or [`LowRank`][hand.low-rank]
 against another hand. Two or more hands having a `HandRank` of equal value
 indicate that the hands have equivalent `HandRank`, and thus have both won.
 
+As such, when hands are sorted (low-to-high) by `Rank` or `LowRank`, the
+winner(s) of a hand will be all the hands in the lowest position and having the
+same `HandRank`.
+
 #### Comparing Hands
 
-[`Hand`][hand]'s can be compared to each other using [`Compare`][hand.compare]
-and [`LowCompare`][hand.low-compare]. `Compare` and `LowCompare` return `-1`,
-`0`, or `+1`, making it easy to compare or sort hands:
+A [`Hand`][hand] can be compared to another `Hand` using [`Compare`][hand.compare]
+and [`LowCompare`][hand.low-compare].
+
+`Compare` and `LowCompare` return `-1`, `0`, or `+1`, making it easy to compare
+or sort hands:
 
 ```go
 // Compare hands:
