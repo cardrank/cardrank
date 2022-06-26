@@ -1,9 +1,9 @@
-// Package `cardrank.io/cardrank` provides a library of types, funcs, and
-// utilities for working with playing cards, decks, and evaluating poker hands.
+// Package cardrank.io/cardrank is a library of types, utilities, and
+// interfaces for working with playing cards, card decks, and evaluating poker
+// hand ranks.
 //
-// Supports Texas Holdem, Texas Holdem Short (6-plus), Texas Holdem Royal
-// (10-plus), Omaha, Omaha Hi/Lo, Stud, Stud Hi/Lo, and Razz (everything needed
-// for HORSE).
+// Supports Texas Holdem, Texas Holdem Short (6+), Texas Holdem Royal
+// (10-plus), Omaha, Omaha Hi/Lo, Stud, Stud Hi/Lo, and Razz.
 package cardrank
 
 // HandRank is a poker hand rank.
