@@ -146,6 +146,15 @@ func (typ Type) MaxPlayers() int {
 	return 0
 }
 
+// Low returns true if the hand type supports low evaluation.
+func (typ Type) Low() bool {
+	switch typ {
+	case OmahaHiLo, StudHiLo:
+		return true
+	}
+	return false
+}
+
 // Hand is a poker hand.
 type Hand struct {
 	typ       Type

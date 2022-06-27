@@ -220,10 +220,7 @@ When a [`Hand`][hand] is created, a Hi and Lo (if applicable) `HandRank` is
 evaluated, and made available via [`Hand.Rank`][hand.rank] and
 [`Hand.LowRank`][hand.low-rank] methods, respectively. The Hi and Lo
 `HandRank`'s are evaluated by a `Ranker`, dependent on the `Hand`'s
-[`Type`][type] (see below).
-
-A number of different poker hand rank evaluators included in the package are
-used to determine the best Hi/Lo hands based on the [poker hand's type][type]:
+[`Type`][type]:
 
 #### Cactus Kev
 
@@ -241,14 +238,16 @@ for different scenarios.
 
 #### Default Ranker
 
-The package-level [`DefaultRanker`][default-ranker] is used for regular poker
-evaluation. Used out-of-the-box (ie, when no [build tags][build-tags] have been
-specified), the package's `DefaultRanker` will be an instance of the
-[`HybridRanker`][hybrid-ranker].
+The package-level [`DefaultRanker`][default-ranker] variable is used for regular poker
+evaluation. For most scenarios, the [`HybridRanker`][hybrid-ranker] provides
+the best possible evaluation performance, and is used by default when no [build
+tags][build-tags] have been specified.
 
-For most scenarios, the `HybridRanker` provides the best possible evaluation
-performance, and is used by default when no [build tags][build-tags] have been
-specified.
+#### Hybrid
+
+The [`HybridRanker`][hybrid-ranker] uses either the [`CactusFastRanker`][cactus-fast-ranker]
+or an instance of the [`TwoPlusTwoRanker`][two-plus-two-ranker] depending on
+the [`Hand`][hand] having 5, 6, or 7 cards.
 
 #### Two-Plus-Two
 
@@ -257,12 +256,6 @@ The [`TwoPlusTwoRanker`][two-plus-two-ranker] makes use of a large
 card hand rank evaluation. Due to the large size of the lookup table, the
 `TwoPlusTwoRanker` will be excluded when using the using the [`portable` or
 `embedded` build tags][build-tags].
-
-#### Hybrid
-
-The [`HybridRanker`][hybrid-ranker] uses either the [`CactusFastRanker`][cactus-fast-ranker]
-or an instance of the [`TwoPlusTwoRanker`][two-plus-two-ranker] depending on
-the [`Hand`][hand] having 5, 6, or 7 cards.
 
 #### Other Variants
 
@@ -311,8 +304,9 @@ sort.Slice(hands, func(i, j int) bool {
 #### Ordering Hands
 
 [`Order`][order] and [`LowOrder`][low-order] determine the winner(s) of a hand
-by ordering the indexes of a [`[]*Hand`][hand], returned as an `[]int` along
-with a "pivot" indicating the partition between winning and losing hands.
+by ordering the indexes of a [`[]*Hand`][hand] and returning the list of
+ordered hands as a `[]int` and an `int` pivot indicating the position within
+the returned list demarcating winning and losing hands.
 
 A `Hand` whose index is in position `i < pivot` is considered to be the
 winner(s) of the hand. Hi hands are guaranteed to have 1 or more winner(s),
