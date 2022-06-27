@@ -181,11 +181,6 @@ func NewHand(typ Type, pocket, board []Card) *Hand {
 	return h
 }
 
-// LowValid returns true if is a valid low hand.
-func (h *Hand) LowValid() bool {
-	return len(h.lowBest) != 0
-}
-
 // Pocket returns the hand's pocket.
 func (h *Hand) Pocket() []Card {
 	return h.pocket
@@ -214,6 +209,11 @@ func (h *Hand) Best() []Card {
 // Unused returns the hand's unused cards.
 func (h *Hand) Unused() []Card {
 	return h.unused
+}
+
+// LowValid returns true if is a valid low hand.
+func (h *Hand) LowValid() bool {
+	return len(h.lowBest) != 0
 }
 
 // LowRank returns the hand's low rank.
@@ -253,7 +253,7 @@ func (h *Hand) Format(f fmt.State, verb rune) {
 			c.Format(f, 's')
 		}
 	default:
-		fmt.Fprintf(f, "%%!%c(ERROR=unknown verb, hand: %s/%s)", verb, h.best, h.unused)
+		fmt.Fprintf(f, "%%!%c(ERROR=unknown verb, Hand<%s>: %s/%s %d)", verb, h.typ, h.pocket, h.board, h.rank)
 	}
 }
 
