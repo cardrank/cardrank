@@ -191,16 +191,6 @@ func (d *Deck) Board(counts ...int) []Card {
 	return board
 }
 
-// Simple draws board cards and hands of n cards. Useful for examples.
-func (d *Deck) Simple(board, hands, n int) ([][]Card, []Card) {
-	b := d.Draw(board)
-	pockets := make([][]Card, hands)
-	for i := 0; i < hands; i++ {
-		pockets[i] = d.Draw(n)
-	}
-	return pockets, b
-}
-
 // Holdem draws hands for Texas Holdem, returning the set of pockets (one per
 // hand) and board cards. Deals 1 card per player until each player has 2
 // pocket cards, then discards a card, deals 3 board cards, discards another,
@@ -210,24 +200,10 @@ func (d *Deck) Holdem(hands int) ([][]Card, []Card) {
 	return d.Deal(hands, 2), d.Board(4, 2, 2)
 }
 
-// HoldemSimple draws hands for Texas Holdem, returning the set of pockets (one
-// per hand) and board cards. Useful for examples. Deals 5 board cards prior to
-// dealing pocket cards for each hand.
-func (d *Deck) HoldemSimple(hands int) ([][]Card, []Card) {
-	return d.Simple(5, hands, 2)
-}
-
 // Omaha draws hands for Omaha, returning the set of pockets (one per hand) and
 // board cards.
 func (d *Deck) Omaha(hands int) ([][]Card, []Card) {
 	return d.Deal(hands, 4), d.Board(4, 2, 2)
-}
-
-// OmahaSimple draws hands for Omaha, returning the set of pockets (one per
-// hand) and board cards. Useful for examples. Deals 5 board cards prior to
-// dealing pocket cards for each hand.
-func (d *Deck) OmahaSimple(hands int) ([][]Card, []Card) {
-	return d.Simple(5, hands, 4)
 }
 
 // Stud draws hands for Stud, returning the sets of pockets (one per hand).

@@ -191,31 +191,31 @@ func TestUnshuffled(t *testing.T) {
 }
 
 func TestDeckDeal(t *testing.T) {
-	for i := 2; i <= 10; i++ {
-		for _, typ := range []string{"Holdem", "HoldemSimple", "Omaha", "OmahaSimple"} {
+	for _, typ := range []Type{Holdem, Short, Royal, Omaha, OmahaHiLo, Stud, StudHiLo, Razz} {
+		for i := 2; i <= typ.MaxPlayers(); i++ {
 			checkDeal(t, i, typ, time.Now().UnixNano())
 		}
 	}
 }
 
-func checkDeal(t *testing.T, i int, typ string, seed int64) {
+func checkDeal(t *testing.T, i int, typ Type, seed int64) {
 	r := rand.New(rand.NewSource(seed))
-	d := NewDeck()
+	d := typ.Deck()
 	d.Shuffle(r.Shuffle)
 	var f func(int) ([][]Card, []Card)
-	var p int
+	var p, b int
 	switch typ {
-	case "Holdem":
-		f, p = d.Holdem, 2
-	case "HoldemSimple":
-		f, p = d.HoldemSimple, 2
-	case "Omaha":
-		f, p = d.Omaha, 4
-	case "OmahaSimple":
-		f, p = d.OmahaSimple, 4
+	case Holdem, Short, Royal:
+		f, p, b = d.Holdem, 2, 5
+	case Omaha, OmahaHiLo:
+		f, p, b = d.Omaha, 4, 5
+	case Stud, StudHiLo, Razz:
+		f, p, b = d.Stud, 7, 0
+	default:
+		t.Fatalf("unknown type %q", typ)
 	}
 	pockets, board := f(i)
-	if n, exp := len(board), 5; n != exp {
+	if n, exp := len(board), b; n != exp {
 		t.Fatalf("expected %d board cards, got: %d", exp, n)
 	}
 	m := make(map[Card]bool)
