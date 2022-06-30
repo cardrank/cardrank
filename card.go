@@ -358,6 +358,14 @@ func FromString(str string) (Card, error) {
 	return 0, ErrInvalidCard
 }
 
+// FromIndex creates a card from a numerical index (0-51).
+func FromIndex(i int) (Card, error) {
+	if i < 52 {
+		return New(Rank(i%13), Suit(1<<(i/13))), nil
+	}
+	return 0, ErrInvalidCard
+}
+
 // Parse parses strings of Card representations from v. Ignores whitespace
 // between cards and case. Combines all parsed representations into a single
 // Card slice.
@@ -460,6 +468,11 @@ func (c Card) BitRank() uint32 {
 // Prime returns the prime value of the card.
 func (c Card) Prime() uint32 {
 	return uint32(c) & 0x3f
+}
+
+// Index returns the index of the card.
+func (c Card) Index() int {
+	return int(c.Suit())
 }
 
 // UnmarshalText satisfies the encoding.TextUnmarshaler interface.

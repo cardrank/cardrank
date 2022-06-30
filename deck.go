@@ -5,7 +5,7 @@ const (
 	UnshuffledSize = 52
 	// UnshuffledShortSize is the unshuffled short deck size.
 	UnshuffledShortSize = 36
-	// UnshuffledRoyalSize is the unshuffled royal size.
+	// UnshuffledRoyalSize is the unshuffled royal deck size.
 	UnshuffledRoyalSize = 20
 )
 
@@ -31,8 +31,7 @@ func Unshuffled() []Card {
 	return v
 }
 
-// UnshuffledShort generates an unshuffled set of short deck cards (ie,
-// excluding card ranks 2 through 5).
+// UnshuffledShort generates an unshuffled set of short cards (6+).
 func UnshuffledShort() []Card {
 	v := make([]Card, UnshuffledShortSize)
 	var i int
@@ -45,8 +44,7 @@ func UnshuffledShort() []Card {
 	return v
 }
 
-// UnshuffledRoyal generates an royal set of short deck cards (ie,
-// excluding card ranks 2 through 5).
+// UnshuffledRoyal generates an unshuffled set of royal cards (10+).
 func UnshuffledRoyal() []Card {
 	v := make([]Card, UnshuffledRoyalSize)
 	var i int
@@ -98,12 +96,12 @@ func NewDeck(cards ...Card) *Deck {
 	return d
 }
 
-// NewShortDeck creates a new deck of short cards.
+// NewShortDeck creates a new short deck (6+).
 func NewShortDeck() *Deck {
 	return NewDeck(unshuffledShort...)
 }
 
-// NewRoyalDeck creates a new deck of short cards.
+// NewRoyalDeck creates a new royal deck (10+).
 func NewRoyalDeck() *Deck {
 	return NewDeck(unshuffledRoyal...)
 }

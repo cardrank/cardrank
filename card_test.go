@@ -73,6 +73,29 @@ func TestCardMarshal(t *testing.T) {
 	}
 }
 
+func TestCardIndex(t *testing.T) {
+	i := 0
+	for _, s := range []Suit{Spade, Heart, Diamond, Club} {
+		for r := Two; r <= Ace; r++ {
+			c := New(r, s)
+			d, err := FromIndex(i)
+			if err != nil {
+				t.Fatalf("index %d expected no error, got: %v", i, err)
+			}
+			if d != c {
+				t.Errorf("expected %s to equal %s", c, d)
+			}
+			if n, exp := d.Index(), c.Index(); n != exp {
+				t.Errorf("card %s expected index %d, got: %d", c, exp, n)
+			}
+			if unshuffled[i] != c {
+				t.Errorf("expected unshuffled[%d] == %s, has: %s", i, c, unshuffled[i])
+			}
+			i++
+		}
+	}
+}
+
 func TestFromRune(t *testing.T) {
 	tests := []struct {
 		r   rune
