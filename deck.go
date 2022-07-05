@@ -191,6 +191,18 @@ func (d *Deck) Board(counts ...int) []Card {
 	return board
 }
 
+// MultiBoard draws n boards of cards, by discarding a card and drawing m cards
+// for each m in counts.
+func (d *Deck) MultiBoard(n int, counts ...int) [][]Card {
+	boards := make([][]Card, n)
+	for _, m := range counts {
+		for i := 0; i < n; i++ {
+			boards[i] = append(boards[i], d.Draw(m)[1:]...)
+		}
+	}
+	return boards
+}
+
 // Holdem draws hands for Texas Holdem, returning the set of pockets (one per
 // hand) and board cards. Deals 1 card per player until each player has 2
 // pocket cards, then discards a card, deals 3 board cards, discards another,

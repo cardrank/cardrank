@@ -611,6 +611,121 @@ func Example_omahaHiLo() {
 	// Result (Lo): Player 1 wins with Six-low [6♦ 5♠ 4♣ 3♦ A♣]
 }
 
+func Example_omahaMultiBoard() {
+	for i, game := range []struct {
+		seed    int64
+		players int
+	}{
+		{119, 2},
+		{321, 5},
+		{408, 6},
+		{455, 6},
+		{1113, 6},
+	} {
+		// note: use a real random source
+		rnd := rand.New(rand.NewSource(game.seed))
+		deck := cardrank.Omaha.Deck()
+		deck.Shuffle(rnd.Shuffle)
+		pockets := deck.Deal(game.players, 4)
+		boards := deck.MultiBoard(2, 4, 2, 2)
+		fmt.Printf("------ Omaha %d ------\n", i+1)
+		for j := 0; j < len(boards); j++ {
+			fmt.Printf("Board %d:    %b\n", j+1, boards[j])
+			hands := cardrank.Omaha.RankHands(pockets, boards[j])
+			for k := 0; k < game.players; k++ {
+				fmt.Printf("  Player %d: %b %s %b %b\n", k+1, hands[k].Pocket(), hands[k].Description(), hands[k].Best(), hands[k].Unused())
+			}
+			h, pivot := cardrank.Order(hands)
+			if pivot == 1 {
+				fmt.Printf("Result %d:   Player %d wins with %s %b\n", j+1, h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
+			} else {
+				var s, b []string
+				for j := 0; j < pivot; j++ {
+					s = append(s, strconv.Itoa(h[j]+1))
+					b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+				}
+				fmt.Printf("Result %d:   Players %s push with %s %s\n", j+1, strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
+			}
+		}
+	}
+	// Output:
+	// ------ Omaha 1 ------
+	// Board 1:    [3♥ 5♥ 4♥ 9♦ 7♦]
+	//   Player 1: [K♥ 7♣ J♣ 4♣] Two Pair, Sevens over Fours, kicker Nine [7♣ 7♦ 4♣ 4♥ 9♦] [K♥ J♣ 3♥ 5♥]
+	//   Player 2: [A♥ 5♠ Q♠ 2♠] Straight, Five-high [5♥ 4♥ 3♥ 2♠ A♥] [5♠ Q♠ 9♦ 7♦]
+	// Result 1:   Player 2 wins with Straight, Five-high [5♥ 4♥ 3♥ 2♠ A♥]
+	// Board 2:    [7♥ K♦ K♣ 9♥ T♥]
+	//   Player 1: [K♥ 7♣ J♣ 4♣] Full House, Kings full of Sevens [K♣ K♦ K♥ 7♣ 7♥] [J♣ 4♣ 9♥ T♥]
+	//   Player 2: [A♥ 5♠ Q♠ 2♠] Pair, Kings, kickers Ace, Queen, Ten [K♣ K♦ A♥ Q♠ T♥] [5♠ 2♠ 7♥ 9♥]
+	// Result 2:   Player 1 wins with Full House, Kings full of Sevens [K♣ K♦ K♥ 7♣ 7♥]
+	// ------ Omaha 2 ------
+	// Board 1:    [3♥ 7♣ 3♣ 7♠ 2♦]
+	//   Player 1: [3♠ 6♦ Q♦ K♦] Three of a Kind, Threes, kickers King, Seven [3♣ 3♥ 3♠ K♦ 7♣] [6♦ Q♦ 7♠ 2♦]
+	//   Player 2: [J♦ 3♦ Q♣ K♠] Three of a Kind, Threes, kickers King, Seven [3♣ 3♦ 3♥ K♠ 7♣] [J♦ Q♣ 7♠ 2♦]
+	//   Player 3: [T♦ 2♥ T♠ 8♥] Two Pair, Tens over Sevens, kicker Three [T♦ T♠ 7♣ 7♠ 3♥] [2♥ 8♥ 3♣ 2♦]
+	//   Player 4: [8♣ 8♦ Q♥ Q♠] Two Pair, Queens over Sevens, kicker Three [Q♥ Q♠ 7♣ 7♠ 3♥] [8♣ 8♦ 3♣ 2♦]
+	//   Player 5: [6♣ A♥ 4♥ 6♠] Two Pair, Sevens over Sixes, kicker Three [7♣ 7♠ 6♣ 6♠ 3♥] [A♥ 4♥ 3♣ 2♦]
+	// Result 1:   Players 1, 2 push with Three of a Kind, Threes, kickers King, Seven [3♣ 3♥ 3♠ K♦ 7♣], [3♣ 3♦ 3♥ K♠ 7♣]
+	// Board 2:    [9♠ T♣ 9♣ 7♥ J♣]
+	//   Player 1: [3♠ 6♦ Q♦ K♦] Straight, King-high [K♦ Q♦ J♣ T♣ 9♠] [3♠ 6♦ 9♣ 7♥]
+	//   Player 2: [J♦ 3♦ Q♣ K♠] Straight, King-high [K♠ Q♣ J♣ T♣ 9♠] [J♦ 3♦ 9♣ 7♥]
+	//   Player 3: [T♦ 2♥ T♠ 8♥] Full House, Tens full of Nines [T♣ T♦ T♠ 9♣ 9♠] [2♥ 8♥ 7♥ J♣]
+	//   Player 4: [8♣ 8♦ Q♥ Q♠] Straight, Queen-high [Q♥ J♣ T♣ 9♠ 8♣] [8♦ Q♠ 9♣ 7♥]
+	//   Player 5: [6♣ A♥ 4♥ 6♠] Two Pair, Nines over Sixes, kicker Jack [9♣ 9♠ 6♣ 6♠ J♣] [A♥ 4♥ T♣ 7♥]
+	// Result 2:   Player 3 wins with Full House, Tens full of Nines [T♣ T♦ T♠ 9♣ 9♠]
+	// ------ Omaha 3 ------
+	// Board 1:    [J♣ T♥ 4♥ 9♦ 7♦]
+	//   Player 1: [K♠ J♠ 3♠ 5♣] Pair, Jacks, kickers King, Ten, Nine [J♣ J♠ K♠ T♥ 9♦] [3♠ 5♣ 4♥ 7♦]
+	//   Player 2: [7♠ 4♠ Q♠ 3♣] Two Pair, Sevens over Fours, kicker Jack [7♦ 7♠ 4♥ 4♠ J♣] [Q♠ 3♣ T♥ 9♦]
+	//   Player 3: [T♠ 5♥ 3♥ 8♦] Straight, Jack-high [J♣ T♠ 9♦ 8♦ 7♦] [5♥ 3♥ T♥ 4♥]
+	//   Player 4: [4♣ 8♥ 2♣ T♦] Straight, Jack-high [J♣ T♦ 9♦ 8♥ 7♦] [4♣ 2♣ T♥ 4♥]
+	//   Player 5: [6♠ K♦ J♦ 2♠] Pair, Jacks, kickers King, Ten, Nine [J♣ J♦ K♦ T♥ 9♦] [6♠ 2♠ 4♥ 7♦]
+	//   Player 6: [Q♦ 2♦ A♣ T♣] Pair, Tens, kickers Ace, Jack, Nine [T♣ T♥ A♣ J♣ 9♦] [Q♦ 2♦ 4♥ 7♦]
+	// Result 1:   Players 3, 4 push with Straight, Jack-high [J♣ T♠ 9♦ 8♦ 7♦], [J♣ T♦ 9♦ 8♥ 7♦]
+	// Board 2:    [K♣ 7♣ Q♣ 5♠ 2♥]
+	//   Player 1: [K♠ J♠ 3♠ 5♣] Two Pair, Kings over Fives, kicker Queen [K♣ K♠ 5♣ 5♠ Q♣] [J♠ 3♠ 7♣ 2♥]
+	//   Player 2: [7♠ 4♠ Q♠ 3♣] Two Pair, Queens over Sevens, kicker King [Q♣ Q♠ 7♣ 7♠ K♣] [4♠ 3♣ 5♠ 2♥]
+	//   Player 3: [T♠ 5♥ 3♥ 8♦] Pair, Fives, kickers King, Queen, Ten [5♥ 5♠ K♣ Q♣ T♠] [3♥ 8♦ 7♣ 2♥]
+	//   Player 4: [4♣ 8♥ 2♣ T♦] Flush, King-high [K♣ Q♣ 7♣ 4♣ 2♣] [8♥ T♦ 5♠ 2♥]
+	//   Player 5: [6♠ K♦ J♦ 2♠] Two Pair, Kings over Twos, kicker Queen [K♣ K♦ 2♥ 2♠ Q♣] [6♠ J♦ 7♣ 5♠]
+	//   Player 6: [Q♦ 2♦ A♣ T♣] Flush, Ace-high [A♣ K♣ Q♣ T♣ 7♣] [Q♦ 2♦ 5♠ 2♥]
+	// Result 2:   Player 6 wins with Flush, Ace-high [A♣ K♣ Q♣ T♣ 7♣]
+	// ------ Omaha 4 ------
+	// Board 1:    [2♦ 6♦ 6♣ K♦ 3♠]
+	//   Player 1: [6♠ Q♥ 2♣ 9♠] Full House, Sixes full of Twos [6♣ 6♦ 6♠ 2♣ 2♦] [Q♥ 9♠ K♦ 3♠]
+	//   Player 2: [3♦ T♣ K♥ 4♥] Two Pair, Kings over Sixes, kicker Ten [K♦ K♥ 6♣ 6♦ T♣] [3♦ 4♥ 2♦ 3♠]
+	//   Player 3: [6♥ J♥ 4♦ Q♦] Flush, King-high [K♦ Q♦ 6♦ 4♦ 2♦] [6♥ J♥ 6♣ 3♠]
+	//   Player 4: [A♣ J♣ 5♣ K♠] Two Pair, Kings over Sixes, kicker Ace [K♦ K♠ 6♣ 6♦ A♣] [J♣ 5♣ 2♦ 3♠]
+	//   Player 5: [K♣ A♠ 8♣ 5♥] Two Pair, Kings over Sixes, kicker Ace [K♣ K♦ 6♣ 6♦ A♠] [8♣ 5♥ 2♦ 3♠]
+	//   Player 6: [Q♠ J♠ 8♦ 7♥] Pair, Sixes, kickers King, Queen, Jack [6♣ 6♦ K♦ Q♠ J♠] [8♦ 7♥ 2♦ 3♠]
+	// Result 1:   Player 1 wins with Full House, Sixes full of Twos [6♣ 6♦ 6♠ 2♣ 2♦]
+	// Board 2:    [Q♣ 5♦ 7♣ 7♦ T♠]
+	//   Player 1: [6♠ Q♥ 2♣ 9♠] Two Pair, Queens over Sevens, kicker Nine [Q♣ Q♥ 7♣ 7♦ 9♠] [6♠ 2♣ 5♦ T♠]
+	//   Player 2: [3♦ T♣ K♥ 4♥] Two Pair, Tens over Sevens, kicker King [T♣ T♠ 7♣ 7♦ K♥] [3♦ 4♥ Q♣ 5♦]
+	//   Player 3: [6♥ J♥ 4♦ Q♦] Two Pair, Queens over Sevens, kicker Jack [Q♣ Q♦ 7♣ 7♦ J♥] [6♥ 4♦ 5♦ T♠]
+	//   Player 4: [A♣ J♣ 5♣ K♠] Two Pair, Sevens over Fives, kicker Ace [7♣ 7♦ 5♣ 5♦ A♣] [J♣ K♠ Q♣ T♠]
+	//   Player 5: [K♣ A♠ 8♣ 5♥] Two Pair, Sevens over Fives, kicker Ace [7♣ 7♦ 5♦ 5♥ A♠] [K♣ 8♣ Q♣ T♠]
+	//   Player 6: [Q♠ J♠ 8♦ 7♥] Full House, Sevens full of Queens [7♣ 7♦ 7♥ Q♣ Q♠] [J♠ 8♦ 5♦ T♠]
+	// Result 2:   Player 6 wins with Full House, Sevens full of Queens [7♣ 7♦ 7♥ Q♣ Q♠]
+	// ------ Omaha 5 ------
+	// Board 1:    [4♣ K♣ 6♦ 6♥ 2♦]
+	//   Player 1: [3♦ T♥ A♣ 7♦] Pair, Sixes, kickers Ace, King, Ten [6♦ 6♥ A♣ K♣ T♥] [3♦ 7♦ 4♣ 2♦]
+	//   Player 2: [5♣ 6♠ 4♦ J♠] Full House, Sixes full of Fours [6♦ 6♥ 6♠ 4♣ 4♦] [5♣ J♠ K♣ 2♦]
+	//   Player 3: [9♠ 3♣ Q♠ 7♠] Pair, Sixes, kickers King, Queen, Nine [6♦ 6♥ K♣ Q♠ 9♠] [3♣ 7♠ 4♣ 2♦]
+	//   Player 4: [5♦ K♠ T♠ 8♠] Two Pair, Kings over Sixes, kicker Ten [K♣ K♠ 6♦ 6♥ T♠] [5♦ 8♠ 4♣ 2♦]
+	//   Player 5: [J♥ 7♥ J♣ 2♣] Two Pair, Jacks over Sixes, kicker King [J♣ J♥ 6♦ 6♥ K♣] [7♥ 2♣ 4♣ 2♦]
+	//   Player 6: [3♠ 7♣ 2♠ 2♥] Full House, Twos full of Sixes [2♦ 2♥ 2♠ 6♦ 6♥] [3♠ 7♣ 4♣ K♣]
+	// Result 1:   Player 2 wins with Full House, Sixes full of Fours [6♦ 6♥ 6♠ 4♣ 4♦]
+	// Board 2:    [9♦ K♥ 5♠ K♦ 6♣]
+	//   Player 1: [3♦ T♥ A♣ 7♦] Pair, Kings, kickers Ace, Ten, Nine [K♦ K♥ A♣ T♥ 9♦] [3♦ 7♦ 5♠ 6♣]
+	//   Player 2: [5♣ 6♠ 4♦ J♠] Two Pair, Kings over Sixes, kicker Jack [K♦ K♥ 6♣ 6♠ J♠] [5♣ 4♦ 9♦ 5♠]
+	//   Player 3: [9♠ 3♣ Q♠ 7♠] Two Pair, Kings over Nines, kicker Queen [K♦ K♥ 9♦ 9♠ Q♠] [3♣ 7♠ 5♠ 6♣]
+	//   Player 4: [5♦ K♠ T♠ 8♠] Full House, Kings full of Fives [K♦ K♥ K♠ 5♦ 5♠] [T♠ 8♠ 9♦ 6♣]
+	//   Player 5: [J♥ 7♥ J♣ 2♣] Two Pair, Kings over Jacks, kicker Nine [K♦ K♥ J♣ J♥ 9♦] [7♥ 2♣ 5♠ 6♣]
+	//   Player 6: [3♠ 7♣ 2♠ 2♥] Two Pair, Kings over Twos, kicker Nine [K♦ K♥ 2♥ 2♠ 9♦] [3♠ 7♣ 5♠ 6♣]
+	// Result 2:   Player 4 wins with Full House, Kings full of Fives [K♦ K♥ K♠ 5♦ 5♠]
+}
+
 func Example_stud() {
 	for i, game := range []struct {
 		seed    int64
