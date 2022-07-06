@@ -137,24 +137,24 @@ func LowRanker(c0, c1, c2, c3, c4 Card) uint16 {
 func low(mask uint16, c0, c1, c2, c3, c4 Card) uint16 {
 	rank := uint16(0)
 	// c0
-	r := uint16((c0.Rank() + 1) % 13)
-	rank |= (1 << r) | ((mask&(1<<r)>>r)&1)*0x8000
+	r := uint16(c0>>8&0xf+1) % 13
+	rank |= 1<<r | ((mask&(1<<r)>>r)&1)*0x8000
 	mask |= 1 << r
 	// c1
-	r = uint16((c1.Rank() + 1) % 13)
-	rank |= (1 << r) | ((mask&(1<<r)>>r)&1)*0x8000
+	r = uint16(c1>>8&0xf+1) % 13
+	rank |= 1<<r | ((mask&(1<<r)>>r)&1)*0x8000
 	mask |= 1 << r
 	// c2
-	r = uint16((c2.Rank() + 1) % 13)
-	rank |= (1 << r) | ((mask&(1<<r)>>r)&1)*0x8000
+	r = uint16(c2>>8&0xf+1) % 13
+	rank |= 1<<r | ((mask&(1<<r)>>r)&1)*0x8000
 	mask |= 1 << r
 	// c3
-	r = uint16((c3.Rank() + 1) % 13)
-	rank |= (1 << r) | ((mask&(1<<r)>>r)&1)*0x8000
+	r = uint16(c3>>8&0xf+1) % 13
+	rank |= 1<<r | ((mask&(1<<r)>>r)&1)*0x8000
 	mask |= 1 << r
 	// c4
-	r = uint16((c4.Rank() + 1) % 13)
-	rank |= (1 << r) | ((mask&(1<<r)>>r)&1)*0x8000
+	r = uint16(c4>>8&0xf+1) % 13
+	rank |= 1<<r | ((mask&(1<<r)>>r)&1)*0x8000
 	return rank
 }
 

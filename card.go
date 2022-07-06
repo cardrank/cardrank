@@ -432,7 +432,7 @@ func Must(v ...string) []Card {
 
 // Rank returns the rank of the card.
 func (c Card) Rank() Rank {
-	return Rank((uint32(c) >> 8) & 0xf)
+	return Rank(c >> 8 & 0xf)
 }
 
 // RankByte returns the rank byte of the card.
@@ -447,7 +447,7 @@ func (c Card) RankIndex() int {
 
 // Suit returns the suit of the card.
 func (c Card) Suit() Suit {
-	return Suit((uint32(c) >> 12) & 0xf)
+	return Suit(c >> 12 & 0xf)
 }
 
 // SuitByte returns the suit byte of the card.
@@ -460,19 +460,9 @@ func (c Card) SuitIndex() int {
 	return c.Suit().Index()
 }
 
-// BitRank returns the bit rank of the card.
-func (c Card) BitRank() uint32 {
-	return (uint32(c) >> 16) & 0x1fff
-}
-
-// Prime returns the prime value of the card.
-func (c Card) Prime() uint32 {
-	return uint32(c) & 0x3f
-}
-
 // Index returns the index of the card.
 func (c Card) Index() int {
-	return int(c.Suit())
+	return c.SuitIndex()*13 + c.RankIndex()
 }
 
 // UnmarshalText satisfies the encoding.TextUnmarshaler interface.

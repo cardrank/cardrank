@@ -2,8 +2,6 @@ package cardrank
 
 import (
 	"fmt"
-	"reflect"
-	"runtime"
 	"testing"
 )
 
@@ -13,9 +11,8 @@ func BenchmarkRanker(b *testing.B) {
 			bench5, bench6, bench7,
 		} {
 			ranker, f := r, ff
-			rankerName := runtime.FuncForPC(reflect.ValueOf(ranker).Pointer()).Name()
-			b.Run(fmt.Sprintf("%s/%d", rankerName, i+5), func(b *testing.B) {
-				f(b, ranker, b.N)
+			b.Run(fmt.Sprintf("%s/%d", ranker.name, i+5), func(b *testing.B) {
+				f(b, ranker.ranker, b.N)
 			})
 		}
 	}

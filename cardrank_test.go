@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"reflect"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -19,12 +17,11 @@ func TestRanker(t *testing.T) {
 			sevenCardTests,
 		} {
 			ranker, tests := r, f()
-			rankerName := runtime.FuncForPC(reflect.ValueOf(ranker).Pointer()).Name()
-			t.Run(fmt.Sprintf("%s/%d", rankerName, i+5), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s/%d", ranker.name, i+5), func(t *testing.T) {
 				for j, test := range tests {
 					hand := make([]Card, len(test.hand))
 					copy(hand, test.hand)
-					rank := ranker(hand)
+					rank := ranker.ranker(hand)
 					if rank != test.r {
 						t.Errorf("test %d %d expected %d, got: %d", i, j, test.r, rank)
 					}
@@ -42,10 +39,23 @@ func TestRanker(t *testing.T) {
 }
 
 func TestLow(t *testing.T) {
-	king1 := Must("Kh Qh Jh Th 9h")
-	t.Logf("king1 %s: %d", king1, LowRanker(king1[0], king1[1], king1[2], king1[3], king1[4]))
-	eight1 := Must("9h 7h 6h 5h 4h")
-	t.Logf("eight1 %s: %d", eight1, EightOrBetterRanker(eight1[0], eight1[1], eight1[2], eight1[3], eight1[4]))
+	tests := []struct {
+		v string
+		r HandRank
+		f RankFiveFunc
+	}{
+		{"Kh Qh Jh Th 9h", 7936, LowRanker},
+		{"9h 7h 6h 5h 4h", 33144, EightOrBetterRanker},
+	}
+	for i, test := range tests {
+		ranker := HandRanker(test.f)
+		if n, exp := ranker(Must(test.v)), test.r; n != exp {
+			t.Errorf("test %d expected rank %d, got: %d", i, exp, n)
+		}
+	}
+}
+
+func TestEightOrBetterRanker(t *testing.T) {
 	p0 := Must("Ah 2h 3h 4h 5h 6h 7h 8h")
 	for i := Nine; i <= King; i++ {
 		p1 := Must(i.String() + "h 4h 3h 2h Ah")
@@ -69,23 +79,25 @@ func TestLow(t *testing.T) {
 }
 
 func TestRazzRanker(t *testing.T) {
-	ranker := HandRanker(RazzRanker)
 	tests := []struct {
 		v string
+		r HandRank
 	}{
-		{"Kh Qh Jh Th 9h"},
-		{"Ah Kh Qh Jh Th"},
-		{"2h 2c 2d 2s As"},
-		{"Ah Ac Ad Ks Kh"},
-		{"Ah Ac Ad Ks Qh"},
-		{"Kh Kd Qd Qs Jh"},
-		{"3h 3c Kh Qd Jd"},
-		{"2h 2c Kh Qd Jd"},
-		{"3h 2c Kh Qd Jd"},
+		{"Kh Qh Jh Th 9h", 7936},
+		{"Ah Kh Qh Jh Th", 7681},
+		{"2h 2c 2d 2s As", 65380},
+		{"Ah Ac Ad Ks Kh", 65368},
+		{"Ah Ac Ad Ks Qh", 63925},
+		{"Kh Kd Qd Qs Jh", 62934},
+		{"3h 3c Kh Qd Jd", 59734},
+		{"2h 2c Kh Qd Jd", 59514},
+		{"3h 2c Kh Qd Jd", 7174},
 	}
-	for _, test := range tests {
-		r := ranker(Must(test.v))
-		t.Logf("%v: %d", test.v, r)
+	ranker := HandRanker(RazzRanker)
+	for i, test := range tests {
+		if n, exp := ranker(Must(test.v)), test.r; n != exp {
+			t.Errorf("test %d expected rank %d, got: %d", i, exp, n)
+		}
 	}
 }
 
@@ -98,7 +110,7 @@ func TestAllCards(t *testing.T) {
 		t.Logf("skipping: Cactus ranker is not available")
 		return
 	}
-	ranker := HandRanker(cactus)
+	ranker, rankers := HandRanker(cactus), rankers(false)
 	for c0 := 0; c0 < 52; c0++ {
 		for c1 := c0 + 1; c1 < 52; c1++ {
 			for c2 := c1 + 1; c2 < 52; c2++ {
@@ -108,10 +120,9 @@ func TestAllCards(t *testing.T) {
 							for c6 := c5 + 1; c6 < 52; c6++ {
 								hand := []Card{allCards[c0], allCards[c1], allCards[c2], allCards[c3], allCards[c4], allCards[c5], allCards[c6]}
 								exp := ranker(hand)
-								for _, ranker := range rankers(false) {
-									rankerName := runtime.FuncForPC(reflect.ValueOf(ranker).Pointer()).Name()
-									if r := ranker(hand); r != exp {
-										t.Errorf("test %s(%b) expected %d (%s), got: %d (%s)", rankerName, hand, exp, exp.Fixed(), r, r.Fixed())
+								for _, rnk := range rankers {
+									if r := rnk.ranker(hand); r != exp {
+										t.Errorf("test %s(%b) expected %d (%s), got: %d (%s)", rnk.name, hand, exp, exp.Fixed(), r, r.Fixed())
 									}
 								}
 							}
@@ -211,19 +222,24 @@ func sevenCardTests() []test {
 	}
 }
 
-func rankers(base bool) []RankerFunc {
-	var rankers []RankerFunc
+type ranker struct {
+	name   string
+	ranker RankerFunc
+}
+
+func rankers(base bool) []ranker {
+	var rankers []ranker
 	if base && cactus != nil {
-		rankers = append(rankers, HandRanker(cactus))
+		rankers = append(rankers, ranker{"Cactus", HandRanker(cactus)})
 	}
 	if cactusFast != nil {
-		rankers = append(rankers, HandRanker(cactusFast))
+		rankers = append(rankers, ranker{"CactusFast", HandRanker(cactusFast)})
 	}
 	if twoPlusTwo != nil {
-		rankers = append(rankers, twoPlusTwo)
+		rankers = append(rankers, ranker{"TwoPlusTwo", twoPlusTwo})
 	}
 	if cactusFast != nil && twoPlusTwo != nil {
-		rankers = append(rankers, HybridRanker(cactusFast, twoPlusTwo))
+		rankers = append(rankers, ranker{"HybridRanker", HybridRanker(cactusFast, twoPlusTwo)})
 	}
 	return rankers
 }

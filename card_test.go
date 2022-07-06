@@ -44,13 +44,6 @@ func TestParse(t *testing.T) {
 	}
 }
 
-func TestCardBitRank(t *testing.T) {
-	hand := Must("Ks")
-	if r, exp := hand[0].BitRank(), uint32(0x800); r != exp {
-		t.Errorf("expected %d == %d", exp, r)
-	}
-}
-
 func TestCardUnmarshal(t *testing.T) {
 	var hand []Card
 	if err := json.Unmarshal([]byte(`["Ah","Kh","Qh","Jh","Th"]`), &hand); err != nil {
@@ -85,7 +78,13 @@ func TestCardIndex(t *testing.T) {
 			if d != c {
 				t.Errorf("expected %s to equal %s", c, d)
 			}
-			if n, exp := d.Index(), c.Index(); n != exp {
+			if n, exp := d.SuitIndex(), c.SuitIndex(); n != exp {
+				t.Errorf("card %s expected suit index %d, got: %d", c, exp, n)
+			}
+			if n, exp := d.RankIndex(), c.RankIndex(); n != exp {
+				t.Errorf("card %s expected rank index %d, got: %d", c, exp, n)
+			}
+			if n, exp := c.Index(), i; n != exp {
 				t.Errorf("card %s expected index %d, got: %d", c, exp, n)
 			}
 			if unshuffled[i] != c {
