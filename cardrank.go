@@ -250,6 +250,26 @@ func Init() {
 	}
 }
 
+// Error is a error.
+type Error string
+
+// Error satisfies the error interface.
+func (err Error) Error() string {
+	return string(err)
+}
+
+// Error values.
+const (
+	// ErrInvalidCard is the invalid card error.
+	ErrInvalidCard Error = "invalid card"
+	// ErrInvalidCardRank is the invalid card rank error.
+	ErrInvalidCardRank Error = "invalid card rank"
+	// ErrInvalidCardSuit is the invalid card suit error.
+	ErrInvalidCardSuit Error = "invalid card suit"
+	// ErrInvalidType is the invalid type error.
+	ErrInvalidType Error = "invalid type"
+)
+
 // min returns the min of a, b.
 func min(a, b uint16) uint16 {
 	if a < b {

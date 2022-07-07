@@ -3,6 +3,7 @@ package cardrank
 import (
 	"fmt"
 	"sort"
+	"strings"
 )
 
 // Type is a hand type.
@@ -44,6 +45,38 @@ func (typ Type) String() string {
 		return "Badugi"
 	}
 	return fmt.Sprintf("Type(%d)", typ)
+}
+
+// MarshalText satisfies the encoding.TextMarshaler interface.
+func (typ Type) MarshalText() ([]byte, error) {
+	return []byte(typ.String()), nil
+}
+
+// UnmarshalText satisfies the encoding.TextUnmarshaler interface.
+func (typ *Type) UnmarshalText(buf []byte) error {
+	switch strings.ToLower(string(buf)) {
+	case "holdem":
+		*typ = Holdem
+	case "short":
+		*typ = Short
+	case "royal":
+		*typ = Royal
+	case "omaha":
+		*typ = Omaha
+	case "omahahilo":
+		*typ = OmahaHiLo
+	case "stud":
+		*typ = Stud
+	case "studhilo":
+		*typ = StudHiLo
+	case "razz":
+		*typ = Razz
+	case "badugi":
+		*typ = Badugi
+	default:
+		return ErrInvalidType
+	}
+	return nil
 }
 
 // NewDeck returns a new deck for the type.

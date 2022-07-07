@@ -225,3 +225,25 @@ func TestMaxPlayers(t *testing.T) {
 		}
 	}
 }
+
+func TestTypeUnmarshal(t *testing.T) {
+	tests := []struct {
+		s   string
+		exp Type
+	}{
+		{"HOLDEM", Holdem},
+		{"omaha", Omaha},
+		{"studHiLo", StudHiLo},
+		{"razz", Razz},
+		{"BaDUGI", Badugi},
+	}
+	for i, test := range tests {
+		typ := Type(^uint32(0))
+		if err := typ.UnmarshalText([]byte(test.s)); err != nil {
+			t.Fatalf("test %d expected no error, got: %v", i, err)
+		}
+		if typ != test.exp {
+			t.Errorf("test %d expected %d, got: %d", i, test.exp, typ)
+		}
+	}
+}
