@@ -368,9 +368,9 @@ third-party `Ranker` algorithm:
 GOOS=js GOARCH=wasm go build -tags 'embedded noinit'
 ```
 
-When using the `noinit` build tag, the user will need to [`Init` func][init] to
-set `DefaultCactus`, `DefaultRanker` and `DefaultSixPlusRanker` automatically
-or by manually specifying the variables:
+When using the `noinit` build tag, the user will need to call the [`Init`
+func][init] to set `DefaultCactus`, `DefaultRanker` and `DefaultSixPlusRanker`
+automatically or by manually specifying the variables:
 
 ```go
 // Set DefaultCactus, DefaultRanker and DefaultSixPlusRanker based on
