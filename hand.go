@@ -19,7 +19,7 @@ const (
 	Stud
 	StudHiLo
 	Razz
-	Badugi // FIXME: not yet available
+	Badugi
 )
 
 // String satisfies the fmt.Stringer interface.
@@ -151,8 +151,7 @@ func (typ Type) Best(pocket, board []Card) (HandRank, []Card, []Card, HandRank, 
 	case Razz:
 		rank, best, unused := bestLow(pocket, board, RazzRanker, ^uint16(0))
 		if rank >= lowMaxRank {
-			r := Invalid - rank
-			switch r.Fixed() {
+			switch r := Invalid - rank; r.Fixed() {
 			case FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, Pair:
 				best, _ = bestSet(best)
 			default:
