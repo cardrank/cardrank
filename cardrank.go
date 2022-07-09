@@ -3,8 +3,12 @@
 // hand ranks.
 //
 // Supports Texas Holdem, Texas Holdem Short (6+), Texas Holdem Royal (10+),
-// Omaha, Omaha Hi/Lo, Stud, Stud Hi/Lo, and Razz.
+// Omaha, Omaha Hi/Lo, Stud, Stud Hi/Lo, Razz, and Badugi.
 package cardrank
+
+import (
+	"sort"
+)
 
 // HandRank is a poker hand rank.
 //
@@ -156,6 +160,55 @@ func low(mask uint16, c0, c1, c2, c3, c4 Card) uint16 {
 	r = uint16(c4>>8&0xf+1) % 13
 	rank |= 1<<r | ((mask&(1<<r)>>r)&1)*0x8000
 	return rank
+}
+
+// BadugiRanker is a Badugi hand ranker.
+func BadugiRanker(hand []Card) (HandRank, []Card, []Card) {
+	s := make([][]Card, 4)
+	for i := 0; i < len(hand) && i < 4; i++ {
+		idx := hand[i].SuitIndex()
+		s[idx] = append(s[idx], hand[i])
+	}
+	sort.SliceStable(s, func(i, j int) bool {
+		a, b := len(s[i]), len(s[j])
+		switch {
+		case a != b:
+			return a < b
+		case a == 0:
+			return true
+		case b == 0:
+			return false
+		}
+		return uint16(s[i][0]>>8&0xf+1)%13 < uint16(s[j][0]>>8&0xf+1)%13
+	})
+	count, rank := 4, 0
+	var best, unused []Card
+	for i := 0; i < 4; i++ {
+		sort.Slice(s[i], func(j, k int) bool {
+			return uint16(s[i][j]>>8&0xf+1)%13 < uint16(s[i][k]>>8&0xf+1)%13
+		})
+		captured := false
+		for j := 0; j < len(s[i]); j++ {
+			if r := 1 << (uint16(s[i][j]>>8&0xf+1) % 13); rank&r == 0 && !captured {
+				captured, best = true, append(best, s[i][j])
+				rank |= r
+				count--
+			} else {
+				unused = append(unused, s[i][j])
+			}
+		}
+	}
+	sort.Slice(best, func(i, j int) bool {
+		return uint16(best[i]>>8&0xf+1)%13 > uint16(best[j]>>8&0xf+1)%13
+	})
+	sort.Slice(unused, func(i, j int) bool {
+		a, b := uint16(unused[i]>>8&0xf+1)%13, uint16(unused[j]>>8&0xf+1)%13
+		if a != b {
+			return a > b
+		}
+		return unused[i].Suit() < unused[j].Suit()
+	})
+	return HandRank(count<<13 | rank), best, unused
 }
 
 // HandRanker creates a new hand ranker for 5, 6, or 7 cards using f.

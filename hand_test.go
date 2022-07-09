@@ -215,7 +215,7 @@ func TestHandRankCompare(t *testing.T) {
 
 func TestMaxPlayers(t *testing.T) {
 	rnd := rand.New(rand.NewSource(0))
-	for typ := Holdem; typ <= Razz; typ++ {
+	for typ := Holdem; typ <= Badugi; typ++ {
 		maxPlayers := typ.MaxPlayers()
 		for i := 2; i <= maxPlayers; i++ {
 			pockets, _ := typ.Deal(rnd.Shuffle, i)

@@ -6,7 +6,7 @@ for working with playing cards, card decks, and evaluating poker hand ranks.
 Supports [Texas Holdem][holdem-example], [Texas Holdem Short (6+)][short-example],
 [Texas Holdem Royal (10+)][royal-example], [Omaha][omaha-example],
 [Omaha Hi/Lo][omaha-hi-lo-example], [Stud][stud-example], [Stud Hi/Lo][stud-hi-lo-example],
-and [Razz][razz-example].
+[Razz][razz-example], and [Badugi][badugi-example].
 
 [![GoDoc](https://godoc.org/cardrank.io/cardrank?status.svg)](https://godoc.org/cardrank.io/cardrank)
 [![Tests on Linux, MacOS and Windows](https://github.com/cardrank/cardrank/workflows/Test/badge.svg)](https://github.com/cardrank/cardrank/actions?query=workflow%3ATest)
@@ -29,14 +29,15 @@ cards for, and evaluating [poker hands][hand] of the following:
 * [Stud][stud-example]
 * [Stud Hi/Lo][stud-hi-lo-example]
 * [Razz][razz-example]
+* [Badugi][badugi-example]
 
 [Hand evaluation and ranking][hand-ranking] of the different [poker hand
 types][type] is accomplished through pure Go implementations of [well-known
 poker rank evaluation algorithms](#rankers). [Poker hands][hand] can be
 compared and [ordered to determine the hand's winner(s)][hand-ordering].
 
-[Development of additional poker variants][future], such as Badugi and Candian
-Stud (Sökö), is planned.
+[Development of additional poker variants][future], such as Kansas City Lowball
+and Candian Stud (Sökö), is planned.
 
 ## Using
 
@@ -52,10 +53,10 @@ See package level [Go documentation][pkg].
 
 Complete examples for [Texas Holdem][holdem-example], [Texas Holdem Short (6+)][short-example],
 [Texas Holdem Royal (10+)][royal-example], [Omaha][omaha-example], [Omaha Hi/Lo][omaha-hi-lo-example],
-[Stud][stud-example], [Stud Hi/Lo][stud-hi-lo-example], and [Razz][razz-example]
-are available in the source repository. [Other examples][examples] are
-available in the [Go package documentation][pkg] showing use of the package's
-types, utilities, and interfaces.
+[Stud][stud-example], [Stud Hi/Lo][stud-hi-lo-example], [Razz][razz-example],
+and [Badugi][badugi-example] are available in the source repository. [Other examples][examples]
+are available in the [Go package documentation][pkg] showing use of the
+package's types, utilities, and interfaces.
 
 ##### Texas Holdem
 
@@ -259,10 +260,10 @@ card hand rank evaluation. Due to the large size of the lookup table, the
 
 #### Other Variants
 
-For the [`Short`][type], [`OmahaHiLo`][type], [`StudHiLo`][type], and
-[`Razz`][type] poker hand types, a [6-plus][six-plus-ranker],
-[8-or-better][eight-or-better-ranker], and a [Razz][razz-ranker] poker hand
-rank evaluators are used.
+For the [`Short`][type], [`OmahaHiLo`][type], [`StudHiLo`][type], [`Razz`][type],
+and [`Badugi`][type] poker hand types, a [6-plus][six-plus-ranker],
+an [8-or-better][eight-or-better-ranker], a [Razz][razz-ranker], and a
+[Badugi][badugi-ranker] poker hand rank evaluators are used.
 
 ### Winner Determination
 
@@ -384,9 +385,9 @@ cardrank.DefaultSixPlusRanker = cardrank.HandRanker(cardrank.SixPlusRanker(cardr
 
 ## Future Development
 
-Rankers for Badugi, Sökö, and other poker variants will be added to this
-package in addition to standardized interfaces for managing poker tables and
-games.
+Rankers for Kansas City Lowball, Sökö, and other poker variants will be added
+to this package in addition to standardized interfaces for managing poker
+tables and games.
 
 ## Links
 
@@ -430,9 +431,9 @@ games.
 [stud-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Stud
 [stud-hi-lo-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-StudHiLo
 [razz-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Razz
+[badugi-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Badugi
 
 [default-ranker]: https://pkg.go.dev/cardrank.io/cardrank#DefaultRanker
-[hand-ranker]: https://pkg.go.dev/cardrank.io/cardrank#HandRanker
 [cactus-ranker]: https://pkg.go.dev/cardrank.io/cardrank#CactusRanker
 [cactus-fast-ranker]: https://pkg.go.dev/cardrank.io/cardrank#CactusFastRanker
 [two-plus-two-ranker]: https://pkg.go.dev/cardrank.io/cardrank#TwoPlusTwoRanker
@@ -440,3 +441,4 @@ games.
 [six-plus-ranker]: https://pkg.go.dev/cardrank.io/cardrank#SixPlusRanker
 [eight-or-better-ranker]: https://pkg.go.dev/cardrank.io/cardrank#EightOrBetterRanker
 [razz-ranker]: https://pkg.go.dev/cardrank.io/cardrank#RazzRanker
+[badugi-ranker]: https://pkg.go.dev/cardrank.io/cardrank#BadugiRanker

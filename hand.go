@@ -160,6 +160,9 @@ func (typ Type) Best(pocket, board []Card) (HandRank, []Card, []Card, HandRank, 
 			}
 		}
 		return rank, best, unused, 0, nil, nil
+	case Badugi:
+		rank, best, unused := BadugiRanker(pocket)
+		return rank, best, unused, 0, nil, nil
 	}
 	panic("invalid type")
 }
@@ -309,6 +312,12 @@ func (h *Hand) Format(f fmt.State, verb rune) {
 func (h *Hand) Description() string {
 	r := h.rank
 	switch {
+	case h.typ == Badugi:
+		s := make([]string, len(h.best))
+		for i := 0; i < len(h.best); i++ {
+			s[i] = h.best[i].Rank().Name()
+		}
+		return strings.Join(s, ", ") + "-low"
 	case h.typ == Razz && h.rank < lowMaxRank:
 		return h.best[0].Rank().Name() + "-low"
 	case h.typ == Razz:

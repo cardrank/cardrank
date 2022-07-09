@@ -1010,3 +1010,72 @@ func Example_razz() {
 	// Player 6: [K♦ 8♣ 2♦ A♥ 6♣ 4♠ T♦] Eight-low [8♣ 6♣ 4♠ 2♦ A♥] [K♦ T♦]
 	// Result:   Player 1 wins with Six-low [6♠ 5♣ 4♦ 3♦ A♣]
 }
+
+func Example_badugi() {
+	for i, game := range []struct {
+		seed    int64
+		players int
+	}{
+		{119, 2},
+		{321, 5},
+		{408, 6},
+		{455, 6},
+		{1113, 6},
+	} {
+		// note: use a real random source
+		rnd := rand.New(rand.NewSource(game.seed))
+		pockets, _ := cardrank.Badugi.Deal(rnd.Shuffle, game.players)
+		hands := cardrank.Badugi.RankHands(pockets, nil)
+		fmt.Printf("------ Badugi %d ------\n", i+1)
+		for j := 0; j < game.players; j++ {
+			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket(), hands[j].Description(), hands[j].Best(), hands[j].Unused())
+		}
+		h, pivot := cardrank.Order(hands)
+		if pivot == 1 {
+			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
+		} else {
+			var s, b []string
+			for j := 0; j < pivot; j++ {
+				s = append(s, strconv.Itoa(h[j]+1))
+				b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+			}
+			fmt.Printf("Result:   Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
+		}
+	}
+	// Output:
+	// ------ Badugi 1 ------
+	// Player 1: [K♥ 7♣ J♣ 4♣] King, Four-low [K♥ 4♣] [J♣ 7♣]
+	// Player 2: [A♥ 5♠ Q♠ 2♠] Two, Ace-low [2♠ A♥] [Q♠ 5♠]
+	// Result:   Player 2 wins with Two, Ace-low [2♠ A♥]
+	// ------ Badugi 2 ------
+	// Player 1: [3♠ 6♦ Q♦ K♦] Six, Three-low [6♦ 3♠] [K♦ Q♦]
+	// Player 2: [J♦ 3♦ Q♣ K♠] King, Queen, Three-low [K♠ Q♣ 3♦] [J♦]
+	// Player 3: [T♦ 2♥ T♠ 8♥] Ten, Two-low [T♠ 2♥] [T♦ 8♥]
+	// Player 4: [8♣ 8♦ Q♥ Q♠] Queen, Eight-low [Q♠ 8♦] [Q♥ 8♣]
+	// Player 5: [6♣ A♥ 4♥ 6♠] Six, Ace-low [6♠ A♥] [6♣ 4♥]
+	// Result:   Player 2 wins with King, Queen, Three-low [K♠ Q♣ 3♦]
+	// ------ Badugi 3 ------
+	// Player 1: [K♠ J♠ 3♠ 5♣] Five, Three-low [5♣ 3♠] [K♠ J♠]
+	// Player 2: [7♠ 4♠ Q♠ 3♣] Four, Three-low [4♠ 3♣] [Q♠ 7♠]
+	// Player 3: [T♠ 5♥ 3♥ 8♦] Ten, Eight, Three-low [T♠ 8♦ 3♥] [5♥]
+	// Player 4: [4♣ 8♥ 2♣ T♦] Ten, Eight, Two-low [T♦ 8♥ 2♣] [4♣]
+	// Player 5: [6♠ K♦ J♦ 2♠] Jack, Two-low [J♦ 2♠] [K♦ 6♠]
+	// Player 6: [Q♦ 2♦ A♣ T♣] Two, Ace-low [2♦ A♣] [Q♦ T♣]
+	// Result:   Player 4 wins with Ten, Eight, Two-low [T♦ 8♥ 2♣]
+	// ------ Badugi 4 ------
+	// Player 1: [6♠ Q♥ 2♣ 9♠] Queen, Six, Two-low [Q♥ 6♠ 2♣] [9♠]
+	// Player 2: [3♦ T♣ K♥ 4♥] Ten, Four, Three-low [T♣ 4♥ 3♦] [K♥]
+	// Player 3: [6♥ J♥ 4♦ Q♦] Six, Four-low [6♥ 4♦] [Q♦ J♥]
+	// Player 4: [A♣ J♣ 5♣ K♠] King, Ace-low [K♠ A♣] [J♣ 5♣]
+	// Player 5: [K♣ A♠ 8♣ 5♥] Eight, Five, Ace-low [8♣ 5♥ A♠] [K♣]
+	// Player 6: [Q♠ J♠ 8♦ 7♥] Jack, Eight, Seven-low [J♠ 8♦ 7♥] [Q♠]
+	// Result:   Player 5 wins with Eight, Five, Ace-low [8♣ 5♥ A♠]
+	// ------ Badugi 5 ------
+	// Player 1: [3♦ T♥ A♣ 7♦] Ten, Three, Ace-low [T♥ 3♦ A♣] [7♦]
+	// Player 2: [5♣ 6♠ 4♦ J♠] Six, Five, Four-low [6♠ 5♣ 4♦] [J♠]
+	// Player 3: [9♠ 3♣ Q♠ 7♠] Seven, Three-low [7♠ 3♣] [Q♠ 9♠]
+	// Player 4: [5♦ K♠ T♠ 8♠] Eight, Five-low [8♠ 5♦] [K♠ T♠]
+	// Player 5: [J♥ 7♥ J♣ 2♣] Seven, Two-low [7♥ 2♣] [J♥ J♣]
+	// Player 6: [3♠ 7♣ 2♠ 2♥] Seven, Three, Two-low [7♣ 3♠ 2♥] [2♠]
+	// Result:   Player 2 wins with Six, Five, Four-low [6♠ 5♣ 4♦]
+}

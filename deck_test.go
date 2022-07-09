@@ -191,7 +191,7 @@ func TestUnshuffled(t *testing.T) {
 }
 
 func TestDeckDeal(t *testing.T) {
-	for _, typ := range []Type{Holdem, Short, Royal, Omaha, OmahaHiLo, Stud, StudHiLo, Razz} {
+	for _, typ := range []Type{Holdem, Short, Royal, Omaha, OmahaHiLo, Stud, StudHiLo, Razz, Badugi} {
 		for i := 2; i <= typ.MaxPlayers(); i++ {
 			checkDeal(t, i, typ, time.Now().UnixNano())
 		}
@@ -211,6 +211,8 @@ func checkDeal(t *testing.T, i int, typ Type, seed int64) {
 		f, p, b = d.Omaha, 4, 5
 	case Stud, StudHiLo, Razz:
 		f, p, b = d.Stud, 7, 0
+	case Badugi:
+		f, p, b = d.Badugi, 4, 0
 	default:
 		t.Fatalf("unknown type %q", typ)
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -97,6 +98,45 @@ func TestRazzRanker(t *testing.T) {
 	for i, test := range tests {
 		if n, exp := ranker(Must(test.v)), test.r; n != exp {
 			t.Errorf("test %d expected rank %d, got: %d", i, exp, n)
+		}
+	}
+}
+
+func TestBadugiRanker(t *testing.T) {
+	tests := []struct {
+		v string
+		b string
+		u string
+		r HandRank
+	}{
+		{"Kh Qh Jh Th", "Th", "Kh Qh Jh", 25088},
+		{"Kh Qh Jd Th", "Jd Th", "Kh Qh", 17920},
+		{"Kh Qc Jd Th", "Qc Jd Th", "Kh", 11776},
+		{"Ks Qc Jd Th", "Ks Qc Jd Th", "", 7680},
+		{"2h 2c 2d 2s", "2s", "2h 2d 2c", 24578},
+		{"Ah Kh Qh Jh", "Ah", "Kh Qh Jh", 24577},
+		{"Ah Ac Ad Ks", "Ks Ah", "Ad Ac", 20481},
+		{"Kh Kd Qd Qs", "Kh Qs", "Kd Qd", 22528},
+		{"3h 3c Kh Qd", "Kh Qd 3c", "3h", 14340},
+		{"2h 2c Kh Qd", "Kh Qd 2c", "2h", 14338},
+		{"3h 2c Kh Ks", "Ks 3h 2c", "Kh", 12294},
+		{"3h 2c Kh Qd", "Qd 3h 2c", "Kh", 10246},
+		{"Ah 2c 3s 6d", "6d 3s 2c Ah", "", 39},
+		{"Ah 2c 3s 5d", "5d 3s 2c Ah", "", 23},
+		{"Ah 2c 3s 4d", "4d 3s 2c Ah", "", 15},
+		{"Ac 2h 3s 4d", "4d 3s 2h Ac", "", 15},
+	}
+	for i, test := range tests {
+		hand, best, unused := Must(test.v), Must(test.b), Must(test.u)
+		r, b, u := BadugiRanker(hand)
+		if r != test.r {
+			t.Errorf("test %d %v expected rank %d, got: %d", i, hand, test.r, r)
+		}
+		if !reflect.DeepEqual(b, best) {
+			t.Errorf("test %d %v expected best %v, got: %v", i, hand, best, b)
+		}
+		if !reflect.DeepEqual(u, unused) {
+			t.Errorf("test %d %v expected unused %v, got: %v", i, hand, unused, u)
 		}
 	}
 }
