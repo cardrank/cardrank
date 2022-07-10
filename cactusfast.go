@@ -13,7 +13,7 @@ func init() {
 func CactusFastRanker(c0, c1, c2, c3, c4 Card) uint16 {
 	// check for flushes and straight flushes
 	if c0&c1&c2&c3&c4&0xf000 != 0 {
-		return fastFlushes[uint16((c0|c1|c2|c3|c4)>>16)]
+		return fastFlushes[(c0|c1|c2|c3|c4)>>16]
 	}
 	// check for straights and high card hands
 	if r := fastUnique5[(c0|c1|c2|c3|c4)>>16]; r != 0 {
