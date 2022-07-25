@@ -8,9 +8,10 @@ Supports [Texas Holdem][holdem-example], [Texas Holdem Short (6+)][short-example
 [Omaha Hi/Lo][omaha-hi-lo-example], [Stud][stud-example], [Stud Hi/Lo][stud-hi-lo-example],
 [Razz][razz-example], and [Badugi][badugi-example].
 
-[![GoDoc](https://godoc.org/cardrank.io/cardrank?status.svg)](https://godoc.org/cardrank.io/cardrank)
-[![Tests on Linux, MacOS and Windows](https://github.com/cardrank/cardrank/workflows/Test/badge.svg)](https://github.com/cardrank/cardrank/actions?query=workflow%3ATest)
+[![Tests](https://github.com/cardrank/cardrank/workflows/Test/badge.svg)](https://github.com/cardrank/cardrank/actions?query=workflow%3ATest)
 [![Go Report Card](https://goreportcard.com/badge/cardrank.io/cardrank)](https://goreportcard.com/report/cardrank.io/cardrank)
+[![Reference](https://godoc.org/cardrank.io/cardrank?status.svg)](https://pkg.go.dev/cardrank.io/cardrank)
+[![Releases](https://img.shields.io/github/v/release/cardrank/cardrank?display_name=tag&sort=semver)](https://github.com/cardrank/cardrank/releases)
 
 ## Overview
 

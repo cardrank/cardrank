@@ -119,26 +119,27 @@ func SixPlusRanker(f RankFiveFunc) RankFiveFunc {
 	}
 }
 
-// EightOrBetterRanker is a 8-or-better low hand ranker.
+// EightOrBetterRanker is a 8-or-better low hand ranker. Aces are low,
+// straights and flushes do not count. Any card with rank 8 or higher will
+// cause
 func EightOrBetterRanker(c0, c1, c2, c3, c4 Card) uint16 {
-	return low(0xff00, c0, c1, c2, c3, c4)
+	return aceFiveLow(0xff00, c0, c1, c2, c3, c4)
 }
 
-// RazzRanker is a Razz low hand ranker.
+// RazzRanker is a Razz (Ace-to-Five) low hand ranker. Aces are low, straights
+// and flushes do not count.
+//
+// When there is a pair (or higher) of matching ranks, will be the inverted
+// value of the regular hand rank.
 func RazzRanker(c0, c1, c2, c3, c4 Card) uint16 {
-	if r := low(0, c0, c1, c2, c3, c4); r < lowMaxRank {
+	if r := aceFiveLow(0, c0, c1, c2, c3, c4); r < lowMaxRank {
 		return r
 	}
 	return ^uint16(0) - DefaultCactus(c0, c1, c2, c3, c4)
 }
 
-// LowRanker is a low hand ranker.
-func LowRanker(c0, c1, c2, c3, c4 Card) uint16 {
-	return low(0, c0, c1, c2, c3, c4)
-}
-
-// low is a low hand ranker.
-func low(mask uint16, c0, c1, c2, c3, c4 Card) uint16 {
+// aceFiveLow is a Ace-to-Five low hand ranker.
+func aceFiveLow(mask uint16, c0, c1, c2, c3, c4 Card) uint16 {
 	rank := uint16(0)
 	// c0
 	r := uint16(c0>>8&0xf+1) % 13
@@ -384,8 +385,9 @@ var t7c5 = [21][7]uint8{
 var primes = [...]uint8{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41}
 
 const (
-	// eightOrBetterMaxRank is the eight-or-better max rank.
+	// eightOrBetterMaxRank is the eight-or-better max rank for a qualifying
+	// low hand.
 	eightOrBetterMaxRank = 512
-	// lowMaxRank is the low max rank.
+	// lowMaxRank is the low max rank for a qualifying low hand.
 	lowMaxRank = 16384
 )

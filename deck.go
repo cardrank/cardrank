@@ -129,7 +129,7 @@ func (d *Deck) SetLimit(limit int) {
 
 // Shuffle shuffles the deck's cards using f (same interface as
 // math/rand.Shuffle).
-func (d *Deck) Shuffle(f func(int, func(i, j int))) {
+func (d *Deck) Shuffle(f func(int, func(int, int))) {
 	f(len(d.v), func(i, j int) {
 		d.v[i], d.v[j] = d.v[j], d.v[i]
 	})
@@ -137,9 +137,11 @@ func (d *Deck) Shuffle(f func(int, func(i, j int))) {
 
 // ShuffleN shuffles the deck's cards, n times, using f (same interface as
 // math/rand.Shuffle).
-func (d *Deck) ShuffleN(f func(n int, swap func(i, j int)), n int) {
-	for i := 0; i < n; i++ {
-		d.Shuffle(f)
+func (d *Deck) ShuffleN(n int, f func(int, func(int, int))) {
+	for m := 0; m < n; m++ {
+		f(len(d.v), func(i, j int) {
+			d.v[i], d.v[j] = d.v[j], d.v[i]
+		})
 	}
 }
 

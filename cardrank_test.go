@@ -45,7 +45,7 @@ func TestLow(t *testing.T) {
 		r HandRank
 		f RankFiveFunc
 	}{
-		{"Kh Qh Jh Th 9h", 7936, LowRanker},
+		{"Kh Qh Jh Th 9h", 7936, RazzRanker},
 		{"9h 7h 6h 5h 4h", 33144, EightOrBetterRanker},
 	}
 	for i, test := range tests {
