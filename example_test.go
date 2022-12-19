@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"cardrank.io/cardrank"
+	"github.com/cardrank/cardrank"
 )
 
 func ExampleFromRune() {

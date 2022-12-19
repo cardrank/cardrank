@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"cardrank.io/cardrank"
+	"github.com/cardrank/cardrank"
 )
 
 func main() {

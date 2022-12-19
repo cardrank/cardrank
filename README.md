@@ -1,6 +1,6 @@
-# cardrank.io/cardrank
+# github.com/cardrank/cardrank
 
-Package `cardrank.io/cardrank` is a library of types, utilities, and interfaces
+Package `github.com/cardrank/cardrank` is a library of types, utilities, and interfaces
 for working with playing cards, card decks, and evaluating poker hand ranks.
 
 Supports [Texas Holdem][holdem-example], [Texas Holdem Short (6+)][short-example],
@@ -9,13 +9,13 @@ Supports [Texas Holdem][holdem-example], [Texas Holdem Short (6+)][short-example
 [Razz][razz-example], and [Badugi][badugi-example].
 
 [![Tests](https://github.com/cardrank/cardrank/workflows/Test/badge.svg)](https://github.com/cardrank/cardrank/actions?query=workflow%3ATest)
-[![Go Report Card](https://goreportcard.com/badge/cardrank.io/cardrank)](https://goreportcard.com/report/cardrank.io/cardrank)
-[![Reference](https://godoc.org/cardrank.io/cardrank?status.svg)](https://pkg.go.dev/cardrank.io/cardrank)
+[![Go Report Card](https://goreportcard.com/badge/github.com/cardrank/cardrank)](https://goreportcard.com/report/github.com/cardrank/cardrank)
+[![Reference](https://pkg.go.dev/github.com/cardrank/cardrank?status.svg)](https://pkg.go.dev/github.com/cardrank/cardrank)
 [![Releases](https://img.shields.io/github/v/release/cardrank/cardrank?display_name=tag&sort=semver)](https://github.com/cardrank/cardrank/releases)
 
 ## Overview
 
-The `cardrank.io/cardrank` package contains types for [cards][card], [card
+The `github.com/cardrank/cardrank` package contains types for [cards][card], [card
 suits][suit], [card ranks][rank], [card decks][deck], and [hands of
 cards][hand].
 
@@ -45,7 +45,7 @@ and Candian Stud (Sökö), is planned.
 To use within a Go package or module:
 
 ```sh
-go get cardrank.io/cardrank
+go get github.com/cardrank/cardrank
 ```
 
 See package level [Go documentation][pkg].
@@ -73,7 +73,7 @@ import (
 	"strings"
 	"time"
 
-	"cardrank.io/cardrank"
+	"github.com/cardrank/cardrank"
 )
 
 func main() {
@@ -131,7 +131,7 @@ import (
 	"strings"
 	"time"
 
-	"cardrank.io/cardrank"
+	"github.com/cardrank/cardrank"
 )
 
 func main() {
@@ -402,44 +402,44 @@ tables and games.
 [senzee]: http://senzee.blogspot.com/2006/06/some-perfect-hash.html
 [tangentforks]: https://github.com/tangentforks/TwoPlusTwoHandEvaluator
 
-[pkg]: https://pkg.go.dev/cardrank.io/cardrank
-[examples]: https://pkg.go.dev/cardrank.io/cardrank#pkg-examples
+[pkg]: https://pkg.go.dev/github.com/cardrank/cardrank
+[examples]: https://pkg.go.dev/github.com/cardrank/cardrank#pkg-examples
 [hand-ranking]: #hand-ranking
 [build-tags]: #build-tags
 [future]: #future-development
 [hand-ordering]: #winner-determination-and-hand-ordering
 
-[card]: https://pkg.go.dev/cardrank.io/cardrank#Card
-[suit]: https://pkg.go.dev/cardrank.io/cardrank#Suit
-[rank]: https://pkg.go.dev/cardrank.io/cardrank#Rank
-[deck]: https://pkg.go.dev/cardrank.io/cardrank#Deck
-[hand]: https://pkg.go.dev/cardrank.io/cardrank#Hand
-[hand-rank]: https://pkg.go.dev/cardrank.io/cardrank#HandRank
-[type]: https://pkg.go.dev/cardrank.io/cardrank#Type
-[order]: https://pkg.go.dev/cardrank.io/cardrank#Order
-[init]: https://pkg.go.dev/cardrank.io/cardrank#Init
-[low-order]: https://pkg.go.dev/cardrank.io/cardrank#LowOrder
-[hand.compare]: https://pkg.go.dev/cardrank.io/cardrank#Hand.Compare
-[hand.low-compare]: https://pkg.go.dev/cardrank.io/cardrank#Hand.LowCompare
-[hand.rank]: https://pkg.go.dev/cardrank.io/cardrank#Hand.Rank
-[hand.low-rank]: https://pkg.go.dev/cardrank.io/cardrank#Hand.LowRank
+[card]: https://pkg.go.dev/github.com/cardrank/cardrank#Card
+[suit]: https://pkg.go.dev/github.com/cardrank/cardrank#Suit
+[rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Rank
+[deck]: https://pkg.go.dev/github.com/cardrank/cardrank#Deck
+[hand]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand
+[hand-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#HandRank
+[type]: https://pkg.go.dev/github.com/cardrank/cardrank#Type
+[order]: https://pkg.go.dev/github.com/cardrank/cardrank#Order
+[init]: https://pkg.go.dev/github.com/cardrank/cardrank#Init
+[low-order]: https://pkg.go.dev/github.com/cardrank/cardrank#LowOrder
+[hand.compare]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.Compare
+[hand.low-compare]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.LowCompare
+[hand.rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.Rank
+[hand.low-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.LowRank
 
-[holdem-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Holdem
-[short-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Short
-[royal-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Royal
-[omaha-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Omaha
-[omaha-hi-lo-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-OmahaHiLo
-[stud-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Stud
-[stud-hi-lo-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-StudHiLo
-[razz-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Razz
-[badugi-example]: https://pkg.go.dev/cardrank.io/cardrank#example-package-Badugi
+[holdem-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Holdem
+[short-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Short
+[royal-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Royal
+[omaha-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Omaha
+[omaha-hi-lo-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-OmahaHiLo
+[stud-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Stud
+[stud-hi-lo-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-StudHiLo
+[razz-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Razz
+[badugi-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Badugi
 
-[default-ranker]: https://pkg.go.dev/cardrank.io/cardrank#DefaultRanker
-[cactus-ranker]: https://pkg.go.dev/cardrank.io/cardrank#CactusRanker
-[cactus-fast-ranker]: https://pkg.go.dev/cardrank.io/cardrank#CactusFastRanker
-[two-plus-two-ranker]: https://pkg.go.dev/cardrank.io/cardrank#TwoPlusTwoRanker
-[hybrid-ranker]: https://pkg.go.dev/cardrank.io/cardrank#HybridRanker
-[six-plus-ranker]: https://pkg.go.dev/cardrank.io/cardrank#SixPlusRanker
-[eight-or-better-ranker]: https://pkg.go.dev/cardrank.io/cardrank#EightOrBetterRanker
-[razz-ranker]: https://pkg.go.dev/cardrank.io/cardrank#RazzRanker
-[badugi-ranker]: https://pkg.go.dev/cardrank.io/cardrank#BadugiRanker
+[default-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#DefaultRanker
+[cactus-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#CactusRanker
+[cactus-fast-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#CactusFastRanker
+[two-plus-two-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#TwoPlusTwoRanker
+[hybrid-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#HybridRanker
+[six-plus-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#SixPlusRanker
+[eight-or-better-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#EightOrBetterRanker
+[razz-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#RazzRanker
+[badugi-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#BadugiRanker
