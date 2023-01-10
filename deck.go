@@ -1,5 +1,11 @@
 package cardrank
 
+// Shuffler is an interface for a deck shuffler. Compatible with
+// math/rand.Rand's Shuffle method.
+type Shuffler interface {
+	Shuffle(int, func(int, int))
+}
+
 const (
 	// UnshuffledSize is the unshuffled deck size.
 	UnshuffledSize = 52
@@ -127,16 +133,14 @@ func (d *Deck) SetLimit(limit int) {
 	d.l = uint16(limit)
 }
 
-// Shuffle shuffles the deck's cards using f (same interface as
-// math/rand.Shuffle).
-func (d *Deck) Shuffle(f func(int, func(int, int))) {
-	f(len(d.v), func(i, j int) {
+// Shuffle shuffles the deck's cards using the provided shuffler.
+func (d *Deck) Shuffle(shuffler Shuffler) {
+	shuffler.Shuffle(len(d.v), func(i, j int) {
 		d.v[i], d.v[j] = d.v[j], d.v[i]
 	})
 }
 
-// ShuffleN shuffles the deck's cards, n times, using f (same interface as
-// math/rand.Shuffle).
+// ShuffleN shuffles the deck's cards, n times, using the provided shuffler.
 func (d *Deck) ShuffleN(n int, f func(int, func(int, int))) {
 	for m := 0; m < n; m++ {
 		f(len(d.v), func(i, j int) {

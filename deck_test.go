@@ -14,8 +14,8 @@ func TestNewDeck(t *testing.T) {
 	}
 	// shuffle
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	d1.Shuffle(r.Shuffle)
-	d2.Shuffle(r.Shuffle)
+	d1.Shuffle(r)
+	d2.Shuffle(r)
 	if reflect.DeepEqual(d1.v, unshuffled) {
 		t.Fatalf("expected d1.v != unshuffled")
 	}
@@ -44,7 +44,7 @@ func TestNewDeck(t *testing.T) {
 func TestNewDeckShoe(t *testing.T) {
 	const decks = 7
 	d := NewShoeDeck(decks)
-	d.Shuffle(rand.New(rand.NewSource(time.Now().UnixNano())).Shuffle)
+	d.Shuffle(rand.New(rand.NewSource(time.Now().UnixNano())))
 	if n, exp := len(d.v), UnshuffledSize*decks; n != exp {
 		t.Fatalf("expected len(d.v) == %d, got: %d", exp, n)
 	}
@@ -201,7 +201,7 @@ func TestDeckDeal(t *testing.T) {
 func checkDeal(t *testing.T, i int, typ Type, seed int64) {
 	r := rand.New(rand.NewSource(seed))
 	d := typ.Deck()
-	d.Shuffle(r.Shuffle)
+	d.Shuffle(r)
 	var f func(int) ([][]Card, []Card)
 	var p, b int
 	switch typ {

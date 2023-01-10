@@ -93,10 +93,10 @@ func (typ Type) Deck() *Deck {
 // DealShuffle creates a new deck for the type and shuffles the deck count
 // number of times, returning the pockets and board for the number of hands
 // specified.
-func (typ Type) DealShuffle(shuffle func(int, func(int, int)), count, hands int) ([][]Card, []Card) {
+func (typ Type) DealShuffle(shuffler Shuffler, count, hands int) ([][]Card, []Card) {
 	d := typ.Deck()
 	for i := 0; i < count; i++ {
-		d.Shuffle(shuffle)
+		d.Shuffle(shuffler)
 	}
 	switch typ {
 	case Holdem, Short, Royal:
@@ -115,8 +115,8 @@ func (typ Type) DealShuffle(shuffle func(int, func(int, int)), count, hands int)
 // pockets and board for the number of hands specified.
 //
 // Use DealShuffle when needing to shuffle the deck more than once.
-func (typ Type) Deal(shuffle func(int, func(int, int)), hands int) ([][]Card, []Card) {
-	return typ.DealShuffle(shuffle, 1, hands)
+func (typ Type) Deal(shuffler Shuffler, hands int) ([][]Card, []Card) {
+	return typ.DealShuffle(shuffler, 1, hands)
 }
 
 // RankHand ranks the hand.
@@ -307,7 +307,6 @@ func (h *Hand) Format(f fmt.State, verb rune) {
 //	Two Pair, Nines over Sixes, kicker Jack
 //	Pair, Aces, kickers King, Queen, Nine
 //	Nothing, Seven-high, kickers Six, Five, Three, Two
-//
 func (h *Hand) Description() string {
 	r := h.rank
 	switch {

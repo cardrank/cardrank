@@ -15,7 +15,7 @@ func main() {
 	seed := time.Now().UnixNano()
 	// note: use a better pseudo-random number generator
 	rnd := rand.New(rand.NewSource(seed))
-	pockets, board := cardrank.OmahaHiLo.Deal(rnd.Shuffle, players)
+	pockets, board := cardrank.OmahaHiLo.Deal(rnd, players)
 	hands := cardrank.OmahaHiLo.RankHands(pockets, board)
 	fmt.Printf("------ OmahaHiLo %d ------\n", seed)
 	fmt.Printf("Board: %b\n", board)

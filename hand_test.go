@@ -35,7 +35,7 @@ func TestOrderHands(t *testing.T) {
 			d := NewDeck()
 			// note: use a real random source
 			rnd := rand.New(rand.NewSource(test.r))
-			d.Shuffle(rnd.Shuffle)
+			d.Shuffle(rnd)
 			board := d.Draw(5)
 			t.Logf("board: %b", board)
 			var hands []*Hand
@@ -218,7 +218,7 @@ func TestMaxPlayers(t *testing.T) {
 	for typ := Holdem; typ <= Badugi; typ++ {
 		maxPlayers := typ.MaxPlayers()
 		for i := 2; i <= maxPlayers; i++ {
-			pockets, _ := typ.Deal(rnd.Shuffle, i)
+			pockets, _ := typ.Deal(rnd, i)
 			if len(pockets) != i {
 				t.Errorf("%s was not able to deal pockets for %d players", typ, i)
 			}

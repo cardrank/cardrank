@@ -49,7 +49,7 @@ func ExampleDeck_Draw() {
 	d := cardrank.NewDeck()
 	// note: use a real random source
 	rnd := rand.New(rand.NewSource(52))
-	d.Shuffle(rnd.Shuffle)
+	d.Shuffle(rnd)
 	hand := d.Draw(7)
 	fmt.Printf("%b\n", hand)
 	// Output:
@@ -60,7 +60,7 @@ func ExampleNewHand() {
 	d := cardrank.NewDeck()
 	// note: use a real random source
 	rnd := rand.New(rand.NewSource(6265))
-	d.Shuffle(rnd.Shuffle)
+	d.Shuffle(rnd)
 	hand := d.Draw(5)
 	h := cardrank.NewHand(cardrank.Holdem, hand, nil)
 	fmt.Printf("%b\n", h)
@@ -72,7 +72,7 @@ func ExampleHoldem_RankHand() {
 	d := cardrank.NewDeck()
 	// note: use a real random source
 	rnd := rand.New(rand.NewSource(26076))
-	d.Shuffle(rnd.Shuffle)
+	d.Shuffle(rnd)
 	h := cardrank.Holdem.RankHand(d.Draw(5), d.Draw(2))
 	fmt.Printf("%b\n", h)
 	// Output:
@@ -98,7 +98,7 @@ func Example_holdem() {
 	} {
 		// note: use a real random source
 		rnd := rand.New(rand.NewSource(game.seed))
-		pockets, board := cardrank.Holdem.Deal(rnd.Shuffle, game.players)
+		pockets, board := cardrank.Holdem.Deal(rnd, game.players)
 		hands := cardrank.Holdem.RankHands(pockets, board)
 		fmt.Printf("------ Holdem %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
@@ -217,7 +217,7 @@ func Example_short() {
 	} {
 		// note: use a real random source
 		rnd := rand.New(rand.NewSource(game.seed))
-		pockets, board := cardrank.Short.Deal(rnd.Shuffle, game.players)
+		pockets, board := cardrank.Short.Deal(rnd, game.players)
 		hands := cardrank.Short.RankHands(pockets, board)
 		fmt.Printf("------ Short %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
@@ -309,7 +309,7 @@ func Example_royal() {
 	} {
 		// note: use a real random source
 		rnd := rand.New(rand.NewSource(game.seed))
-		pockets, board := cardrank.Royal.Deal(rnd.Shuffle, game.players)
+		pockets, board := cardrank.Royal.Deal(rnd, game.players)
 		hands := cardrank.Royal.RankHands(pockets, board)
 		fmt.Printf("------ Royal %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
@@ -396,7 +396,7 @@ func Example_omaha() {
 	} {
 		// note: use a real random source
 		rnd := rand.New(rand.NewSource(game.seed))
-		pockets, board := cardrank.Omaha.Deal(rnd.Shuffle, game.players)
+		pockets, board := cardrank.Omaha.Deal(rnd, game.players)
 		hands := cardrank.Omaha.RankHands(pockets, board)
 		fmt.Printf("------ Omaha %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
@@ -471,7 +471,7 @@ func Example_omahaHiLo() {
 	} {
 		// note: use a real random source
 		rnd := rand.New(rand.NewSource(game.seed))
-		pockets, board := cardrank.OmahaHiLo.Deal(rnd.Shuffle, game.players)
+		pockets, board := cardrank.OmahaHiLo.Deal(rnd, game.players)
 		hands := cardrank.OmahaHiLo.RankHands(pockets, board)
 		fmt.Printf("------ OmahaHiLo %d ------\n", i+1)
 		fmt.Printf("Board: %b\n", board)
@@ -625,7 +625,7 @@ func Example_omahaMultiBoard() {
 		// note: use a real random source
 		rnd := rand.New(rand.NewSource(game.seed))
 		deck := cardrank.Omaha.Deck()
-		deck.Shuffle(rnd.Shuffle)
+		deck.Shuffle(rnd)
 		pockets := deck.Deal(game.players, 4)
 		boards := deck.MultiBoard(2, 4, 2, 2)
 		fmt.Printf("------ Omaha %d ------\n", i+1)
@@ -739,7 +739,7 @@ func Example_stud() {
 	} {
 		// note: use a real random source
 		rnd := rand.New(rand.NewSource(game.seed))
-		pockets, _ := cardrank.Stud.Deal(rnd.Shuffle, game.players)
+		pockets, _ := cardrank.Stud.Deal(rnd, game.players)
 		hands := cardrank.Stud.RankHands(pockets, nil)
 		fmt.Printf("------ Stud %d ------\n", i+1)
 		for j := 0; j < game.players; j++ {
@@ -808,7 +808,7 @@ func Example_studHiLo() {
 	} {
 		// note: use a real random source
 		rnd := rand.New(rand.NewSource(game.seed))
-		pockets, _ := cardrank.StudHiLo.Deal(rnd.Shuffle, game.players)
+		pockets, _ := cardrank.StudHiLo.Deal(rnd, game.players)
 		hands := cardrank.StudHiLo.RankHands(pockets, nil)
 		fmt.Printf("------ StudHiLo %d ------\n", i+1)
 		for j := 0; j < game.players; j++ {
@@ -955,7 +955,7 @@ func Example_razz() {
 	} {
 		// note: use a real random source
 		rnd := rand.New(rand.NewSource(game.seed))
-		pockets, _ := cardrank.Razz.Deal(rnd.Shuffle, game.players)
+		pockets, _ := cardrank.Razz.Deal(rnd, game.players)
 		hands := cardrank.Razz.RankHands(pockets, nil)
 		fmt.Printf("------ Razz %d ------\n", i+1)
 		for j := 0; j < game.players; j++ {
@@ -1024,7 +1024,7 @@ func Example_badugi() {
 	} {
 		// note: use a real random source
 		rnd := rand.New(rand.NewSource(game.seed))
-		pockets, _ := cardrank.Badugi.Deal(rnd.Shuffle, game.players)
+		pockets, _ := cardrank.Badugi.Deal(rnd, game.players)
 		hands := cardrank.Badugi.RankHands(pockets, nil)
 		fmt.Printf("------ Badugi %d ------\n", i+1)
 		for j := 0; j < game.players; j++ {
