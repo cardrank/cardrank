@@ -10,7 +10,7 @@ Supports [Texas Holdem][holdem-example], [Texas Holdem Short (6+)][short-example
 
 [![Tests](https://github.com/cardrank/cardrank/workflows/Test/badge.svg)](https://github.com/cardrank/cardrank/actions?query=workflow%3ATest)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cardrank/cardrank)](https://goreportcard.com/report/github.com/cardrank/cardrank)
-[![Reference](https://pkg.go.dev/github.com/cardrank/cardrank?status.svg)](https://pkg.go.dev/github.com/cardrank/cardrank)
+[![Reference](https://pkg.go.dev/badge/github.com/cardrank/cardrank.svg)](https://pkg.go.dev/github.com/cardrank/cardrank)
 [![Releases](https://img.shields.io/github/v/release/cardrank/cardrank?display_name=tag&sort=semver)](https://github.com/cardrank/cardrank/releases)
 
 ## Overview
@@ -235,8 +235,8 @@ implementations of different [Cactus Kev][cactus-kev] evaluators:
 * [`TwoPlusTwoRanker`][two-plus-two-ranker] - the [2+2 forum][tangentforks] poker hand evaluator, using a 130 MiB lookup table
 
 See [below for more information](#default-ranker) on the default ranker in use
-by the package, and for information on [using build tags to disable][build-tags]
-for different scenarios.
+by the package, and for information on [using build tags][build-tags] to
+enable/disable functionality for different target runtime environments.
 
 #### Default Ranker
 
@@ -258,6 +258,9 @@ The [`TwoPlusTwoRanker`][two-plus-two-ranker] makes use of a large
 card hand rank evaluation. Due to the large size of the lookup table, the
 `TwoPlusTwoRanker` will be excluded when using the using the [`portable` or
 `embedded` build tags][build-tags].
+
+The `TwoPlusTwoRanker` is disabled by default for `GOOS=js` (ie, WASM) builds,
+but can be enabled using the [`forcefat` build tag][build-tags].
 
 #### Other Variants
 
@@ -342,17 +345,19 @@ configuration. Available tags:
 The `portable` tag disables the `TwoPlusTwoRanker`, in effect excluding the the
 [large lookup table](#two-plus-two-ranker), and creating significantly smaller
 binaries but at the cost of more expensive poker hand rank evaluation. Useful
-when building for portable or embedded environments, such as a WASM
+when building for portable or embedded environments, such as a client
 application:
 
 ```sh
-GOOS=js GOARCH=wasm go build -tags portable
+go build -tags portable
 ```
 
 #### `embedded`
 
 The `embedded` tag disables the `CactusFastRanker` and the `TwoPlusTwoRanker`,
-creating the smallest possible binaries:
+creating the smallest possible binaries. Useful when either embedding the
+package in another application, or in constrained runtime environments such as
+WASM:
 
 ```sh
 GOOS=js GOARCH=wasm go build -tags embedded
@@ -360,13 +365,13 @@ GOOS=js GOARCH=wasm go build -tags embedded
 
 #### `noinit`
 
-The `noinit` tag disables the packagelevel initialization of variables
+The `noinit` tag disables the package level initialization of variables
 `DefaultRanker` and `DefaultSixPlusRanker`. Useful when applications need the
 fastest possible startup times and can defer initialization, or when using a
 third-party `Ranker` algorithm:
 
 ```sh
-GOOS=js GOARCH=wasm go build -tags 'embedded noinit'
+GOOS=js GOARCH=wasm go build -tags 'embedded noinit' -o cardrank.wasm
 ```
 
 When using the `noinit` build tag, the user will need to call the [`Init`
@@ -382,6 +387,15 @@ cardrank.Init()
 cardrank.DefaultCactus = cardrank.CactusRanker
 cardrank.DefaultRanker = cardrank.HandRanker(cardrank.CactusRanker)
 cardrank.DefaultSixPlusRanker = cardrank.HandRanker(cardrank.SixPlusRanker(cardrank.CactusRanker))
+```
+
+#### `forcefat`
+
+The `forcefat` tag forces a "fat" binary build, including the `TwoPlusTwoRanker`'s
+large lookup table, irrespective of other build tags:
+
+```sh
+GOOS=js GOARCH=wasm go build -tags 'forcefat' -o cardrank.wasm
 ```
 
 ## Future Development

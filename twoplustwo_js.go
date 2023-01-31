@@ -1,4 +1,4 @@
-//go:build js && !forcetwoplustwo && !portable && !embedded
+//go:build js && !portable && !embedded && !forcefat
 
 package cardrank
 

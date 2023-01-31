@@ -1,4 +1,4 @@
-//go:build !portable && !embedded
+//go:build forcefat || (!portable && !embedded)
 
 package cardrank
 
