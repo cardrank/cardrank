@@ -1,4 +1,4 @@
-# github.com/cardrank/cardrank
+# About
 
 Package `github.com/cardrank/cardrank` is a library of types, utilities, and interfaces
 for working with playing cards, card decks, and evaluating poker hand ranks.
