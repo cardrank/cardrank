@@ -3,11 +3,10 @@ package cardrank
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
-
-	"golang.org/x/text/unicode/rangetable"
 )
 
 // Rank is a card rank.
@@ -598,11 +597,16 @@ func init() {
 		d[i] = UnicodeDiamondAce + rune(i)
 		c[i] = UnicodeClubAce + rune(i)
 	}
-	rangeS = rangetable.New(s...)
-	rangeH = rangetable.New(h...)
-	rangeD = rangetable.New(d...)
-	rangeC = rangetable.New(c...)
-	rangeA = rangetable.Merge(rangeS, rangeH, rangeD, rangeC)
+	rangeS = newRangeTable(s...)
+	rangeH = newRangeTable(h...)
+	rangeD = newRangeTable(d...)
+	rangeC = newRangeTable(c...)
+	a := make([]rune, 14*4)
+	copy(a[0:14], s[:])
+	copy(a[14:28], h[:])
+	copy(a[28:42], d[:])
+	copy(a[42:56], c[:])
+	rangeA = newRangeTable(a...)
 }
 
 // range tables for unicode playing card runes.
@@ -613,3 +617,29 @@ var (
 	rangeC *unicode.RangeTable // clubs
 	rangeA *unicode.RangeTable // all
 )
+
+func newRangeTable(r ...rune) *unicode.RangeTable {
+	if len(r) == 0 {
+		return &unicode.RangeTable{}
+	}
+	sort.Slice(r, func(i, j int) bool {
+		return r[i] < r[j]
+	})
+	// Remove duplicates.
+	k := 1
+	for i := 1; i < len(r); i++ {
+		if r[k-1] != r[i] {
+			r[k] = r[i]
+			k++
+		}
+	}
+	rt := new(unicode.RangeTable)
+	for _, r := range r[:k] {
+		if r <= 0xFFFF {
+			rt.R16 = append(rt.R16, unicode.Range16{Lo: uint16(r), Hi: uint16(r), Stride: 1})
+		} else {
+			rt.R32 = append(rt.R32, unicode.Range32{Lo: uint32(r), Hi: uint32(r), Stride: 1})
+		}
+	}
+	return rt
+}
