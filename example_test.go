@@ -12,17 +12,14 @@ import (
 )
 
 func ExampleFromRune() {
-	c, err := cardrank.FromRune('🂡')
-	if err != nil {
-		log.Fatal(err)
-	}
+	c := cardrank.FromRune('🂡')
 	fmt.Printf("%b\n", c)
 	// Output:
 	// A♠
 }
 
-func ExampleMustCard() {
-	c := cardrank.MustCard("Ah")
+func ExampleFromString() {
+	c := cardrank.FromString("Ah")
 	fmt.Printf("%N of %L (%b)\n", c, c, c)
 	// Output:
 	// Ace of Hearts (A♥)

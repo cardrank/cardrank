@@ -29,47 +29,50 @@ const (
 	Two
 )
 
+// InvalidRank is an invalid rank.
+const InvalidRank = Rank(^uint8(0))
+
 // RankFromRune returns the card rank for the rune.
-func RankFromRune(r rune) (Rank, error) {
+func RankFromRune(r rune) Rank {
 	switch r {
 	case 'A', 'a':
-		return Ace, nil
+		return Ace
 	case 'K', 'k':
-		return King, nil
+		return King
 	case 'Q', 'q':
-		return Queen, nil
+		return Queen
 	case 'J', 'j':
-		return Jack, nil
+		return Jack
 	case 'T', 't':
-		return Ten, nil
+		return Ten
 	case '9':
-		return Nine, nil
+		return Nine
 	case '8':
-		return Eight, nil
+		return Eight
 	case '7':
-		return Seven, nil
+		return Seven
 	case '6':
-		return Six, nil
+		return Six
 	case '5':
-		return Five, nil
+		return Five
 	case '4':
-		return Four, nil
+		return Four
 	case '3':
-		return Three, nil
+		return Three
 	case '2':
-		return Two, nil
+		return Two
 	}
-	return 0, ErrInvalidCardRank
+	return InvalidRank
 }
 
 // String satisfies the fmt.Stringer interface.
-func (r Rank) String() string {
-	return string(r.Byte())
+func (rank Rank) String() string {
+	return string(rank.Byte())
 }
 
 // Byte returns the byte representation for the card rank.
-func (r Rank) Byte() byte {
-	switch r {
+func (rank Rank) Byte() byte {
+	switch rank {
 	case Ace:
 		return 'A'
 	case King:
@@ -101,13 +104,13 @@ func (r Rank) Byte() byte {
 }
 
 // Index the int index for the card rank (0-12 for Two-Ace).
-func (r Rank) Index() int {
-	return int(r)
+func (rank Rank) Index() int {
+	return int(rank)
 }
 
 // Name returns the name of the card rank.
-func (r Rank) Name() string {
-	switch r {
+func (rank Rank) Name() string {
+	switch rank {
 	case Ace:
 		return "Ace"
 	case King:
@@ -139,11 +142,11 @@ func (r Rank) Name() string {
 }
 
 // PluralName returns the plural name of the card rank.
-func (r Rank) PluralName() string {
-	if r == Six {
+func (rank Rank) PluralName() string {
+	if rank == Six {
 		return "Sixes"
 	}
-	return r.Name() + "s"
+	return rank.Name() + "s"
 }
 
 // Suit is a card suit.
@@ -157,29 +160,32 @@ const (
 	Club
 )
 
+// InvalidSuit
+const InvalidSuit = Suit(^uint8(0))
+
 // SuitFromRune returns the card suit for the rune.
-func SuitFromRune(r rune) (Suit, error) {
+func SuitFromRune(r rune) Suit {
 	switch r {
 	case 'S', 's', UnicodeSpadeBlack, UnicodeSpadeWhite:
-		return Spade, nil
+		return Spade
 	case 'H', 'h', UnicodeHeartBlack, UnicodeHeartWhite:
-		return Heart, nil
+		return Heart
 	case 'D', 'd', UnicodeDiamondBlack, UnicodeDiamondWhite:
-		return Diamond, nil
+		return Diamond
 	case 'C', 'c', UnicodeClubBlack, UnicodeClubWhite:
-		return Club, nil
+		return Club
 	}
-	return 0, ErrInvalidCardSuit
+	return InvalidSuit
 }
 
 // String satisfies the fmt.Stringer interface.
-func (s Suit) String() string {
-	return string(s.Byte())
+func (suit Suit) String() string {
+	return string(suit.Byte())
 }
 
 // Byte returns the byte representation for the card suit.
-func (s Suit) Byte() byte {
-	switch s {
+func (suit Suit) Byte() byte {
+	switch suit {
 	case Spade:
 		return 's'
 	case Heart:
@@ -194,8 +200,8 @@ func (s Suit) Byte() byte {
 
 // Index returns the int index for the card suit (0-3 for Spade, Heart,
 // Diamond, Club).
-func (s Suit) Index() int {
-	switch s {
+func (suit Suit) Index() int {
+	switch suit {
 	case Spade:
 		return 0
 	case Heart:
@@ -209,8 +215,8 @@ func (s Suit) Index() int {
 }
 
 // Name returns the name of the card suit.
-func (s Suit) Name() string {
-	switch s {
+func (suit Suit) Name() string {
+	switch suit {
 	case Spade:
 		return "Spade"
 	case Heart:
@@ -224,13 +230,13 @@ func (s Suit) Name() string {
 }
 
 // PluralName returns the plural name of the card suit.
-func (s Suit) PluralName() string {
-	return s.Name() + "s"
+func (suit Suit) PluralName() string {
+	return suit.Name() + "s"
 }
 
 // UnicodeBlack returns the black unicode pip rune for the card suit.
-func (s Suit) UnicodeBlack() rune {
-	switch s {
+func (suit Suit) UnicodeBlack() rune {
+	switch suit {
 	case Spade:
 		return UnicodeSpadeBlack
 	case Heart:
@@ -244,8 +250,8 @@ func (s Suit) UnicodeBlack() rune {
 }
 
 // UnicodeWhite returns the white unicode pip rune for the card suit.
-func (s Suit) UnicodeWhite() rune {
-	switch s {
+func (suit Suit) UnicodeWhite() rune {
+	switch suit {
 	case Spade:
 		return UnicodeSpadeWhite
 	case Heart:
@@ -260,9 +266,9 @@ func (s Suit) UnicodeWhite() rune {
 
 // PlayingCardRune returns the unicode playing card rune for the card rank and
 // suit.
-func PlayingCardRune(r Rank, s Suit) rune {
+func PlayingCardRune(rank Rank, suit Suit) rune {
 	var v rune
-	switch s {
+	switch suit {
 	case Spade:
 		v = UnicodeSpadeAce
 	case Heart:
@@ -272,23 +278,23 @@ func PlayingCardRune(r Rank, s Suit) rune {
 	case Club:
 		v = UnicodeClubAce
 	}
-	switch r {
+	switch rank {
 	case Ace:
 	case King:
 		v += 13
 	case Queen:
 		v += 12
 	default:
-		v += rune(r + 1)
+		v += rune(rank + 1)
 	}
 	return v
 }
 
 // PlayingCardKnightRune returns the unicode playing card rune for the card
 // rank and suit, substituting knights for jacks.
-func PlayingCardKnightRune(r Rank, s Suit) rune {
+func PlayingCardKnightRune(rank Rank, suit Suit) rune {
 	var v rune
-	switch s {
+	switch suit {
 	case Spade:
 		v = UnicodeSpadeAce
 	case Heart:
@@ -298,7 +304,7 @@ func PlayingCardKnightRune(r Rank, s Suit) rune {
 	case Club:
 		v = UnicodeClubAce
 	}
-	switch r {
+	switch rank {
 	case Ace:
 	case King:
 		v += 13
@@ -307,7 +313,7 @@ func PlayingCardKnightRune(r Rank, s Suit) rune {
 	case Jack:
 		v += 11
 	default:
-		v += rune(r + 1)
+		v += rune(rank + 1)
 	}
 	return v
 }
@@ -315,54 +321,52 @@ func PlayingCardKnightRune(r Rank, s Suit) rune {
 // Card is a card consisting of a rank (23456789TJQKA) and suit (shdc).
 type Card uint32
 
+// InvalidCard is an invalid card.
+const InvalidCard = Card(^uint32(0))
+
 // New creates a card for the specified rank and suit.
-func New(r Rank, s Suit) Card {
-	return Card(1<<uint32(r)<<16 | uint32(s)<<12 | uint32(r)<<8 | uint32(primes[r]))
+func New(rank Rank, suit Suit) Card {
+	if Ace < rank || (suit != Spade && suit != Heart && suit != Diamond && suit != Club) {
+		return InvalidCard
+	}
+	return Card(1<<uint32(rank)<<16 | uint32(suit)<<12 | uint32(rank)<<8 | uint32(primes[rank]))
 }
 
 // FromRune creates a card from a unicode playing card rune.
-func FromRune(r rune) (Card, error) {
+func FromRune(r rune) Card {
 	switch {
 	case unicode.Is(rangeS, r):
-		return New(runeCardRank(r, UnicodeSpadeAce), Spade), nil
+		return New(runeCardRank(r, UnicodeSpadeAce), Spade)
 	case unicode.Is(rangeH, r):
-		return New(runeCardRank(r, UnicodeHeartAce), Heart), nil
+		return New(runeCardRank(r, UnicodeHeartAce), Heart)
 	case unicode.Is(rangeD, r):
-		return New(runeCardRank(r, UnicodeDiamondAce), Diamond), nil
+		return New(runeCardRank(r, UnicodeDiamondAce), Diamond)
 	case unicode.Is(rangeC, r):
-		return New(runeCardRank(r, UnicodeClubAce), Club), nil
+		return New(runeCardRank(r, UnicodeClubAce), Club)
 	}
-	return 0, ErrInvalidCard
+	return InvalidCard
 }
 
 // FromString creates a card from a string.
-func FromString(str string) (Card, error) {
-	if strings.HasPrefix(str, "10") {
-		str = "T" + str[2:]
+func FromString(s string) Card {
+	if strings.HasPrefix(s, "10") {
+		s = "T" + s[2:]
 	}
-	switch v := []rune(str); len(v) {
+	switch v := []rune(s); len(v) {
 	case 1:
 		return FromRune(v[0])
 	case 2:
-		r, err := RankFromRune(v[0])
-		if err != nil {
-			return 0, err
-		}
-		s, err := SuitFromRune(v[1])
-		if err != nil {
-			return 0, err
-		}
-		return New(r, s), nil
+		return New(RankFromRune(v[0]), SuitFromRune(v[1]))
 	}
-	return 0, ErrInvalidCard
+	return InvalidCard
 }
 
 // FromIndex creates a card from a numerical index (0-51).
-func FromIndex(i int) (Card, error) {
+func FromIndex(i int) Card {
 	if i < 52 {
-		return New(Rank(i%13), Suit(1<<(i/13))), nil
+		return New(Rank(i%13), Suit(1<<(i/13)))
 	}
-	return 0, ErrInvalidCard
+	return InvalidCard
 }
 
 // Parse parses strings of Card representations from v. Ignores whitespace
@@ -374,48 +378,50 @@ func FromIndex(i int) (Card, error) {
 // "K♠"), or single unicode playing card runes (such as "🃆" or "🂣").
 func Parse(v ...string) ([]Card, error) {
 	var hand []Card
-	for _, s := range v {
+	for n, s := range v {
 		for i, r := 0, []rune(s); i < len(r); i++ {
 			switch {
 			case unicode.IsSpace(r[i]):
 				continue
 			case unicode.Is(rangeA, r[i]):
-				c, err := FromRune(r[i])
-				if err != nil {
-					return nil, err
+				c := FromRune(r[i])
+				if c == InvalidCard {
+					return nil, &ParseError{
+						S:   s,
+						N:   n,
+						I:   i,
+						Err: ErrInvalidCard,
+					}
 				}
 				hand = append(hand, c)
 				continue
 			case len(r)-i < 2:
-				return nil, ErrInvalidCard
+				return nil, &ParseError{
+					S:   s,
+					N:   n,
+					I:   i,
+					Err: ErrInvalidCard,
+				}
 			}
 			c := r[i]
 			// handle '10'
 			if len(r)-i > 2 && c == '1' && r[i+1] == '0' {
 				c, i = 'T', i+1
 			}
-			rank, err := RankFromRune(c)
-			if err != nil {
-				return nil, err
+			card := New(RankFromRune(c), SuitFromRune(r[i+1]))
+			if card == InvalidCard {
+				return nil, &ParseError{
+					S:   s,
+					N:   n,
+					I:   i,
+					Err: ErrInvalidCard,
+				}
 			}
-			suit, err := SuitFromRune(r[i+1])
-			if err != nil {
-				return nil, err
-			}
-			hand = append(hand, New(rank, suit))
+			hand = append(hand, card)
 			i++
 		}
 	}
 	return hand, nil
-}
-
-// MustCard creates a Card from s.
-func MustCard(s string) Card {
-	c, err := FromString(s)
-	if err == nil {
-		return c
-	}
-	panic(err)
 }
 
 // Must creates a Card slice from v.
@@ -467,7 +473,7 @@ func (c Card) Index() int {
 // UnmarshalText satisfies the encoding.TextUnmarshaler interface.
 func (c *Card) UnmarshalText(buf []byte) error {
 	var err error
-	*c, err = FromString(string(buf))
+	*c = FromString(string(buf))
 	return err
 }
 
@@ -559,6 +565,24 @@ func (c Card) Format(f fmt.State, verb rune) {
 		buf = append(buf, fmt.Sprintf("%%!%c(ERROR=unknown verb, card: %s)", verb, string(r.Byte())+string(s.Byte()))...)
 	}
 	_, _ = f.Write(buf)
+}
+
+// ParseError is a parse error.
+type ParseError struct {
+	S   string
+	N   int
+	I   int
+	Err error
+}
+
+// Error satisfies the error interface.
+func (err *ParseError) Error() string {
+	return fmt.Sprintf("parse %q %d, %d: %v", err.S, err.N, err.I, err.Err)
+}
+
+// Unwrap satisfies the errors.Unwrap interface.
+func (err *ParseError) Unwrap() error {
+	return err.Err
 }
 
 // Unicode card runes.

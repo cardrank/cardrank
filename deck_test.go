@@ -135,9 +135,9 @@ func TestUnshuffled(t *testing.T) {
 	}
 	for _, r := range "23456789TJQKA" {
 		for _, s := range "shdc" {
-			c, err := FromString(string(r) + string(s))
-			if err != nil {
-				t.Fatalf("expected no error for %c%c, got: %v", r, s, err)
+			c := FromString(string(r) + string(s))
+			if c == InvalidCard {
+				t.Fatalf("expected valid card for %c%c", r, s)
 			}
 			if !contains(unshuffled, c) {
 				t.Errorf("unshuffled does not contain %s", c)
@@ -149,9 +149,9 @@ func TestUnshuffled(t *testing.T) {
 	}
 	for _, r := range "6789TJQKA" {
 		for _, s := range "shdc" {
-			c, err := FromString(string(r) + string(s))
-			if err != nil {
-				t.Fatalf("expected no error for %c%c, got: %v", r, s, err)
+			c := FromString(string(r) + string(s))
+			if c == InvalidCard {
+				t.Fatalf("expected valid card for %c%c", r, s)
 			}
 			if !contains(unshuffled, c) {
 				t.Errorf("unshuffled does not contain %s", c)
@@ -163,9 +163,9 @@ func TestUnshuffled(t *testing.T) {
 	}
 	for _, r := range "TJQKA" {
 		for _, s := range "shdc" {
-			c, err := FromString(string(r) + string(s))
-			if err != nil {
-				t.Fatalf("expected no error for %c%c, got: %v", r, s, err)
+			c := FromString(string(r) + string(s))
+			if c == InvalidCard {
+				t.Fatalf("expected valid card for %c%c", r, s)
 			}
 			if !contains(unshuffled, c) {
 				t.Errorf("unshuffled does not contain %s", c)

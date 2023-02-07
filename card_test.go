@@ -18,27 +18,27 @@ func TestParse(t *testing.T) {
 	}{
 		{"", nil, nil},
 		{"z", nil, ErrInvalidCard},
-		{"vs", nil, ErrInvalidCardRank},
-		{"av", nil, ErrInvalidCardSuit},
-		{"AsKs", []Card{MustCard("As"), MustCard("Ks")}, nil},
-		{"As Ks", []Card{MustCard("As"), MustCard("Ks")}, nil},
-		{" 🂬   a♣  🃚  🂸  td ", []Card{MustCard("Js"), MustCard("As"), MustCard("Ts"), MustCard("8h"), MustCard("Td")}, nil},
-		{"10D 10C 10S 10h", []Card{MustCard("10d"), MustCard("10c"), MustCard("10s"), MustCard("10h")}, nil},
+		{"vs", nil, ErrInvalidCard},
+		{"av", nil, ErrInvalidCard},
+		{"AsKs", []Card{New(Ace, Spade), New(King, Spade)}, nil},
+		{"As Ks", []Card{New(Ace, Spade), New(King, Spade)}, nil},
+		{" 🂬   a♣  🃚  🂸  td ", []Card{New(Jack, Spade), New(Ace, Club), New(Ten, Club), New(Eight, Heart), New(Ten, Diamond)}, nil},
+		{"10D 10C 10S 10h", []Card{New(Ten, Diamond), New(Ten, Club), New(10, Spade), New(10, Heart)}, nil},
 	}
 	for i, test := range tests {
 		hand, err := Parse(test.s)
 		switch {
-		case test.err != nil && !errors.Is(test.err, err):
-			t.Fatalf("test %d Parse(%q) expected error %v, got: %v", i, test.s, test.err, err)
+		case test.err != nil && !errors.Is(err, test.err):
+			t.Fatalf("test %d %q expected error %v, got: %v", i, test.s, test.err, err)
 		case errors.Is(test.err, err):
 			continue
 		}
 		if n, exp := len(hand), len(test.exp); n != exp {
-			t.Fatalf("test %d expected len(hand) == %d, got: %d", i, exp, n)
+			t.Fatalf("test %d %q expected len(hand) == %d, got: %d", i, test.s, exp, n)
 		}
 		for j, c := range hand {
 			if exp := test.exp[j]; c != exp {
-				t.Errorf("test %d card %d expected %s, got %s", i, j, exp, c)
+				t.Errorf("test %d %q card %d expected %s, got %s", i, test.s, j, exp, c)
 			}
 		}
 	}
@@ -71,9 +71,9 @@ func TestCardIndex(t *testing.T) {
 	for _, s := range []Suit{Spade, Heart, Diamond, Club} {
 		for r := Two; r <= Ace; r++ {
 			c := New(r, s)
-			d, err := FromIndex(i)
-			if err != nil {
-				t.Fatalf("index %d expected no error, got: %v", i, err)
+			d := FromIndex(i)
+			if d == InvalidCard {
+				t.Fatalf("expected valid card")
 			}
 			if d != c {
 				t.Errorf("expected %s to equal %s", c, d)
@@ -116,9 +116,9 @@ func TestFromRune(t *testing.T) {
 		{'🂲', "2h"},
 	}
 	for i, test := range tests {
-		c, err := FromRune(test.r)
-		if err != nil {
-			t.Fatalf("test %d expected no error, got: %v", i, err)
+		c := FromRune(test.r)
+		if c == InvalidCard {
+			t.Fatalf("test %d expected valid card", i)
 		}
 		if s := c.String(); s != test.exp {
 			t.Errorf("test %d expected s == %s, got: %s", i, test.exp, s)
@@ -156,18 +156,18 @@ func TestCardFormat(t *testing.T) {
 		for _, r := range z {
 			for _, s := range test.s {
 				v := string(r) + string(s)
-				c, err := FromString(v)
-				if err != nil {
-					t.Fatalf("test %d %q expected no error, got: %v", i, v, err)
+				c := FromString(v)
+				if c == InvalidCard {
+					t.Fatalf("test %d expected valid card", i)
 				}
 				if c != test.exp {
 					t.Errorf("test %d %q expected %d, got: %d", i, v, test.exp, c)
 				}
 			}
 		}
-		c, err := FromRune(test.c)
-		if err != nil {
-			t.Errorf("test %d expected no error, got: %v", i, err)
+		c := FromRune(test.c)
+		if c == InvalidCard {
+			t.Fatalf("test %d expected valid card", i)
 		}
 		if c != test.exp {
 			t.Errorf("test %d expected %c to be %d, got: %d (%s)", i, test.c, test.exp, c, c)
