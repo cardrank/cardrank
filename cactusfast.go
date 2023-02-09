@@ -3,14 +3,14 @@
 package cardrank
 
 func init() {
-	cactusFast = CactusFastRanker
+	cactusFast = CactusFast
 }
 
-// CactusFastRanker is a fast Cactus Kev hand ranker, implementing Paul
-// Senzee's perfect hash lookup.
+// CactusFast is a fast Cactus Kev hand rank func, implementing Paul Senzee's
+// perfect hash lookup.
 //
 // See: http://senzee.blogspot.com/2006/06/some-perfect-hash.html
-func CactusFastRanker(c0, c1, c2, c3, c4 Card) uint16 {
+func CactusFast(c0, c1, c2, c3, c4 Card) uint16 {
 	// check for flushes and straight flushes
 	if c0&c1&c2&c3&c4&0xf000 != 0 {
 		return fastFlushes[(c0|c1|c2|c3|c4)>>16]

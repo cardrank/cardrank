@@ -34,7 +34,7 @@ cards for, and evaluating [poker hands][hand] of the following:
 
 [Hand evaluation and ranking][hand-ranking] of the different [poker hand
 types][type] is accomplished through pure Go implementations of [well-known
-poker rank evaluation algorithms](#rankers). [Poker hands][hand] can be
+poker rank evaluation algorithms](#cactus-kev). [Poker hands][hand] can be
 compared and [ordered to determine the hand's winner(s)][hand-ordering].
 
 [Development of additional poker variants][future], such as Kansas City Lowball
@@ -86,7 +86,7 @@ func main() {
 	fmt.Printf("------ Holdem %d ------\n", seed)
 	fmt.Printf("Board:    %b\n", board)
 	for i := 0; i < players; i++ {
-		fmt.Printf("Player %d: %b %s %b %b\n", i+1, hands[i].Pocket(), hands[i].Description(), hands[i].Best(), hands[i].Unused())
+		fmt.Printf("Player %d: %b %s %b %b\n", i+1, hands[i].Pocket, hands[i].Description(), hands[i].Best(), hands[i].Unused())
 	}
 	h, pivot := cardrank.Order(hands)
 	if pivot == 1 {
@@ -105,15 +105,15 @@ func main() {
 Output:
 
 ```txt
------- Holdem 1653086388531833787 ------
-Board:    [A♣ 3♥ Q♥ J♣ J♠]
-Player 1: [5♣ 5♦] Two Pair, Jacks over Fives, kicker Ace [J♣ J♠ 5♣ 5♦ A♣] [Q♥ 3♥]
-Player 2: [A♥ 7♠] Two Pair, Aces over Jacks, kicker Queen [A♣ A♥ J♣ J♠ Q♥] [7♠ 3♥]
-Player 3: [8♥ 3♣] Two Pair, Jacks over Threes, kicker Ace [J♣ J♠ 3♣ 3♥ A♣] [Q♥ 8♥]
-Player 4: [9♣ T♠] Pair, Jacks, kickers Ace, Queen, Ten [J♣ J♠ A♣ Q♥ T♠] [9♣ 3♥]
-Player 5: [6♣ J♥] Three of a Kind, Jacks, kickers Ace, Queen [J♣ J♥ J♠ A♣ Q♥] [6♣ 3♥]
-Player 6: [2♣ T♦] Pair, Jacks, kickers Ace, Queen, Ten [J♣ J♠ A♣ Q♥ T♦] [3♥ 2♣]
-Result:   Player 5 wins with Three of a Kind, Jacks, kickers Ace, Queen [J♣ J♥ J♠ A♣ Q♥]
+------ Holdem 1676110749917132920 ------
+Board:    [8♦ 9♠ 2♦ 2♣ J♦]
+Player 1: [J♣ 4♠] Two Pair, Jacks over Twos, kicker Nine [J♣ J♦ 2♣ 2♦ 9♠] [8♦ 4♠]
+Player 2: [3♣ T♣] Pair, Twos, kickers Jack, Ten, Nine [2♣ 2♦ J♦ T♣ 9♠] [8♦ 3♣]
+Player 3: [6♦ 5♣] Pair, Twos, kickers Jack, Nine, Eight [2♣ 2♦ J♦ 9♠ 8♦] [6♦ 5♣]
+Player 4: [9♣ 4♣] Two Pair, Nines over Twos, kicker Jack [9♣ 9♠ 2♣ 2♦ J♦] [8♦ 4♣]
+Player 5: [7♠ 2♥] Three of a Kind, Twos, kickers Jack, Nine [2♣ 2♦ 2♥ J♦ 9♠] [8♦ 7♠]
+Player 6: [T♠ 3♠] Pair, Twos, kickers Jack, Ten, Nine [2♣ 2♦ J♦ T♠ 9♠] [8♦ 3♠]
+Result:   Player 5 wins with Three of a Kind, Twos, kickers Jack, Nine [2♣ 2♦ 2♥ J♦ 9♠]
 ```
 
 ##### Omaha Hi/Lo
@@ -146,11 +146,7 @@ func main() {
 	for i := 0; i < players; i++ {
 		fmt.Printf("Player %d: %b\n", i+1, pockets[i])
 		fmt.Printf("  Hi: %s %b %b\n", hands[i].Description(), hands[i].Best(), hands[i].Unused())
-		if hands[i].LowValid() {
-			fmt.Printf("  Lo: %s %b %b\n", hands[i].LowDescription(), hands[i].LowBest(), hands[i].LowUnused())
-		} else {
-			fmt.Printf("  Lo: None\n")
-		}
+		fmt.Printf("  Lo: %s %b %b\n", hands[i].LowDescription(), hands[i].LowBest(), hands[i].LowUnused())
 	}
 	h, hPivot := cardrank.Order(hands)
 	l, lPivot := cardrank.LowOrder(hands)
@@ -186,28 +182,28 @@ func main() {
 Output:
 
 ```txt
------- OmahaHiLo 1653086518494356973 ------
-Board: [2♣ K♥ 6♠ 5♣ 8♠]
-Player 1: [A♣ 9♦ J♦ T♣]
-  Hi: Nothing, Ace-high, kickers King, Jack, Eight, Six [A♣ K♥ J♦ 8♠ 6♠] [9♦ T♣ 2♣ 5♣]
-  Lo: None
-Player 2: [7♣ 5♥ 6♣ T♦]
-  Hi: Two Pair, Sixes over Fives, kicker King [6♣ 6♠ 5♣ 5♥ K♥] [7♣ T♦ 2♣ 8♠]
-  Lo: Eight-low [8♠ 7♣ 6♠ 5♥ 2♣] [6♣ T♦ K♥ 5♣]
-Player 3: [4♣ Q♥ K♣ Q♦]
-  Hi: Pair, Kings, kickers Queen, Eight, Six [K♣ K♥ Q♥ 8♠ 6♠] [4♣ Q♦ 2♣ 5♣]
-  Lo: None
-Player 4: [5♦ 3♦ 9♠ 9♣]
-  Hi: Pair, Nines, kickers King, Eight, Six [9♣ 9♠ K♥ 8♠ 6♠] [5♦ 3♦ 2♣ 5♣]
-  Lo: Eight-low [8♠ 6♠ 5♦ 3♦ 2♣] [9♠ 9♣ K♥ 5♣]
-Player 5: [2♠ K♦ 2♥ 8♦]
-  Hi: Three of a Kind, Twos, kickers King, Eight [2♣ 2♥ 2♠ K♥ 8♠] [K♦ 8♦ 6♠ 5♣]
-  Lo: None
-Player 6: [J♠ 3♣ K♠ J♥]
-  Hi: Pair, Kings, kickers Jack, Eight, Six [K♥ K♠ J♠ 8♠ 6♠] [3♣ J♥ 2♣ 5♣]
-  Lo: None
-Result (Hi): Player 5 wins with Three of a Kind, Twos, kickers King, Eight [2♣ 2♥ 2♠ K♥ 8♠]
-Result (Lo): Player 4 wins with Eight-low [8♠ 6♠ 5♦ 3♦ 2♣]
+------ OmahaHiLo 1676110711435292197 ------
+Board: [9♥ 4♦ A♣ 9♦ 2♣]
+Player 1: [J♦ Q♠ J♠ 7♦]
+  Hi: Two Pair, Jacks over Nines, kicker Ace [J♦ J♠ 9♦ 9♥ A♣] [Q♠ 7♦ 4♦ 2♣]
+  Lo: None [] []
+Player 2: [K♥ 2♠ T♥ 3♦]
+  Hi: Two Pair, Nines over Twos, kicker King [9♦ 9♥ 2♣ 2♠ K♥] [T♥ 3♦ 4♦ A♣]
+  Lo: None [] []
+Player 3: [2♦ T♦ K♣ 6♥]
+  Hi: Two Pair, Nines over Twos, kicker King [9♦ 9♥ 2♣ 2♦ K♣] [T♦ 6♥ 4♦ A♣]
+  Lo: None [] []
+Player 4: [9♣ 5♥ J♥ 8♦]
+  Hi: Three of a Kind, Nines, kickers Ace, Jack [9♣ 9♦ 9♥ A♣ J♥] [5♥ 8♦ 4♦ 2♣]
+  Lo: Eight, Five, Four, Two, Ace-low [8♦ 5♥ 4♦ 2♣ A♣] [9♣ J♥ 9♥ 9♦]
+Player 5: [8♠ 6♣ 4♣ Q♥]
+  Hi: Two Pair, Nines over Fours, kicker Queen [9♦ 9♥ 4♣ 4♦ Q♥] [8♠ 6♣ A♣ 2♣]
+  Lo: Eight, Six, Four, Two, Ace-low [8♠ 6♣ 4♦ 2♣ A♣] [4♣ Q♥ 9♥ 9♦]
+Player 6: [T♠ 6♠ 5♠ 5♦]
+  Hi: Two Pair, Nines over Fives, kicker Ace [9♦ 9♥ 5♦ 5♠ A♣] [T♠ 6♠ 4♦ 2♣]
+  Lo: Six, Five, Four, Two, Ace-low [6♠ 5♠ 4♦ 2♣ A♣] [T♠ 5♦ 9♥ 9♦]
+Result (Hi): Player 4 wins with Three of a Kind, Nines, kickers Ace, Jack [9♣ 9♦ 9♥ A♣ J♥]
+Result (Lo): Player 6 wins with Six, Five, Four, Two, Ace-low [6♠ 5♠ 4♦ 2♣ A♣]
 ```
 
 ### Hand Ranking
@@ -221,7 +217,7 @@ have a lower value `HandRank` than lower poker hands. For example, a
 When a [`Hand`][hand] is created, a Hi and Lo (if applicable) `HandRank` is
 evaluated, and made available via [`Hand.Rank`][hand.rank] and
 [`Hand.LowRank`][hand.low-rank] methods, respectively. The Hi and Lo
-`HandRank`'s are evaluated by a `Ranker`, dependent on the `Hand`'s
+`HandRank`'s are evaluated by a `EvalRankFunc`, dependent on the `Hand`'s
 [`Type`][type]:
 
 #### Cactus Kev
@@ -230,44 +226,36 @@ For regular poker hand types ([`Holdem`][type], [`Royal`][type],
 [`Omaha`][type], and [`Stud`][type]), poker hand rank is determined by Go
 implementations of different [Cactus Kev][cactus-kev] evaluators:
 
-* [`CactusRanker`][cactus-ranker] - the original [Cactus Kev][cactus-kev] poker hand evaluator
-* [`CactusFastRanker`][cactus-fast-ranker] - the [Fast Cactus][senzee] poker hand evaluator, using Paul Senzee's perfect hash lookup
-* [`TwoPlusTwoRanker`][two-plus-two-ranker] - the [2+2 forum][tangentforks] poker hand evaluator, using a 130 MiB lookup table
+* [`Cactus`][cactus] - the original [Cactus Kev][cactus-kev] poker hand evaluator
+* [`CactusFast`][cactus-fast] - the [Fast Cactus][senzee] poker hand evaluator, using Paul Senzee's perfect hash lookup
+* [`TwoPlusTwo`][two-plus-two] - the [2+2 forum][tangentforks] poker hand evaluator, using a 130 MiB lookup table
 
-See [below for more information](#default-ranker) on the default ranker in use
-by the package, and for information on [using build tags][build-tags] to
+See [below for more information](#default-rank-func) on the default rank func in
+use by the package, and for information on [using build tags][build-tags] to
 enable/disable functionality for different target runtime environments.
 
-#### Default Ranker
+#### Default Rank Func
 
-The package-level [`DefaultRanker`][default-ranker] variable is used for regular poker
-evaluation. For most scenarios, the [`HybridRanker`][hybrid-ranker] provides
+The package-level [`DefaultRank`][default-rank] variable is used for regular
+poker evaluation. For most scenarios, the [`Hybrid`][hybrid] rank func provides
 the best possible evaluation performance, and is used by default when no [build
 tags][build-tags] have been specified.
 
 #### Hybrid
 
-The [`HybridRanker`][hybrid-ranker] uses either the [`CactusFastRanker`][cactus-fast-ranker]
-or an instance of the [`TwoPlusTwoRanker`][two-plus-two-ranker] depending on
-the [`Hand`][hand] having 5, 6, or 7 cards.
+The [`Hybrid`][hybrid] rank func uses either the [`CactusFast`][cactus-fast] or
+an instance of the [`TwoPlusTwo`][two-plus-two] depending on the [`Hand`][hand]
+having 5, 6, or 7 cards.
 
 #### Two-Plus-Two
 
-The [`TwoPlusTwoRanker`][two-plus-two-ranker] makes use of a large
-(approximately 130 MiB) lookup table to accomplish extremely fast 5, 6 and 7
-card hand rank evaluation. Due to the large size of the lookup table, the
-`TwoPlusTwoRanker` will be excluded when using the using the [`portable` or
-`embedded` build tags][build-tags].
+The [`TwoPlusTwo`][two-plus-two] makes use of a large (approximately 130 MiB)
+lookup table to accomplish extremely fast 5, 6 and 7 card hand rank evaluation.
+Due to the large size of the lookup table, the `TwoPlusTwo` will be excluded
+when using the using the [`portable` or `embedded` build tags][build-tags].
 
-The `TwoPlusTwoRanker` is disabled by default for `GOOS=js` (ie, WASM) builds,
-but can be enabled using the [`forcefat` build tag][build-tags].
-
-#### Other Variants
-
-For the [`Short`][type], [`OmahaHiLo`][type], [`StudHiLo`][type], [`Razz`][type],
-and [`Badugi`][type] poker hand types, a [6-plus][six-plus-ranker],
-an [8-or-better][eight-or-better-ranker], a [Razz][razz-ranker], and a
-[Badugi][badugi-ranker] poker hand rank evaluators are used.
+The `TwoPlusTwo` is disabled by default for `GOOS=js` (ie, WASM) builds, but
+can be enabled using the [`forcefat` build tag][build-tags].
 
 ### Winner Determination
 
@@ -342,8 +330,8 @@ configuration. Available tags:
 
 #### `portable`
 
-The `portable` tag disables the `TwoPlusTwoRanker`, in effect excluding the the
-[large lookup table](#two-plus-two-ranker), and creating significantly smaller
+The `portable` tag disables the `TwoPlusTwo`, in effect excluding the the
+[large lookup table](#two-plus-two), and creating significantly smaller
 binaries but at the cost of more expensive poker hand rank evaluation. Useful
 when building for portable or embedded environments, such as a client
 application:
@@ -354,10 +342,9 @@ go build -tags portable
 
 #### `embedded`
 
-The `embedded` tag disables the `CactusFastRanker` and the `TwoPlusTwoRanker`,
-creating the smallest possible binaries. Useful when either embedding the
-package in another application, or in constrained runtime environments such as
-WASM:
+The `embedded` tag disables the `CactusFast` and the `TwoPlusTwo`, creating the
+smallest possible binaries. Useful when either embedding the package in another
+application, or in constrained runtime environments such as WASM:
 
 ```sh
 GOOS=js GOARCH=wasm go build -tags embedded
@@ -365,33 +352,41 @@ GOOS=js GOARCH=wasm go build -tags embedded
 
 #### `noinit`
 
-The `noinit` tag disables the package level initialization of variables
-`DefaultRanker` and `DefaultSixPlusRanker`. Useful when applications need the
-fastest possible startup times and can defer initialization, or when using a
-third-party `Ranker` algorithm:
+The `noinit` tag disables the package level initialization. Useful when
+applications need the fastest possible startup times and can defer
+initialization, or when using a third-party algorithm:
 
 ```sh
 GOOS=js GOARCH=wasm go build -tags 'embedded noinit' -o cardrank.wasm
 ```
 
 When using the `noinit` build tag, the user will need to call the [`Init`
-func][init] to set `DefaultCactus`, `DefaultRanker` and `DefaultSixPlusRanker`
-automatically or by manually specifying the variables:
+func][init] to set `DefaultCactus`, `DefaultRank` and to register the default
+types automatically:
 
 ```go
-// Set DefaultCactus, DefaultRanker and DefaultSixPlusRanker based on
-// available implementations:
+// Set DefaultCactus, DefaultRank based on available implementations:
 cardrank.Init()
+```
 
+Alternatively, the `DefaultCactus` and `DefaultRank` can be set manually. After
+`DefaultCactus` and `DefaultRank` have been set, call `RegisterDefaultTypes` to
+register built in types:
+
+```go
 // Set manually (such as when using a third-party implementation):
-cardrank.DefaultCactus = cardrank.CactusRanker
-cardrank.DefaultRanker = cardrank.HandRanker(cardrank.CactusRanker)
-cardrank.DefaultSixPlusRanker = cardrank.HandRanker(cardrank.SixPlusRanker(cardrank.CactusRanker))
+cardrank.DefaultCactus = cardrank.Cactus
+cardrank.DefaultRank = cardrank.NewHandRank(cardrank.Cactus)
+
+// Then call RegisterDefaultTypes to register default types
+if err := cardrank.RegisterDefaultTypes(); err != nil {
+	panic(err)
+}
 ```
 
 #### `forcefat`
 
-The `forcefat` tag forces a "fat" binary build, including the `TwoPlusTwoRanker`'s
+The `forcefat` tag forces a "fat" binary build, including the `TwoPlusTwo`'s
 large lookup table, irrespective of other build tags:
 
 ```sh
@@ -400,8 +395,8 @@ GOOS=js GOARCH=wasm go build -tags 'forcefat' -o cardrank.wasm
 
 ## Future Development
 
-Rankers for Kansas City Lowball, Sökö, and other poker variants will be added
-to this package in addition to standardized interfaces for managing poker
+Rank funcs for Kansas City Lowball, Sökö, and other poker variants will be
+added to this package in addition to standardized interfaces for managing poker
 tables and games.
 
 ## Links
@@ -421,7 +416,7 @@ tables and games.
 [hand-ranking]: #hand-ranking
 [build-tags]: #build-tags
 [future]: #future-development
-[hand-ordering]: #winner-determination-and-hand-ordering
+[hand-ordering]: #winner-determination
 
 [card]: https://pkg.go.dev/github.com/cardrank/cardrank#Card
 [suit]: https://pkg.go.dev/github.com/cardrank/cardrank#Suit
@@ -448,12 +443,8 @@ tables and games.
 [razz-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Razz
 [badugi-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Badugi
 
-[default-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#DefaultRanker
-[cactus-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#CactusRanker
-[cactus-fast-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#CactusFastRanker
-[two-plus-two-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#TwoPlusTwoRanker
-[hybrid-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#HybridRanker
-[six-plus-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#SixPlusRanker
-[eight-or-better-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#EightOrBetterRanker
-[razz-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#RazzRanker
-[badugi-ranker]: https://pkg.go.dev/github.com/cardrank/cardrank#BadugiRanker
+[default-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#DefaultRank
+[cactus]: https://pkg.go.dev/github.com/cardrank/cardrank#Cactus
+[cactus-fast]: https://pkg.go.dev/github.com/cardrank/cardrank#CactusFast
+[two-plus-two]: https://pkg.go.dev/github.com/cardrank/cardrank#TwoPlusTwo
+[hybrid]: https://pkg.go.dev/github.com/cardrank/cardrank#Hybrid

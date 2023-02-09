@@ -567,6 +567,22 @@ func (c Card) Format(f fmt.State, verb rune) {
 	_, _ = f.Write(buf)
 }
 
+// CardFormatter wraps formatting a set of cards. Allows `go test` to function
+// without disabling vet.
+type CardFormatter []Card
+
+// Format satisfies the fmt.Formatter interface.
+func (v CardFormatter) Format(f fmt.State, verb rune) {
+	_, _ = f.Write([]byte{'['})
+	for i, c := range v {
+		if i != 0 {
+			_, _ = f.Write([]byte{' '})
+		}
+		c.Format(f, verb)
+	}
+	_, _ = f.Write([]byte{']'})
+}
+
 // ParseError is a parse error.
 type ParseError struct {
 	S   string

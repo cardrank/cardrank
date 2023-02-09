@@ -40,9 +40,8 @@ func TestOrderHands(t *testing.T) {
 			t.Logf("board: %b", board)
 			var hands []*Hand
 			for i := 0; i < test.n; i++ {
-				pocket := d.Draw(2)
-				h := Holdem.RankHand(pocket, board)
-				t.Logf("player %d: %b", i, pocket)
+				h := Holdem.RankHand(d.Draw(2), board)
+				t.Logf("player %d: %b", i, h.Pocket)
 				t.Logf("  hand: %b %b", h.Best(), h.Unused())
 				t.Logf("  desc: %s", h.Description())
 				hands = append(hands, h)
@@ -213,37 +212,15 @@ func TestHandRankCompare(t *testing.T) {
 	}
 }
 
-func TestMaxPlayers(t *testing.T) {
+func TestMax(t *testing.T) {
 	rnd := rand.New(rand.NewSource(0))
 	for typ := Holdem; typ <= Badugi; typ++ {
-		maxPlayers := typ.MaxPlayers()
-		for i := 2; i <= maxPlayers; i++ {
+		max := typ.Max()
+		for i := 2; i <= max; i++ {
 			pockets, _ := typ.Deal(rnd, i)
 			if len(pockets) != i {
 				t.Errorf("%s was not able to deal pockets for %d players", typ, i)
 			}
-		}
-	}
-}
-
-func TestTypeUnmarshal(t *testing.T) {
-	tests := []struct {
-		s   string
-		exp Type
-	}{
-		{"HOLDEM", Holdem},
-		{"omaha", Omaha},
-		{"studHiLo", StudHiLo},
-		{"razz", Razz},
-		{"BaDUGI", Badugi},
-	}
-	for i, test := range tests {
-		typ := Type(^uint32(0))
-		if err := typ.UnmarshalText([]byte(test.s)); err != nil {
-			t.Fatalf("test %d expected no error, got: %v", i, err)
-		}
-		if typ != test.exp {
-			t.Errorf("test %d expected %d, got: %d", i, test.exp, typ)
 		}
 	}
 }

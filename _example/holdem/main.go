@@ -20,7 +20,7 @@ func main() {
 	fmt.Printf("------ Holdem %d ------\n", seed)
 	fmt.Printf("Board:    %b\n", board)
 	for i := 0; i < players; i++ {
-		fmt.Printf("Player %d: %b %s %b %b\n", i+1, hands[i].Pocket(), hands[i].Description(), hands[i].Best(), hands[i].Unused())
+		fmt.Printf("Player %d: %b %s %b %b\n", i+1, hands[i].Pocket, hands[i].Description(), hands[i].Best(), hands[i].Unused())
 	}
 	h, pivot := cardrank.Order(hands)
 	if pivot == 1 {

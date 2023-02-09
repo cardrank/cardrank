@@ -22,11 +22,7 @@ func main() {
 	for i := 0; i < players; i++ {
 		fmt.Printf("Player %d: %b\n", i+1, pockets[i])
 		fmt.Printf("  Hi: %s %b %b\n", hands[i].Description(), hands[i].Best(), hands[i].Unused())
-		if hands[i].LowValid() {
-			fmt.Printf("  Lo: %s %b %b\n", hands[i].LowDescription(), hands[i].LowBest(), hands[i].LowUnused())
-		} else {
-			fmt.Printf("  Lo: None\n")
-		}
+		fmt.Printf("  Lo: %s %b %b\n", hands[i].LowDescription(), hands[i].LowBest(), hands[i].LowUnused())
 	}
 	h, hPivot := cardrank.Order(hands)
 	l, lPivot := cardrank.LowOrder(hands)

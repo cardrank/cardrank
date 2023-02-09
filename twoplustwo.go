@@ -5,15 +5,18 @@ package cardrank
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 )
 
 func init() {
 	if twoplustwo01Dat != nil {
-		twoPlusTwo = NewTwoPlusTwoRanker()
+		twoPlusTwo = NewTwoPlusTwo()
 	}
 }
 
-// TwoPlusTwoRanker is a implementation of the 2+2 poker forum hand ranker.
+// NewTwoPlusTwo creates a new two plus hand rank eval func.
+//
+// The TwoPlusTwo eval is a version of the 2+2 poker forum hand rank evaluator.
 // Uses the embedded twoplustwo*.dat files to provide extremely fast 7 card
 // hand lookup. Uses Cactus Kev values.
 //
@@ -24,16 +27,10 @@ func init() {
 //
 // When recombined, the lookup table has the same hash as the original table
 // generated using the C code.
-type TwoPlusTwoRanker struct {
-	ranks []uint32
-	cards map[Card]uint32
-	types [10]uint32
-}
-
-// TwoPlusRanker creates a new two plus hand ranker.
-func NewTwoPlusTwoRanker() RankerFunc {
-	var buf []byte
-	for _, v := range [][]byte{
+func NewTwoPlusTwo() HandRankFunc {
+	const total, chunk, last = 32487834, 2621440, 1030554
+	tbl, pos := make([]uint32, total), 0
+	for i, buf := range [][]byte{
 		twoplustwo00Dat,
 		twoplustwo01Dat,
 		twoplustwo02Dat,
@@ -48,50 +45,49 @@ func NewTwoPlusTwoRanker() RankerFunc {
 		twoplustwo11Dat,
 		twoplustwo12Dat,
 	} {
-		buf = append(buf, v...)
+		n, exp := len(buf), chunk
+		if i == 12 {
+			exp = last
+		}
+		if n%4 != 0 || n/4 != exp {
+			panic(fmt.Sprintf("twoplustwo%02d.dat is bad: expected %d uint32, has: %d", i, exp, n/4))
+		}
+		if err := binary.Read(bytes.NewReader(buf), binary.LittleEndian, tbl[pos:pos+n/4]); err != nil {
+			panic(fmt.Sprintf("twoplustwo%02d.dat is bad: %v", i, err))
+		}
+		pos += n / 4
 	}
-	if len(buf)%4 != 0 || len(buf)/4 != 32487834 {
-		panic("invalid file")
+	if pos != total {
+		panic("short read twoplustwo*.dat")
 	}
-	ranks := make([]uint32, len(buf)/4)
-	if err := binary.Read(bytes.NewReader(buf), binary.LittleEndian, ranks); err != nil {
-		panic(err)
-	}
-	// build cards
-	cards := make(map[Card]uint32, 52)
+	// build card map
+	m := make(map[Card]uint32, 52)
 	for i, r := uint32(0), Two; r <= Ace; r++ {
 		for _, s := range []Suit{Spade, Heart, Club, Diamond} {
-			cards[New(r, s)] = i + 1
+			m[New(r, s)] = i + 1
 			i++
 		}
 	}
-	p := &TwoPlusTwoRanker{
-		ranks: ranks,
-		cards: cards,
-		types: [10]uint32{
-			uint32(Invalid),
-			uint32(HighCard),
-			uint32(Pair),
-			uint32(TwoPair),
-			uint32(ThreeOfAKind),
-			uint32(Straight),
-			uint32(Flush),
-			uint32(FullHouse),
-			uint32(FourOfAKind),
-			uint32(StraightFlush),
-		},
+	ranks := [10]uint32{
+		uint32(Invalid),
+		uint32(HighCard),
+		uint32(Pair),
+		uint32(TwoPair),
+		uint32(ThreeOfAKind),
+		uint32(Straight),
+		uint32(Flush),
+		uint32(FullHouse),
+		uint32(FourOfAKind),
+		uint32(StraightFlush),
 	}
-	return p.rank
-}
-
-// rank satisfies the Ranker interface.
-func (p *TwoPlusTwoRanker) rank(hand []Card) HandRank {
-	i := uint32(53)
-	for _, c := range hand {
-		i = p.ranks[i+p.cards[c]]
+	return func(v []Card) HandRank {
+		i := uint32(53)
+		for _, c := range v {
+			i = tbl[i+m[c]]
+		}
+		if len(v) < 7 {
+			i = tbl[i]
+		}
+		return HandRank(ranks[i>>12] - i&0xfff + 1)
 	}
-	if len(hand) < 7 {
-		i = p.ranks[i]
-	}
-	return HandRank(p.types[i>>12] - i&0xfff + 1)
 }
