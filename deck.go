@@ -2,6 +2,7 @@ package cardrank
 
 import (
 	"fmt"
+	"strings"
 )
 
 // Shuffler is an interface for a deck shuffler. Compatible with
@@ -10,79 +11,90 @@ type Shuffler interface {
 	Shuffle(int, func(int, int))
 }
 
+// DeckType is a deck type.
+type DeckType uint8
+
+// Deck types.
 const (
-	// unshuffledSize is the unshuffled deck size.
-	unshuffledSize = 52
-	// unshuffledShortSize is the unshuffled short deck size.
-	unshuffledShortSize = 36
-	// unshuffledRoyalSize is the unshuffled royal deck size.
-	unshuffledRoyalSize = 20
+	// DeckFrench is deck of French (52) cards.
+	DeckFrench = DeckType(Two)
+	// DeckShort is a deck of Short (6+) cards.
+	DeckShort = DeckType(Six)
+	// DeckManila is a deck of Manila (7+) cards.
+	DeckManila = DeckType(Seven)
+	// DeckRoyal is a deck of Royal (10+) cards.
+	DeckRoyal = DeckType(Ten)
 )
 
-var (
-	// unshuffled is an unshuffled set of cards.
-	unshuffled = Unshuffled()
-	// unshuffledShort is an unshuffled set of short (6+) cards.
-	unshuffledShort = UnshuffledShort()
-	// unshuffledRoyal is an shuffled set of royal (10+) cards.
-	unshuffledRoyal = UnshuffledRoyal()
-)
-
-// Unshuffled generates an unshuffled set of standard playing cards.
-func Unshuffled() []Card {
-	v := make([]Card, unshuffledSize)
-	var i int
-	for _, s := range []Suit{Spade, Heart, Diamond, Club} {
-		for r := Two; r <= Ace; r++ {
-			v[i] = New(r, s)
-			i++
-		}
+// String satisfies the fmt.Stringer interface.
+func (typ DeckType) String() string {
+	switch typ {
+	case DeckFrench:
+		return "French"
+	case DeckShort:
+		return "Short"
+	case DeckManila:
+		return "Manila"
+	case DeckRoyal:
+		return "Royal"
 	}
-	return v
+	return ""
 }
 
-// UnshuffledShort generates an unshuffled set of short cards (6+).
-func UnshuffledShort() []Card {
-	v := make([]Card, unshuffledShortSize)
-	var i int
-	for _, s := range []Suit{Spade, Heart, Diamond, Club} {
-		for r := Six; r <= Ace; r++ {
-			v[i] = New(r, s)
-			i++
-		}
-	}
-	return v
-}
-
-// UnshuffledRoyal generates an unshuffled set of royal cards (10+).
-func UnshuffledRoyal() []Card {
-	v := make([]Card, unshuffledRoyalSize)
-	var i int
-	for _, s := range []Suit{Spade, Heart, Diamond, Club} {
-		for r := Ten; r <= Ace; r++ {
-			v[i] = New(r, s)
-			i++
-		}
-	}
-	return v
-}
-
-// UnshuffledExclude generates an unshuffled set of cards, with excluded
-// cards removed.
-func UnshuffledExclude(exclude []Card) []Card {
-	m := make(map[uint32]bool)
-	for _, c := range exclude {
-		m[uint32(c)] = true
-	}
-	var v []Card
-	for _, s := range []Suit{Spade, Heart, Diamond, Club} {
-		for r := Two; r <= Ace; r++ {
-			if c := New(r, s); !m[uint32(c)] {
-				v = append(v, c)
+// Unshuffled returns a set of unshuffled cards for
+func (typ DeckType) Unshuffled() []Card {
+	switch typ {
+	case DeckFrench, DeckShort, DeckManila, DeckRoyal:
+		v := make([]Card, 4*(Ace-Rank(typ)+1))
+		var i int
+		for _, s := range []Suit{Spade, Heart, Diamond, Club} {
+			for r := Rank(typ); r <= Ace; r++ {
+				v[i] = New(r, s)
+				i++
 			}
 		}
+		return v
 	}
-	return v
+	return nil
+}
+
+// New returns a new deck for the deck type.
+func (typ DeckType) New() *Deck {
+	var v []Card
+	switch typ {
+	case DeckFrench:
+		v = unshuffledFrench
+	case DeckShort:
+		v = unshuffledShort
+	case DeckManila:
+		v = unshuffledManila
+	case DeckRoyal:
+		v = unshuffledRoyal
+	default:
+		return nil
+	}
+	n := len(v)
+	d := &Deck{
+		v: make([]Card, n),
+		l: uint16(n),
+	}
+	copy(d.v, v)
+	return d
+}
+
+// unshuffled cards.
+var (
+	unshuffledFrench []Card
+	unshuffledShort  []Card
+	unshuffledManila []Card
+	unshuffledRoyal  []Card
+)
+
+func init() {
+	unshuffledFrench = DeckFrench.Unshuffled()
+	unshuffledShort = DeckShort.Unshuffled()
+	unshuffledManila = DeckManila.Unshuffled()
+	unshuffledRoyal = DeckRoyal.Unshuffled()
 }
 
 // Deck is a set of playing cards.
@@ -92,42 +104,17 @@ type Deck struct {
 	v []Card
 }
 
-// NewDeck creates a new unshuffled deck of cards.
+// NewDeck returns a new deck of 52 unshuffled cards.
 func NewDeck() *Deck {
-	d := &Deck{
-		v: make([]Card, unshuffledSize),
-		l: unshuffledSize,
-	}
-	copy(d.v, unshuffled)
-	return d
-}
-
-// NewShortDeck creates a new unshuffled short deck (6+).
-func NewShortDeck() *Deck {
-	d := &Deck{
-		v: make([]Card, unshuffledShortSize),
-		l: unshuffledShortSize,
-	}
-	copy(d.v, unshuffledShort)
-	return d
-}
-
-// NewRoyalDeck creates a new unshuffled royal deck (10+).
-func NewRoyalDeck() *Deck {
-	d := &Deck{
-		v: make([]Card, unshuffledRoyalSize),
-		l: unshuffledRoyalSize,
-	}
-	copy(d.v, unshuffledRoyal)
-	return d
+	return DeckFrench.New()
 }
 
 // NewShoeDeck creates a new unshuffled deck "shoe" composed of n decks of
 // unshuffled cards.
 func NewShoeDeck(n int) *Deck {
-	cards := make([]Card, len(unshuffled)*n)
+	cards := make([]Card, len(unshuffledFrench)*n)
 	for i := 0; i < n; i++ {
-		copy(cards[i*len(unshuffled):], unshuffled)
+		copy(cards[i*len(unshuffledFrench):], unshuffledFrench)
 	}
 	return &Deck{
 		l: uint16(len(cards)),
@@ -162,10 +149,10 @@ func (d *Deck) ShuffleN(shuffler Shuffler, n int) {
 // Draw draws the next n cards from the top (front) of the deck.
 func (d *Deck) Draw(n int) []Card {
 	if n < 0 {
-		panic("n cannot be negative")
+		return nil
 	}
 	var hand []Card
-	for l := min(d.i+uint16(n), d.l); d.i < l; d.i++ {
+	for l := uint16(min(HandRank(d.i)+HandRank(n), HandRank(d.l))); d.i < l; d.i++ {
 		hand = append(hand, d.v[d.i])
 	}
 	return hand
@@ -291,8 +278,28 @@ func NewShuffledDealer(desc TypeDesc, d *Deck) *Dealer {
 func (d *Dealer) Format(f fmt.State, verb rune) {
 	switch verb {
 	case 's', 'v':
-		street := d.Street()
-		fmt.Fprintf(f, "%s (%c, %d)", street.Name, street.Id, d.i)
+		desc := d.Street()
+		var v []string
+		if 0 < desc.Pocket {
+			if 0 < desc.PocketDiscard {
+				v = append(v, fmt.Sprintf("D: %d", desc.PocketDiscard))
+			}
+			v = append(v, fmt.Sprintf("p: %d", desc.Pocket))
+			if 0 < desc.PocketUp {
+				v = append(v, fmt.Sprintf("u: %d", desc.PocketUp))
+			}
+		}
+		if 0 < desc.Board {
+			if 0 < desc.BoardDiscard {
+				v = append(v, fmt.Sprintf("d: %d", desc.BoardDiscard))
+			}
+			v = append(v, fmt.Sprintf("b: %d", desc.Board))
+		}
+		var s string
+		if len(v) != 0 {
+			s = " (" + strings.Join(v, ", ") + ")"
+		}
+		fmt.Fprintf(f, "%d:%q %s%s", d.i, desc.Id, desc.Name, s)
 	}
 }
 

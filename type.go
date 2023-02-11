@@ -6,352 +6,6 @@ import (
 	"strings"
 )
 
-// EvalFunc is a hand rank eval func.
-type EvalFunc func(*Hand)
-
-// HandCompareFunc is a hand rank eval compare func.
-type HandCompareFunc func(*Hand, *Hand) int
-
-// descs are the registered type descriptions.
-var descs map[Type]TypeDesc
-
-// RegisterType registers a type.
-func RegisterType(id string, typ Type, name string, opts ...TypeOption) error {
-	switch _, ok := descs[typ]; {
-	case len(id) != 2, ok:
-		return ErrInvalidId
-	case ToType(id) != typ:
-		return ErrMismatchedIdAndType
-	}
-	desc := &TypeDesc{
-		Num:  len(descs),
-		Type: typ,
-		Name: name,
-	}
-	for _, o := range opts {
-		o(desc)
-	}
-	if desc.Deck == nil {
-		desc.Deck = NewDeck
-	}
-	if desc.Eval == nil {
-		return fmt.Errorf("%s does not define Eval", typ)
-	}
-	if desc.HiCompare == nil {
-		desc.HiCompare = NewHiCompare()
-	}
-	descs[typ] = *desc
-	return nil
-}
-
-// RegisterDefaultTypes registers default types.
-func RegisterDefaultTypes() error {
-	descs = make(map[Type]TypeDesc)
-	for _, d := range []struct {
-		s    string
-		typ  Type
-		name string
-		opt  TypeOption
-	}{
-		{"Hh", Holdem, "Holdem", WithHoldem()},
-		{"Hs", Short, "Short", WithShort()},
-		{"Hr", Royal, "Royal", WithRoyal()},
-		{"Hd", Double, "Double", WithDouble()}, // aka "Split Hold'em"
-		{"Ht", Showtime, "Showtime", WithShowtime()},
-		{"O4", Omaha, "Omaha", WithOmaha(false)},
-		{"Ol", OmahaHiLo, "OmahaHiLo", WithOmaha(true)},
-		{"Od", OmahaDouble, "OmahaDouble", WithOmahaDouble()},
-		{"O5", OmahaFive, "OmahaFive", WithOmahaFive(false)},
-		{"O6", OmahaSix, "OmahaSix", WithOmahaSix(false)},
-		{"Oc", Courchevel, "Courchevel", WithCourchevel(false)},
-		{"Oe", CourchevelHiLo, "CourchevelHiLo", WithCourchevel(true)},
-		{"Of", Fusion, "Fusion", WithFusion(false)},
-		{"Sh", Stud, "Stud", WithStud(false)},
-		{"Sl", StudHiLo, "StudHiLo", WithStud(true)},
-		{"Ra", Razz, "Razz", WithRazz()},
-		{"Ba", Badugi, "Badugi", WithBadugi()},
-	} {
-		if err := RegisterType(d.s, d.typ, d.name, d.opt); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// TypeDesc is a type description.
-type TypeDesc struct {
-	// Num is the registered number.
-	Num int
-	// Type is the type.
-	Type Type
-	// Name is the type name.
-	Name string
-	// Max is the max number of players.
-	Max int
-	// Low is true when type has low rank.
-	Low bool
-	// Double is true when there are two boards.
-	Double bool
-	// Show is true when folded cards are shown.
-	Show bool
-	// Blinds are the blind names.
-	Blinds []string
-	// Streets are the betting streets.
-	Streets []StreetDesc
-	// Deck is the deck func.
-	Deck func() *Deck
-	// Eval is the eval func.
-	Eval EvalFunc
-	// HiCompare is the hi compare func.
-	HiCompare HandCompareFunc
-	// LoCompare is the lo compare func.
-	LoCompare HandCompareFunc
-}
-
-// Apply applies street options.
-func (desc *TypeDesc) Apply(opts ...StreetOption) {
-	for _, o := range opts {
-		for i, street := range desc.Streets {
-			o(i, &street)
-			desc.Streets[i] = street
-		}
-	}
-}
-
-// TypeOption is a type description option.
-type TypeOption func(*TypeDesc)
-
-// WithHoldem is a type description option to set Holdem definitions.
-func WithHoldem(opts ...StreetOption) TypeOption {
-	return func(desc *TypeDesc) {
-		desc.Max = 10
-		desc.Blinds = HoldemBlinds()
-		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
-		desc.Eval = NewHoldemEval(DefaultRank, Five)
-		desc.Apply(opts...)
-	}
-}
-
-// WithShort is a type description option to set Holdem 6+ definitions.
-func WithShort(opts ...StreetOption) TypeOption {
-	return func(desc *TypeDesc) {
-		desc.Max = 6
-		desc.Blinds = HoldemBlinds()
-		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
-		desc.Deck = NewShortDeck
-		desc.Eval = NewShortEval()
-		desc.HiCompare = ShortComp
-		desc.Apply(opts...)
-	}
-}
-
-// WithRoyal is a type description option to set Royal definitions.
-func WithRoyal(opts ...StreetOption) TypeOption {
-	return func(desc *TypeDesc) {
-		desc.Max = 5
-		desc.Blinds = HoldemBlinds()
-		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
-		desc.Deck = NewRoyalDeck
-		desc.Eval = NewHoldemEval(DefaultRank, Five)
-		desc.Apply(opts...)
-	}
-}
-
-// WithDouble is a type description option to set Double definitions.
-func WithDouble(opts ...StreetOption) TypeOption {
-	return func(desc *TypeDesc) {
-		desc.Max = 10
-		desc.Double = true
-		desc.Blinds = HoldemBlinds()
-		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
-		desc.Eval = NewHoldemEval(DefaultRank, Five)
-		desc.Apply(opts...)
-	}
-}
-
-// WithShowtime is a type description option to set Showtime definitions.
-func WithShowtime(opts ...StreetOption) TypeOption {
-	return func(desc *TypeDesc) {
-		desc.Max = 10
-		desc.Show = true
-		desc.Blinds = HoldemBlinds()
-		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
-		desc.Eval = NewHoldemEval(DefaultRank, Five)
-		desc.Apply(opts...)
-	}
-}
-
-// WithOmaha is a type description option to set standard Omaha definitions.
-func WithOmaha(hiLo bool, opts ...StreetOption) TypeOption {
-	loMax := Invalid
-	if hiLo {
-		loMax = rankEightOrBetterMax
-	}
-	return func(desc *TypeDesc) {
-		desc.Max = 9
-		desc.Low = hiLo
-		desc.Blinds = HoldemBlinds()
-		desc.Streets = HoldemStreets(4, 1, 3, 1, 1)
-		desc.Eval = NewOmahaEval(loMax)
-		if loMax != Invalid {
-			desc.LoCompare = NewLoCompare(loMax)
-		}
-		desc.Apply(opts...)
-	}
-}
-
-// WithOmahaDouble is a type description option to set standard OmahaDouble
-// definitions.
-func WithOmahaDouble(opts ...StreetOption) TypeOption {
-	return func(desc *TypeDesc) {
-		desc.Max = 9
-		desc.Double = true
-		desc.Blinds = HoldemBlinds()
-		desc.Streets = HoldemStreets(4, 1, 3, 1, 1)
-		desc.Eval = NewOmahaEval(Invalid)
-		desc.Apply(opts...)
-	}
-}
-
-// WithOmahaFive is a type description option to set standard OmahaFive
-// definitions.
-func WithOmahaFive(hiLo bool, opts ...StreetOption) TypeOption {
-	loMax := Invalid
-	if hiLo {
-		loMax = rankEightOrBetterMax
-	}
-	return func(desc *TypeDesc) {
-		desc.Max = 8
-		desc.Low = hiLo
-		desc.Blinds = HoldemBlinds()
-		desc.Streets = HoldemStreets(5, 0, 3, 1, 1)
-		desc.Eval = NewOmahaFiveEval(loMax)
-		if loMax != Invalid {
-			desc.LoCompare = NewLoCompare(loMax)
-		}
-		desc.Apply(opts...)
-	}
-}
-
-// WithOmahaSix is a type description option to set standard OmahaSix
-// definitions.
-func WithOmahaSix(hiLo bool, opts ...StreetOption) TypeOption {
-	loMax := Invalid
-	if hiLo {
-		loMax = rankEightOrBetterMax
-	}
-	return func(desc *TypeDesc) {
-		desc.Max = 7
-		desc.Low = hiLo
-		desc.Blinds = HoldemBlinds()
-		desc.Streets = HoldemStreets(6, 0, 3, 1, 1)
-		desc.Eval = NewOmahaSixEval(loMax)
-		if loMax != Invalid {
-			desc.LoCompare = NewLoCompare(loMax)
-		}
-		desc.Apply(opts...)
-	}
-}
-
-// WithCourchevel is a type description option to set standard Courchevel
-// definitions.
-func WithCourchevel(hiLo bool, opts ...StreetOption) TypeOption {
-	loMax := Invalid
-	if hiLo {
-		loMax = rankEightOrBetterMax
-	}
-	return func(desc *TypeDesc) {
-		desc.Max = 8
-		desc.Low = hiLo
-		desc.Blinds = HoldemBlinds()
-		desc.Streets = HoldemStreets(5, 0, 3, 1, 1)
-		desc.Eval = NewOmahaFiveEval(loMax)
-		if loMax != Invalid {
-			desc.LoCompare = NewLoCompare(loMax)
-		}
-		// pre-flop
-		desc.Streets[0].Pocket = 5
-		desc.Streets[0].Board = 1
-		desc.Streets[0].BoardDiscard = 1
-		// flop
-		desc.Streets[1].Board = 2
-		desc.Streets[1].BoardDiscard = 0
-		desc.Apply(opts...)
-	}
-}
-
-// WithFusion is a type description option to set standard Fusion definitions.
-func WithFusion(hiLo bool, opts ...StreetOption) TypeOption {
-	loMax := Invalid
-	if hiLo {
-		loMax = rankEightOrBetterMax
-	}
-	return func(desc *TypeDesc) {
-		desc.Max = 9
-		desc.Low = hiLo
-		desc.Blinds = HoldemBlinds()
-		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
-		desc.Eval = NewOmahaEval(loMax)
-		if loMax != Invalid {
-			desc.LoCompare = NewLoCompare(loMax)
-		}
-		// flop and turn get additional pocket
-		desc.Streets[1].Pocket = 1
-		desc.Streets[2].Pocket = 1
-		desc.Apply(opts...)
-	}
-}
-
-// WithStud is a type description option to set standard Stud definitions.
-func WithStud(hiLo bool, opts ...StreetOption) TypeOption {
-	loMax := Invalid
-	if hiLo {
-		loMax = rankEightOrBetterMax
-	}
-	return func(desc *TypeDesc) {
-		desc.Max = 7
-		desc.Low = hiLo
-		desc.Blinds = StudBlinds()
-		desc.Streets = StudStreets()
-		desc.Eval = NewStudEval(loMax)
-		if loMax != Invalid {
-			desc.LoCompare = NewLoCompare(loMax)
-		}
-		desc.Apply(opts...)
-	}
-}
-
-// WithRazz is a type description option to set standard Razz definitions.
-//
-// Same as Stud, but with a Ace-to-Five low card ranking.
-func WithRazz(opts ...StreetOption) TypeOption {
-	return func(desc *TypeDesc) {
-		desc.Max = 7
-		desc.Blinds = HoldemBlinds()
-		desc.Streets = StudStreets()
-		desc.Eval = NewRazzEval()
-		desc.Apply(opts...)
-	}
-}
-
-// WithBadugi is a type description option to set standard Badugi definitions.
-//
-// 4 cards, low evaluation of separate suits
-// All 4 face down pre-flop
-// 3 rounds of player discards (up to 4)
-func WithBadugi(opts ...StreetOption) TypeOption {
-	return func(desc *TypeDesc) {
-		desc.Max = 8
-		desc.Streets = NumberedStreets(4, 0, 0, 0)
-		desc.Blinds = HoldemBlinds()
-		desc.Eval = NewBadugiEval()
-		for i := 1; i < 4; i++ {
-			desc.Streets[i].PocketSwap = 4
-		}
-		desc.Apply(opts...)
-	}
-}
-
 // Type is a hand type.
 type Type uint16
 
@@ -359,6 +13,7 @@ type Type uint16
 const (
 	Holdem         Type = 'H'<<8 | 'h' // Hh
 	Short          Type = 'H'<<8 | 's' // Hs
+	Manila         Type = 'H'<<8 | 'm' // Hm
 	Royal          Type = 'H'<<8 | 'r' // Hr
 	Double         Type = 'H'<<8 | 'd' // Hd
 	Showtime       Type = 'H'<<8 | 't' // Ht
@@ -375,14 +30,50 @@ const (
 	StudHiLo       Type = 'S'<<8 | 'l' // Sl
 	Razz           Type = 'R'<<8 | 'a' // Ra
 	Badugi         Type = 'B'<<8 | 'a' // Ba
+	Lowball        Type = 'L'<<8 | '1' // L1
+	LowballTriple  Type = 'L'<<8 | '3' // L3
+	Soko           Type = 'K'<<8 | 'o' // Ko
 )
 
-// ToType converts an id to a type.
-func ToType(id string) Type {
-	if len(id) != 2 {
-		panic(ErrInvalidId)
+// DefaultTypes returns the default type descriptions.
+func DefaultTypes() []TypeDesc {
+	var types []TypeDesc
+	for _, v := range []struct {
+		id   string
+		typ  Type
+		name string
+		opt  TypeOption
+	}{
+		{"Hh", Holdem, "Holdem", WithHoldem()},
+		{"Hs", Short, "Short", WithShort()},
+		{"Hm", Manila, "Manila", WithManila()},
+		{"Hr", Royal, "Royal", WithRoyal()},
+		{"Hd", Double, "Double", WithDouble()},
+		{"Ht", Showtime, "Showtime", WithShowtime()},
+		{"Hw", Swap, "Swap", WithSwap()},
+		{"O4", Omaha, "Omaha", WithOmaha(false)},
+		{"Ol", OmahaHiLo, "OmahaHiLo", WithOmaha(true)},
+		{"Od", OmahaDouble, "OmahaDouble", WithOmahaDouble()},
+		{"O5", OmahaFive, "OmahaFive", WithOmahaFive(false)},
+		{"O6", OmahaSix, "OmahaSix", WithOmahaSix(false)},
+		{"Oc", Courchevel, "Courchevel", WithCourchevel(false)},
+		{"Oe", CourchevelHiLo, "CourchevelHiLo", WithCourchevel(true)},
+		{"Of", Fusion, "Fusion", WithFusion(false)},
+		{"Sh", Stud, "Stud", WithStud(false)},
+		{"Sl", StudHiLo, "StudHiLo", WithStud(true)},
+		{"Ra", Razz, "Razz", WithRazz()},
+		{"Ba", Badugi, "Badugi", WithBadugi()},
+		{"L1", Lowball, "Lowball", WithLowball(false)},
+		{"L3", LowballTriple, "LowballTriple", WithLowball(true)},
+		{"Ko", Soko, "Soko", WithSoko()},
+	} {
+		desc, err := NewTypeDesc(v.id, v.typ, v.name, v.opt)
+		if err != nil {
+			panic(err)
+		}
+		types = append(types, *desc)
 	}
-	return Type(id[0])<<8 | Type(id[1])
+	return types
 }
 
 // Types returns the registered types.
@@ -422,67 +113,81 @@ func (typ Type) Max() int {
 	return 0
 }
 
-// Low returns true when the type has a low board.
-func (typ Type) Low() bool {
-	if desc, ok := descs[typ]; ok {
-		return desc.Low
-	}
-	return false
-}
-
 // Double returns true when the type has a double board.
 func (typ Type) Double() bool {
-	if desc, ok := descs[typ]; ok {
-		return desc.Double
-	}
-	return false
+	return descs[typ].Double
 }
 
-// Show returns true when the type has a show board.
+// Show returns true when the type shows folded cards.
 func (typ Type) Show() bool {
-	if desc, ok := descs[typ]; ok {
-		return desc.Show
-	}
-	return false
+	return descs[typ].Show
+}
+
+// Low returns true when the type has a low board.
+func (typ Type) Low() bool {
+	return descs[typ].Low
 }
 
 // Blinds returns the type's blind names.
 func (typ Type) Blinds() []string {
 	if desc, ok := descs[typ]; ok {
-		return desc.Blinds
+		v := make([]string, len(desc.Blinds))
+		copy(v, desc.Blinds)
+		return v
 	}
 	return nil
 }
 
-// NewDeck returns a new deck for the type.
+// Streets returns the type's street names.
+func (typ Type) Streets() []StreetDesc {
+	if desc, ok := descs[typ]; ok {
+		v := make([]StreetDesc, len(desc.Streets))
+		copy(v, desc.Streets)
+		return v
+	}
+	return nil
+}
+
+// DeckType returns the type's deck type.
+func (typ Type) DeckType() DeckType {
+	return descs[typ].Deck
+}
+
+// Deck returns a new deck for the type.
 func (typ Type) Deck() *Deck {
-	if desc, ok := descs[typ]; ok && desc.Deck != nil {
-		return desc.Deck()
+	if desc, ok := descs[typ]; ok {
+		return desc.Deck.New()
 	}
 	return nil
 }
 
-// Eval evaluates the hand.
+// Eval evals the hand for the type.
 func (typ Type) Eval(h *Hand) {
-	if desc, ok := descs[typ]; ok {
-		desc.Eval(h)
+	evals[typ](h)
+}
+
+// HiCompare returns a hi compare func.
+func (typ Type) HiCompare() func(*Hand, *Hand) int {
+	f, low := descs[typ].HiComp.Compare, descs[typ].Low
+	loMax := Invalid
+	if low {
+		loMax = rankEightOrBetterMax
+	}
+	return func(a, b *Hand) int {
+		return f(a, b, loMax)
 	}
 }
 
-// HiCompare returns the type's hi compare func.
-func (typ Type) HiCompare() HandCompareFunc {
-	if desc, ok := descs[typ]; ok {
-		return desc.HiCompare
+// LoCompare returns a lo compare func.
+func (typ Type) LoCompare() func(*Hand, *Hand) int {
+	f, low := descs[typ].LoComp.Compare, descs[typ].Low
+	loMax := Invalid
+	if low {
+		loMax = rankEightOrBetterMax
 	}
-	return nil
-}
-
-// LoCompare returns the type's lo compare func.
-func (typ Type) LoCompare() HandCompareFunc {
-	if desc, ok := descs[typ]; ok {
-		return desc.LoCompare
+	return func(a, b *Hand) int {
+		return f(a, b, loMax)
 	}
-	return nil
 }
 
 // Dealer creates a new dealer for the type.
@@ -535,6 +240,7 @@ func (typ Type) Format(f fmt.State, verb rune) {
 	switch verb {
 	case 'c':
 		fmt.Fprint(f, typ.String())
+		return
 	}
 	if desc, ok := descs[typ]; ok {
 		fmt.Fprint(f, desc.Name)
@@ -558,10 +264,369 @@ func (typ *Type) UnmarshalText(buf []byte) error {
 		}
 	}
 	if len(name) == 2 {
-		*typ = ToType(name)
-		return nil
+		if id, err := IdToUint16(name); err == nil {
+			*typ = Type(id)
+			return nil
+		}
 	}
 	return ErrInvalidType
+}
+
+// descs are the registered type descriptions.
+var descs map[Type]TypeDesc = make(map[Type]TypeDesc)
+
+// evals are eval funcs.
+var evals map[Type]EvalFunc = make(map[Type]EvalFunc)
+
+// RegisterType registers a type.
+func RegisterType(desc TypeDesc) error {
+	if _, ok := descs[desc.Type]; ok {
+		return ErrInvalidId
+	}
+	// check street ids
+	m := make(map[byte]bool)
+	for i, street := range desc.Streets {
+		if m[street.Id] {
+			return fmt.Errorf("%s street %d id %c must be unique", desc.Type, i, street.Id)
+		}
+	}
+	desc.Num = len(descs)
+	descs[desc.Type] = desc
+	evals[desc.Type] = desc.Eval.New(desc.Low)
+	return nil
+}
+
+// RegisterDefaultTypes registers default types.
+func RegisterDefaultTypes() error {
+	for _, desc := range DefaultTypes() {
+		if err := RegisterType(desc); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// TypeDesc is a type description.
+type TypeDesc struct {
+	// Id is the type id.
+	Id uint16
+	// Num is the registered number.
+	Num int
+	// Type is the type.
+	Type Type
+	// Name is the type name.
+	Name string
+	// Max is the max number of players.
+	Max int
+	// Low is true when the type is a Hi/Lo variant.
+	Low bool
+	// Double is true when there are two boards.
+	Double bool
+	// Show is true when folded cards are shown.
+	Show bool
+	// Once is true when a draw can only occur once.
+	Once bool
+	// Blinds are the blind names.
+	Blinds []string
+	// Streets are the betting streets.
+	Streets []StreetDesc
+	// Deck is the deck type.
+	Deck DeckType
+	// Eval is the eval type.
+	Eval EvalType
+	// HiComp is the hi compare type.
+	HiComp CompType
+	// LoComp is the lo compare type.
+	LoComp CompType
+}
+
+// NewTypeDesc creates a new type description.
+func NewTypeDesc(idstr string, typ Type, name string, opts ...TypeOption) (*TypeDesc, error) {
+	id, err := IdToUint16(idstr)
+	switch {
+	case err != nil:
+		return nil, err
+	case id != uint16(typ):
+		return nil, ErrInvalidId
+	}
+	desc := &TypeDesc{
+		Id:   id,
+		Type: typ,
+		Name: name,
+	}
+	for _, o := range opts {
+		o(desc)
+	}
+	return desc, nil
+}
+
+// Apply applies street options.
+func (desc *TypeDesc) Apply(opts ...StreetOption) {
+	for _, o := range opts {
+		for i, street := range desc.Streets {
+			o(i, &street)
+			desc.Streets[i] = street
+		}
+	}
+}
+
+// TypeOption is a type description option.
+type TypeOption func(*TypeDesc)
+
+// WithHoldem is a type description option to set Holdem definitions.
+func WithHoldem(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 10
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
+		desc.Apply(opts...)
+	}
+}
+
+// WithShort is a type description option to set Short definitions.
+func WithShort(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 6
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
+		desc.Deck = DeckShort
+		desc.Eval = EvalShort
+		desc.HiComp = CompShort
+		desc.Apply(opts...)
+	}
+}
+
+// WithManila is a type description option to set Manila definitions.
+func WithManila(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 6
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(2, 0, 1, 1, 1)
+		desc.Deck = DeckManila
+		desc.Eval = EvalManila
+		desc.HiComp = CompShort
+		desc.Streets[0].Board = 1
+		desc.Streets = append(desc.Streets[:2], append([]StreetDesc{
+			{
+				Id:    'l',
+				Name:  "Flop",
+				Board: 1,
+			},
+		}, desc.Streets[2:]...)...)
+		desc.Apply(opts...)
+	}
+}
+
+// WithRoyal is a type description option to set Royal definitions.
+func WithRoyal(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 5
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
+		desc.Deck = DeckRoyal
+		desc.Apply(opts...)
+	}
+}
+
+// WithDouble is a type description option to set Double definitions.
+func WithDouble(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 10
+		desc.Double = true
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
+		desc.Apply(opts...)
+	}
+}
+
+// WithShowtime is a type description option to set Showtime definitions.
+func WithShowtime(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 10
+		desc.Show = true
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
+		desc.Apply(opts...)
+	}
+}
+
+// WithSwap is a type description option to set Swap definitions.
+func WithSwap(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 10
+		desc.Once = true
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
+		for i := 1; i < len(desc.Streets); i++ {
+			desc.Streets[i].PocketDraw = 2
+		}
+		desc.Apply(opts...)
+	}
+}
+
+// WithOmaha is a type description option to set standard Omaha definitions.
+func WithOmaha(low bool, opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 9
+		desc.Low = low
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(4, 1, 3, 1, 1)
+		desc.Eval = EvalOmaha
+		desc.LoComp = CompLo
+		desc.Apply(opts...)
+	}
+}
+
+// WithOmahaDouble is a type description option to set standard OmahaDouble
+// definitions.
+func WithOmahaDouble(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 9
+		desc.Double = true
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(4, 1, 3, 1, 1)
+		desc.Eval = EvalOmaha
+		desc.Apply(opts...)
+	}
+}
+
+// WithOmahaFive is a type description option to set standard OmahaFive
+// definitions.
+func WithOmahaFive(low bool, opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 8
+		desc.Low = low
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(5, 0, 3, 1, 1)
+		desc.Eval = EvalOmahaFive
+		desc.LoComp = CompLo
+		desc.Apply(opts...)
+	}
+}
+
+// WithOmahaSix is a type description option to set standard OmahaSix
+// definitions.
+func WithOmahaSix(low bool, opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 7
+		desc.Low = low
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(6, 0, 3, 1, 1)
+		desc.Eval = EvalOmahaSix
+		desc.LoComp = CompLo
+		desc.Apply(opts...)
+	}
+}
+
+// WithCourchevel is a type description option to set standard Courchevel
+// definitions.
+func WithCourchevel(low bool, opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 8
+		desc.Low = low
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(5, 0, 3, 1, 1)
+		desc.Eval = EvalOmahaFive
+		desc.LoComp = CompLo
+		// pre-flop
+		desc.Streets[0].Pocket = 5
+		desc.Streets[0].Board = 1
+		desc.Streets[0].BoardDiscard = 1
+		// flop
+		desc.Streets[1].Board = 2
+		desc.Streets[1].BoardDiscard = 0
+		desc.Apply(opts...)
+	}
+}
+
+// WithFusion is a type description option to set standard Fusion definitions.
+func WithFusion(low bool, opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 9
+		desc.Low = low
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
+		desc.Eval = EvalOmaha
+		desc.LoComp = CompLo
+		// flop and turn get additional pocket
+		desc.Streets[1].Pocket = 1
+		desc.Streets[2].Pocket = 1
+		desc.Apply(opts...)
+	}
+}
+
+// WithStud is a type description option to set standard Stud definitions.
+func WithStud(low bool, opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 7
+		desc.Low = low
+		desc.Blinds = StudBlinds()
+		desc.Streets = StudStreets()
+		desc.Eval = EvalStud
+		desc.LoComp = CompLo
+		desc.Apply(opts...)
+	}
+}
+
+// WithRazz is a type description option to set standard Razz definitions.
+//
+// Same as Stud, but with a Ace-to-Five low card ranking.
+func WithRazz(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 7
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = StudStreets()
+		desc.Eval = EvalRazz
+		desc.Apply(opts...)
+	}
+}
+
+// WithBadugi is a type description option to set standard Badugi definitions.
+//
+// 4 cards, low evaluation of separate suits
+// All 4 face down pre-flop
+// 3 rounds of player discards (up to 4)
+func WithBadugi(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 8
+		desc.Streets = NumberedStreets(4, 0, 0, 0)
+		desc.Blinds = HoldemBlinds()
+		desc.Eval = EvalBadugi
+		for i := 1; i < 4; i++ {
+			desc.Streets[i].PocketDraw = 4
+		}
+		desc.Apply(opts...)
+	}
+}
+
+// WithLowball is a type description option to set standard Lowball
+// definitions.
+func WithLowball(multi bool, opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 8
+		desc.Once = !multi
+		desc.Streets = NumberedStreets(5, 0, 0, 0)
+		desc.Blinds = HoldemBlinds()
+		desc.Eval = EvalLowball
+		desc.HiComp = CompLowball
+		for i := 1; i < 4; i++ {
+			desc.Streets[1].PocketDraw = 5
+		}
+		desc.Apply(opts...)
+	}
+}
+
+// WithSoko is a type description option to set standard Soko
+// definitions.
+func WithSoko(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 8
+		desc.Streets = NumberedStreets(2, 3)
+		desc.Blinds = HoldemBlinds()
+		desc.Eval = EvalSoko
+		desc.HiComp = CompSoko
+		desc.Apply(opts...)
+	}
 }
 
 // StreetDesc is a type's street description.
@@ -570,18 +635,35 @@ type StreetDesc struct {
 	Id byte
 	// Name is the name of the street.
 	Name string
-	// Pocket is the count of pocket cards to deal.
+	// Pocket is the count of cards to deal.
 	Pocket int
-	// PocketUp is the count of pocket cards to reveal.
+	// PocketUp is the count of cards to reveal.
 	PocketUp int
-	// PocketDiscard is count of cards to discard before dealing pockets.
+	// PocketDiscard is the count of cards to discard before pockets dealt.
 	PocketDiscard int
-	// PocketSwap is maximum count of pocket cards that can be swapped.
-	PocketSwap int
+	// PocketDraw is the count of cards to draw.
+	PocketDraw int
 	// Board is the count of board cards to deal.
 	Board int
-	// BoardDiscard is the count of cards to discard before dealing the board.
+	// BoardDiscard is the count of cards to discard before board dealt.
 	BoardDiscard int
+}
+
+// HoldemBlinds returns the Holdem blind names.
+func HoldemBlinds() []string {
+	return []string{
+		"Small Blind",
+		"Big Blind",
+		"Straddle",
+	}
+}
+
+// StudBlinds returns the Stud blind names.
+func StudBlinds() []string {
+	return []string{
+		"Ante",
+		"Bring In",
+	}
 }
 
 // HoldemStreets creates Holdem streets for the pre-flop, flop, turn, and
@@ -623,17 +705,21 @@ func NumberedStreets(pockets ...int) []StreetDesc {
 	}
 	for i := 0; i < len(pockets); i++ {
 		count += pockets[i]
-		var name string
+		name, id := ordinal(count), '0'+byte(count)
 		switch {
-		case count == 0:
+		case i == 0:
 			name = "Ante"
-		case count == total:
+		case i == len(pockets)-1:
 			name = "River"
-		default:
-			name = ordinal(count)
+			if pockets[i] == 0 && i != 0 {
+				id = v[i-1].Id + 1
+			}
+		case i != 0 && pockets[i] == 0:
+			n := int(v[i-1].Id-'0') + 1
+			name, id = ordinal(n), '0'+byte(n)
 		}
 		v = append(v, StreetDesc{
-			Id:     '0' + byte(count),
+			Id:     id,
 			Name:   name,
 			Pocket: pockets[i],
 		})
@@ -641,52 +727,93 @@ func NumberedStreets(pockets ...int) []StreetDesc {
 	return v
 }
 
-// HoldemBlinds returns the Holdem blind names.
-func HoldemBlinds() []string {
-	return []string{
-		"Small Blind",
-		"Big Blind",
-		"Straddle",
-	}
-}
+// EvalFunc is a hand rank eval func.
+type EvalFunc func(*Hand)
 
-// StudBlinds returns the Stud blind names.
-func StudBlinds() []string {
-	return []string{
-		"Ante",
-		"Bring In",
-	}
-}
+// EvalType is a hand rank eval type.
+type EvalType uint8
 
-// NewHiCompare creates a hi eval compare func.
-func NewHiCompare() HandCompareFunc {
-	return func(a, b *Hand) int {
-		switch {
-		case a.HiRank < b.HiRank:
-			return -1
-		case a.HiRank > b.HiRank:
-			return +1
+// Eval types.
+const (
+	EvalHoldem EvalType = iota
+	EvalShort
+	EvalManila
+	EvalOmaha
+	EvalOmahaFive
+	EvalOmahaSix
+	EvalStud
+	EvalRazz
+	EvalBadugi
+	EvalLowball
+	EvalSoko
+)
+
+// New creates the eval type.
+func (typ EvalType) New(low bool) EvalFunc {
+	switch typ {
+	case EvalHoldem:
+		return NewHoldemEval(DefaultRank, Five)
+	case EvalShort:
+		return NewShortEval()
+	case EvalManila:
+		return NewManilaEval()
+	case EvalOmaha, EvalOmahaFive, EvalOmahaSix, EvalStud:
+		loMax := Invalid
+		if low {
+			loMax = rankEightOrBetterMax
 		}
-		return 0
+		switch typ {
+		case EvalOmaha:
+			return NewOmahaEval(loMax)
+		case EvalOmahaFive:
+			return NewOmahaFiveEval(loMax)
+		case EvalOmahaSix:
+			return NewOmahaSixEval(loMax)
+		case EvalStud:
+			return NewStudEval(loMax)
+		}
+	case EvalRazz:
+		return NewRazzEval()
+	case EvalBadugi:
+		return NewBadugiEval()
+	case EvalLowball:
+		return NewLowballEval()
+	case EvalSoko:
+		return NewSokoEval()
 	}
+	return nil
 }
 
-// NewLoCompare creates a lo eval compare func.
-func NewLoCompare(loMax HandRank) HandCompareFunc {
-	low := loMax != Invalid
-	return func(a, b *Hand) int {
-		switch {
-		case low && a.LoRank == Invalid && b.LoRank != Invalid:
-			return +1
-		case low && b.LoRank == Invalid && a.LoRank != Invalid:
-			return -1
-		case a.LoRank < b.LoRank:
-			return -1
-		case a.LoRank > b.LoRank:
-			return +1
-		}
-		return 0
+// CompType is a compare type.
+type CompType uint8
+
+// Compare types.
+const (
+	CompHi CompType = iota
+	CompLo
+	CompShort
+	CompManila
+	CompLowball
+	CompSoko
+)
+
+// Compare compares a, b.
+func (typ CompType) Compare(a, b *Hand, loMax HandRank) int {
+	switch typ {
+	case CompHi:
+		return HiComp(a, b, loMax)
+	case CompLo:
+		return LoComp(a, b, loMax)
+	case CompShort:
+		return ShortComp(a, b, loMax)
+	case CompManila:
+		return ManilaComp(a, b, loMax)
+	case CompLowball:
+		return LowballComp(a, b, loMax)
+	case CompSoko:
+		return SokoComp(a, b, loMax)
 	}
+	return 0
 }
 
 // StreetOption is a street option.
@@ -710,9 +837,9 @@ func NewHoldemEval(f HandRankFunc, straightHigh Rank) EvalFunc {
 	}
 }
 
-// NewShortEval creates a Holdem 6+ hand rank eval func.
+// NewShortEval creates a Short hand rank eval func.
 func NewShortEval() EvalFunc {
-	return NewHoldemEval(NewHandRank(func(c0, c1, c2, c3, c4 Card) uint16 {
+	return NewHoldemEval(NewRankFunc(func(c0, c1, c2, c3, c4 Card) HandRank {
 		r := DefaultCactus(c0, c1, c2, c3, c4)
 		switch r {
 		case 747: // Straight Flush, 9, 8, 7, 6, Ace
@@ -722,6 +849,20 @@ func NewShortEval() EvalFunc {
 		}
 		return r
 	}), Nine)
+}
+
+// NewManilaEval creates a Manila hand rank eval func.
+func NewManilaEval() EvalFunc {
+	return NewHoldemEval(NewRankFunc(func(c0, c1, c2, c3, c4 Card) HandRank {
+		r := DefaultCactus(c0, c1, c2, c3, c4)
+		switch r {
+		case 747: // Straight Flush, 10, 9, 8, 7, Ace
+			return 6
+		case 6610: // Straight, 10, 9, 8, 7, Ace
+			return 1605
+		}
+		return r
+	}), Ten)
 }
 
 // NewOmahaEval creates a Omaha hand rank eval func.
@@ -834,6 +975,22 @@ func NewStudEval(loMax HandRank) EvalFunc {
 	}
 }
 
+// NewRazzEval creates a Razz hand rank eval func.
+func NewRazzEval() EvalFunc {
+	f := NewLowEval(RankRazz, Invalid)
+	return func(h *Hand) {
+		f(h)
+		if rankLowMax <= h.HiRank {
+			switch r := Invalid - h.HiRank; r.Fixed() {
+			case FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, Pair:
+				h.HiBest, _ = bestSet(h.HiBest)
+			default:
+				panic("bad rank")
+			}
+		}
+	}
+}
+
 // NewBadugiEval creates a Badugi hand rank eval func.
 func NewBadugiEval() EvalFunc {
 	return func(h *Hand) {
@@ -852,16 +1009,16 @@ func NewBadugiEval() EvalFunc {
 			case b == 0:
 				return false
 			}
-			return uint16(s[i][0]>>8&0xf+1)%13 < uint16(s[j][0]>>8&0xf+1)%13
+			return s[i][0].AceIndex() < s[j][0].AceIndex()
 		})
 		count, rank := 4, 0
 		for i := 0; i < 4; i++ {
 			sort.Slice(s[i], func(j, k int) bool {
-				return uint16(s[i][j]>>8&0xf+1)%13 < uint16(s[i][k]>>8&0xf+1)%13
+				return s[i][j].AceIndex() < s[i][k].AceIndex()
 			})
-			captured := false
+			captured, r := false, 0
 			for j := 0; j < len(s[i]); j++ {
-				if r := 1 << (uint16(s[i][j]>>8&0xf+1) % 13); rank&r == 0 && !captured {
+				if r = 1 << s[i][j].AceIndex(); rank&r == 0 && !captured {
 					captured, h.HiBest = true, append(h.HiBest, s[i][j])
 					rank |= r
 					count--
@@ -871,11 +1028,10 @@ func NewBadugiEval() EvalFunc {
 			}
 		}
 		sort.Slice(h.HiBest, func(i, j int) bool {
-			return uint16(h.HiBest[i]>>8&0xf+1)%13 > uint16(h.HiBest[j]>>8&0xf+1)%13
+			return h.HiBest[i].AceIndex() > h.HiBest[j].AceIndex()
 		})
 		sort.Slice(h.HiUnused, func(i, j int) bool {
-			a, b := uint16(h.HiUnused[i]>>8&0xf+1)%13, uint16(h.HiUnused[j]>>8&0xf+1)%13
-			if a != b {
+			if a, b := h.HiUnused[i].AceIndex(), h.HiUnused[j].AceIndex(); a != b {
 				return a > b
 			}
 			return h.HiUnused[i].Suit() < h.HiUnused[j].Suit()
@@ -884,19 +1040,24 @@ func NewBadugiEval() EvalFunc {
 	}
 }
 
-// NewRazzEval creates a Razz hand rank eval func.
-func NewRazzEval() EvalFunc {
-	f := NewLowEval(RankRazz, Invalid)
+// NewLowballEval creates a Lowball hand rank eval func.
+func NewLowballEval() EvalFunc {
+	f := NewRankFunc(RankLowball)
+	return func(h *Hand) {
+		if len(h.Pocket) != 5 {
+			panic("bad pocket")
+		}
+		h.HiRank = f(h.Pocket)
+		h.Init(5, 0, Invalid)
+		copy(h.HiBest, h.Pocket)
+	}
+}
+
+// NewSokoEval creates a Soko hand rank eval func.
+func NewSokoEval() EvalFunc {
+	f := NewHoldemEval(DefaultRank, Five)
 	return func(h *Hand) {
 		f(h)
-		if rankLowMax <= h.HiRank {
-			switch r := Invalid - h.HiRank; r.Fixed() {
-			case FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, Pair:
-				h.HiBest, _ = bestSet(h.HiBest)
-			default:
-				panic("invalid hand rank")
-			}
-		}
 	}
 }
 
@@ -906,7 +1067,7 @@ func NewLowEval(f RankFunc, loMax HandRank) EvalFunc {
 	return func(h *Hand) {
 		hand := h.Hand()
 		if len(hand) != 7 {
-			panic("bad pocket or board")
+			panic("bad hand")
 		}
 		best, unused := make([]Card, 5), make([]Card, 2)
 		rank, r := Invalid, HandRank(0)
@@ -925,7 +1086,7 @@ func NewLowEval(f RankFunc, loMax HandRank) EvalFunc {
 				unused[0], unused[1] = hand[t7c5[i][5]], hand[t7c5[i][6]]
 			}
 		}
-		if rank >= loMax {
+		if loMax <= rank {
 			return
 		}
 		// order
@@ -936,8 +1097,34 @@ func NewLowEval(f RankFunc, loMax HandRank) EvalFunc {
 	}
 }
 
-// ShortComp is the compare func for Short decks.
-func ShortComp(a, b *Hand) int {
+// HiComp is a hi eval compare func.
+func HiComp(a, b *Hand, _ HandRank) int {
+	switch {
+	case a.HiRank < b.HiRank:
+		return -1
+	case a.HiRank > b.HiRank:
+		return +1
+	}
+	return 0
+}
+
+// LoComp is a lo eval compare func.
+func LoComp(a, b *Hand, loMax HandRank) int {
+	switch low := loMax != Invalid; {
+	case low && a.LoRank == Invalid && b.LoRank != Invalid:
+		return +1
+	case low && b.LoRank == Invalid && a.LoRank != Invalid:
+		return -1
+	case a.LoRank < b.LoRank:
+		return -1
+	case a.LoRank > b.LoRank:
+		return +1
+	}
+	return 0
+}
+
+// ShortComp is the Short compare func.
+func ShortComp(a, b *Hand, _ HandRank) int {
 	switch af, bf := a.HiRank.Fixed(), b.HiRank.Fixed(); {
 	case af == Flush && bf == FullHouse:
 		return -1
@@ -949,6 +1136,43 @@ func ShortComp(a, b *Hand) int {
 		return +1
 	}
 	return 0
+}
+
+// ManilaComp is the Manila compare func.
+func ManilaComp(a, b *Hand, _ HandRank) int {
+	switch af, bf := a.HiRank.Fixed(), b.HiRank.Fixed(); {
+	case af == Flush && bf == FullHouse:
+		return -1
+	case af == FullHouse && bf == Flush:
+		return +1
+	case a.HiRank < b.HiRank:
+		return -1
+	case b.HiRank < a.HiRank:
+		return +1
+	}
+	return 0
+}
+
+// LowballComp is the Lowball compare func.
+func LowballComp(a, b *Hand, _ HandRank) int {
+	switch af, bf := rankMax-a.HiRank, rankMax-b.HiRank; {
+	case af == bf:
+	}
+	// log.Printf(">>> a: %v // b: %v", a.HiRank, b.HiRank)
+	return 0
+}
+
+// SokoComp is the Soko compare func.
+func SokoComp(a, b *Hand, _ HandRank) int {
+	return 0
+}
+
+// IdToType converts an id to a type.
+func IdToUint16(id string) (uint16, error) {
+	if len(id) != 2 {
+		return 0, ErrInvalidId
+	}
+	return uint16(id[0])<<8 | uint16(id[1]), nil
 }
 
 // bestHoldem sets the best holdem.
@@ -974,7 +1198,7 @@ func bestHoldem(h *Hand, hand []Card, straightHigh Rank) {
 	case Nothing:
 		h.HiBest, h.HiUnused = hand[:5], hand[5:]
 	default:
-		panic("invalid hand rank")
+		panic("bad rank")
 	}
 }
 
@@ -999,7 +1223,7 @@ func bestOmaha(h *Hand, loMax HandRank) {
 		h.HiBest, _ = bestSet(h.HiBest)
 	case Nothing:
 	default:
-		panic("invalid hand rank")
+		panic("bad rank")
 	}
 	if loMax != Invalid && h.LoRank < loMax {
 		sort.Slice(h.LoBest, func(i, j int) bool {

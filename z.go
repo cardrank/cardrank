@@ -3,5 +3,5 @@
 package cardrank
 
 func init() {
-	Init()
+	_ = Init()
 }

@@ -9,37 +9,80 @@ import (
 	"time"
 )
 
-func TestNewDeck(t *testing.T) {
-	d1, d2 := NewDeck(), NewDeck()
-	if !reflect.DeepEqual(d1.v, d2.v) || !reflect.DeepEqual(d1.v, unshuffled) {
-		t.Fatalf("expected d1.v == d2.v == unshuffled")
+func TestDeck(t *testing.T) {
+	tests := []struct {
+		typ DeckType
+		r   string
+		v   []Card
+		exp int
+	}{
+		{DeckFrench, "23456789TJQKA", unshuffledFrench, 52},
+		{DeckShort, "6789TJQKA", unshuffledShort, 36},
+		{DeckManila, "789TJQKA", unshuffledManila, 32},
+		{DeckRoyal, "TJQKA", unshuffledRoyal, 20},
 	}
-	// shuffle
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	d1.Shuffle(r)
-	d2.Shuffle(r)
-	if reflect.DeepEqual(d1.v, unshuffled) {
-		t.Fatalf("expected d1.v != unshuffled")
-	}
-	if reflect.DeepEqual(d2.v, unshuffled) {
-		t.Fatalf("expected d2.v != unshuffled")
-	}
-	if reflect.DeepEqual(d1.v, d2.v) {
-		t.Fatalf("expected d1.v != d2.v")
-	}
-	if n, exp := len(d1.v), unshuffledSize; n != exp {
-		t.Fatalf("expected len(d1.v) == %d, got: %d", exp, n)
-	}
-	if n, exp := len(d2.v), unshuffledSize; n != exp {
-		t.Fatalf("expected len(d2.v) == %d, got: %d", exp, n)
-	}
-	for i := 0; i < unshuffledSize; i++ {
-		if !contains(d1.v, unshuffled[i]) {
-			t.Errorf("d1.v does not contain %s", unshuffled[i])
-		}
-		if !contains(d1.v, d2.v[i]) {
-			t.Errorf("d1.v does not contain %s", d2.v[i])
-		}
+	for _, tt := range tests {
+		test := tt
+		t.Run(test.typ.String(), func(t *testing.T) {
+			v := test.typ.Unshuffled()
+			d := test.typ.New()
+			switch {
+			case len(v) != test.exp,
+				len(d.v) != test.exp,
+				len(test.v) != test.exp:
+				t.Fatalf("expected length %d", test.exp)
+			}
+			// check cards
+			for _, r := range test.r {
+				for _, s := range "shdc" {
+					c := FromString(string(r) + string(s))
+					if c == InvalidCard {
+						t.Fatalf("expected valid card for %c%c", r, s)
+					}
+					if !contains(v, c) {
+						t.Errorf("does not contain %s", c)
+					}
+					if !contains(d.v, c) {
+						t.Errorf("does not contain %s", c)
+					}
+					if !contains(test.v, c) {
+						t.Errorf("does not contain %s", c)
+					}
+				}
+			}
+			// check deal
+			d1, d2 := test.typ.New(), test.typ.New()
+			if !reflect.DeepEqual(d1.v, d2.v) || !reflect.DeepEqual(d1.v, test.v) {
+				t.Fatalf("expected d1.v == d2.v == test.v")
+			}
+			// shuffle
+			r := rand.New(rand.NewSource(time.Now().UnixNano()))
+			d1.Shuffle(r)
+			d2.Shuffle(r)
+			if reflect.DeepEqual(d1.v, test.v) {
+				t.Fatalf("expected d1.v != test.v")
+			}
+			if reflect.DeepEqual(d2.v, test.v) {
+				t.Fatalf("expected d2.v != test.v")
+			}
+			if reflect.DeepEqual(d1.v, d2.v) {
+				t.Fatalf("expected d1.v != d2.v")
+			}
+			if n, exp := len(d1.v), test.exp; n != exp {
+				t.Fatalf("expected len(d1.v) == %d, got: %d", exp, n)
+			}
+			if n, exp := len(d2.v), test.exp; n != exp {
+				t.Fatalf("expected len(d2.v) == %d, got: %d", exp, n)
+			}
+			for i := 0; i < test.exp; i++ {
+				if !contains(d1.v, test.v[i]) {
+					t.Errorf("d1.v does not contain %s", test.v[i])
+				}
+				if !contains(d1.v, d2.v[i]) {
+					t.Errorf("d1.v does not contain %s", d2.v[i])
+				}
+			}
+		})
 	}
 }
 
@@ -54,7 +97,7 @@ func TestNewDeckShoe(t *testing.T) {
 	for _, c := range d.v {
 		m[uint(c)]++
 	}
-	for _, c := range unshuffled {
+	for _, c := range unshuffledFrench {
 		i, ok := m[uint(c)]
 		if !ok {
 			t.Fatalf("expected m to contain %s", c)
@@ -77,9 +120,9 @@ func TestNewDeckShoe(t *testing.T) {
 func TestDeckDraw(t *testing.T) {
 	for exp := 1; exp < unshuffledSize; exp++ {
 		d := NewDeck()
-		hand := d.Draw(exp)
-		if len(hand) != exp {
-			t.Fatalf("expected len(hand) == %d, got: %d", exp, len(hand))
+		v := d.Draw(exp)
+		if len(v) != exp {
+			t.Fatalf("expected len(v) == %d, got: %d", exp, len(v))
 		}
 		if d.Empty() {
 			t.Fatalf("expected d to not be empty")
@@ -93,9 +136,9 @@ func TestDeckDraw(t *testing.T) {
 
 func TestDeckDrawAll(t *testing.T) {
 	d := NewDeck()
-	hand := d.Draw(100)
-	if n, exp := len(hand), unshuffledSize; n != exp {
-		t.Errorf("expected len(hand) == %d, got: %d", exp, n)
+	v := d.Draw(100)
+	if n, exp := len(v), unshuffledSize; n != exp {
+		t.Errorf("expected len(v) == %d, got: %d", exp, n)
 	}
 	if !d.Empty() {
 		t.Errorf("expected d to be empty")
@@ -110,84 +153,23 @@ func TestDeckDrawEmpty(t *testing.T) {
 	if d.Empty() {
 		t.Fatalf("expected d to not be empty")
 	}
-	hand := d.Draw(unshuffledSize - 1)
+	v := d.Draw(unshuffledSize - 1)
 	if d.Empty() {
 		t.Fatalf("expected d to not be empty")
 	}
-	if n, exp := len(hand), unshuffledSize-1; n != exp {
-		t.Errorf("expected len(hand) == %d, got: %d", exp, n)
+	if n, exp := len(v), unshuffledSize-1; n != exp {
+		t.Errorf("expected len(v) == %d, got: %d", exp, n)
 	}
-	hand = append(hand, d.Draw(1)...)
+	v = append(v, d.Draw(1)...)
 	if !d.Empty() {
 		t.Errorf("expected d to be empty, remaining: %d", d.Remaining())
 	}
-	if n, exp := len(hand), unshuffledSize; n != exp {
-		t.Fatalf("expected len(hand) == %d, got: %d", exp, n)
+	if n, exp := len(v), unshuffledSize; n != exp {
+		t.Fatalf("expected len(v) == %d, got: %d", exp, n)
 	}
 	for i := 0; i < unshuffledSize; i++ {
-		if !contains(hand, unshuffled[i]) {
-			t.Errorf("hand does not contain %s", unshuffled[i])
-		}
-	}
-}
-
-func TestUnshuffled(t *testing.T) {
-	if n, exp := len(unshuffled), unshuffledSize; n != exp {
-		t.Fatalf("expected len(unshuffled) == %d, got: %d", exp, n)
-	}
-	for _, r := range "23456789TJQKA" {
-		for _, s := range "shdc" {
-			c := FromString(string(r) + string(s))
-			if c == InvalidCard {
-				t.Fatalf("expected valid card for %c%c", r, s)
-			}
-			if !contains(unshuffled, c) {
-				t.Errorf("unshuffled does not contain %s", c)
-			}
-		}
-	}
-	if n, exp := len(unshuffledShort), unshuffledShortSize; n != exp {
-		t.Fatalf("expected len(unshuffledShort) == %d, got: %d", exp, n)
-	}
-	for _, r := range "6789TJQKA" {
-		for _, s := range "shdc" {
-			c := FromString(string(r) + string(s))
-			if c == InvalidCard {
-				t.Fatalf("expected valid card for %c%c", r, s)
-			}
-			if !contains(unshuffled, c) {
-				t.Errorf("unshuffled does not contain %s", c)
-			}
-		}
-	}
-	if n, exp := len(unshuffledRoyal), unshuffledRoyalSize; n != exp {
-		t.Fatalf("expected len(unshuffledRoyal) == %d, got: %d", exp, n)
-	}
-	for _, r := range "TJQKA" {
-		for _, s := range "shdc" {
-			c := FromString(string(r) + string(s))
-			if c == InvalidCard {
-				t.Fatalf("expected valid card for %c%c", r, s)
-			}
-			if !contains(unshuffled, c) {
-				t.Errorf("unshuffled does not contain %s", c)
-			}
-		}
-	}
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	var v []Card
-	for i, n := 0, 13+r.Intn(26); i < n; i++ {
-		if c := New(Rank(r.Intn(13)), Suit(1<<r.Intn(4))); !contains(v, c) {
-			v = append(v, c)
-		}
-	}
-	if n, exp := len(v), 2; n < exp {
-		t.Fatalf("expected len(v) >= %d, got: %d", exp, n)
-	}
-	hand := UnshuffledExclude(v)
-	for i, exp := range v {
-		if contains(hand, exp) {
-			t.Errorf("test %d expected hand to not contain %s", i, exp)
+		if !contains(v, unshuffledFrench[i]) {
+			t.Errorf("v does not contain %s", unshuffledFrench[i])
 		}
 	}
 }
@@ -209,9 +191,9 @@ func TestDealer(t *testing.T) {
 
 func testDealer(t *testing.T, hands int, typ Type, seed int64) {
 	d := typ.Dealer(rand.New(rand.NewSource(seed)), 3)
-	t.Logf("Deck (%d):", len(d.d.v))
+	t.Logf("Deck (%s, %d):", typ.DeckType(), len(d.d.v))
 	for i := 0; i < len(d.d.v); i += 8 {
-		t.Logf("  %v", d.d.v[i:min(uint16(i+8), uint16(len(d.d.v)))])
+		t.Logf("  %v", d.d.v[i:min(HandRank(i+8), HandRank(len(d.d.v)))])
 	}
 	double, low := typ.Double(), typ.Low()
 	var pockets [][]Card
@@ -239,14 +221,15 @@ func testDealer(t *testing.T, hands int, typ Type, seed int64) {
 	}
 	t.Logf("Showdown:")
 	for i := 0; i < len(h1); i++ {
-		t.Logf("  % 2d: %s %v %v %d", i, h1[i].Description(), h1[i].HiBest, h1[i].HiUnused, h1[i].HiRank)
+		t.Logf(" % 2d: %04d %v %v %s", i, h1[i].HiRank, h1[i].HiBest, h1[i].HiUnused, h1[i].Description())
 		switch {
 		case double:
-			t.Logf("      %s %v %v %d", h2[i].Description(), h2[i].HiBest, h2[i].HiUnused, h2[i].HiRank)
+			t.Logf("     %04d %v %v %s", h2[i].HiRank, h2[i].HiBest, h2[i].HiUnused, h2[i].Description())
 		case low:
-			t.Logf("      %s %v %v %d", h1[i].LowDescription(), h1[i].LoBest, h1[i].LoUnused, h1[i].LoRank)
+			t.Logf("     %04d %v %v %s", h1[i].LoRank, h1[i].LoBest, h1[i].LoUnused, h1[i].LowDescription())
 		}
 	}
+	t.Logf("Result:")
 	win := NewWin(h1, h2, low)
 	t.Logf("  %s", win.Describe(func(_, i int) string {
 		return strconv.Itoa(i)
@@ -257,3 +240,5 @@ func testDealer(t *testing.T, hands int, typ Type, seed int64) {
 		}))
 	}
 }
+
+const unshuffledSize = 52

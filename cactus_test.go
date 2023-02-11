@@ -60,7 +60,7 @@ func TestCactusMaps(t *testing.T) {
 	}
 	flushesTests := []struct {
 		r   uint32
-		exp uint16
+		exp HandRank
 	}{
 		{0x005ffe37, 0x0184},
 		{0x003d1623, 0x0185},
@@ -98,7 +98,7 @@ func TestCactusMaps(t *testing.T) {
 	}
 	unique5Tests := []struct {
 		r   uint32
-		exp uint16
+		exp HandRank
 	}{
 		{0x01c51151, 0x0a3e},
 		{0x005f112f, 0x0695},

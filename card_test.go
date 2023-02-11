@@ -87,8 +87,8 @@ func TestCardIndex(t *testing.T) {
 			if n, exp := c.Index(), i; n != exp {
 				t.Errorf("card %s expected index %d, got: %d", c, exp, n)
 			}
-			if unshuffled[i] != c {
-				t.Errorf("expected unshuffled[%d] == %s, has: %s", i, c, unshuffled[i])
+			if unshuffledFrench[i] != c {
+				t.Errorf("expected unshuffled[%d] == %s, has: %s", i, c, unshuffledFrench[i])
 			}
 			i++
 		}

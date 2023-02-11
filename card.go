@@ -470,6 +470,11 @@ func (c Card) Index() int {
 	return c.SuitIndex()*13 + c.RankIndex()
 }
 
+// AceIndex returns the Ace low index of the card.
+func (c Card) AceIndex() int {
+	return int(c>>8&0xf+1) % 13
+}
+
 // UnmarshalText satisfies the encoding.TextUnmarshaler interface.
 func (c *Card) UnmarshalText(buf []byte) error {
 	var err error

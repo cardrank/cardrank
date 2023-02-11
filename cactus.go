@@ -6,16 +6,16 @@ func init() {
 }
 
 // flushes is the flush map.
-var flushes map[uint32]uint16
+var flushes map[uint32]HandRank
 
 // unique5 is the unique5 map.
-var unique5 map[uint32]uint16
+var unique5 map[uint32]HandRank
 
 // Cactus is a Cactus Kev hand rank func that generates the lookup maps on the
 // fly.
 //
 // See: https://archive.is/G6GZg
-func Cactus(c0, c1, c2, c3, c4 Card) uint16 {
+func Cactus(c0, c1, c2, c3, c4 Card) HandRank {
 	if c0&c1&c2&c3&c4&0xf000 != 0 {
 		return flushes[primeProductBits(uint32(c0|c1|c2|c3|c4)>>16)]
 	}
@@ -23,10 +23,10 @@ func Cactus(c0, c1, c2, c3, c4 Card) uint16 {
 }
 
 // cactusMaps builds the cactus flush and unique5 maps.
-func cactusMaps() (map[uint32]uint16, map[uint32]uint16) {
-	flushes, unique5 := make(map[uint32]uint16), make(map[uint32]uint16)
+func cactusMaps() (map[uint32]HandRank, map[uint32]HandRank) {
+	flushes, unique5 := make(map[uint32]HandRank), make(map[uint32]HandRank)
 	// rank orders
-	orders := [10]uint16{
+	orders := [10]uint32{
 		0x1f00, // royal
 		0x0f80, // king
 		0x07c0, // queen
@@ -39,11 +39,11 @@ func cactusMaps() (map[uint32]uint16, map[uint32]uint16) {
 		0x100f, // steel wheel
 	}
 	var r []uint32
-	for i, n := uint16(0), uint32(0x1f); i < 1276+uint16(len(orders)); i++ {
+	for i, n := 0, uint32(0x1f); i < 1286; i++ { // 1276 + len(orders)
 		n = nextBitPermutation(n)
 		var sflush bool
 		for _, j := range orders {
-			if n^uint32(j) == 0 {
+			if n^j == 0 {
 				sflush = true
 				break
 			}
@@ -57,15 +57,15 @@ func cactusMaps() (map[uint32]uint16, map[uint32]uint16) {
 	}
 	for i := 0; i < len(orders); i++ {
 		// straight flush
-		flushes[primeProductBits(uint32(orders[i]))] = 1 + uint16(i)
+		flushes[primeProductBits(orders[i])] = 1 + HandRank(i)
 		// straight
-		unique5[primeProductBits(uint32(orders[i]))] = 1 + uint16(Flush) + uint16(i)
+		unique5[primeProductBits(orders[i])] = 1 + Flush + HandRank(i)
 	}
 	for i := 0; i < len(r); i++ {
 		// flush
-		flushes[primeProductBits(r[i])] = 1 + uint16(FullHouse) + uint16(i)
+		flushes[primeProductBits(r[i])] = 1 + FullHouse + HandRank(i)
 		// nothing (high cards)
-		unique5[primeProductBits(r[i])] = 1 + uint16(Pair) + uint16(i)
+		unique5[primeProductBits(r[i])] = 1 + Pair + HandRank(i)
 	}
 	v := [13]int{12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0}
 	kickers := func(z []int, n int) []int {
@@ -79,25 +79,25 @@ func cactusMaps() (map[uint32]uint16, map[uint32]uint16) {
 		}
 		return k
 	}
-	for i, r3, r2, r1 := 0, 1+uint16(Straight), 1+uint16(ThreeOfAKind), 1+uint16(TwoPair); i < 13; i++ {
+	for i, r3, r2, r1 := 0, 1+Straight, 1+ThreeOfAKind, 1+TwoPair; i < 13; i++ {
 		k := kickers(v[:], i)
 		for j, n := range k {
 			// four of a kind
-			unique5[uint32(primes[v[i]])*uint32(primes[v[i]])*uint32(primes[v[i]])*uint32(primes[v[i]])*uint32(primes[n])] = 1 + uint16(StraightFlush) + uint16(i*len(k)+j)
+			unique5[primes[v[i]]*primes[v[i]]*primes[v[i]]*primes[v[i]]*primes[n]] = 1 + StraightFlush + HandRank(i*len(k)+j)
 			// full house
-			unique5[uint32(primes[v[i]])*uint32(primes[v[i]])*uint32(primes[v[i]])*uint32(primes[n])*uint32(primes[n])] = 1 + uint16(FourOfAKind) + uint16(i*len(k)+j)
+			unique5[primes[v[i]]*primes[v[i]]*primes[v[i]]*primes[n]*primes[n]] = 1 + FourOfAKind + HandRank(i*len(k)+j)
 		}
 		// three of a kind
 		for j := 0; j < len(k)-1; j++ {
 			for l := j + 1; l < len(k); l++ {
-				unique5[uint32(primes[v[i]])*uint32(primes[v[i]])*uint32(primes[v[i]])*uint32(primes[k[j]])*uint32(primes[k[l]])] = r3
+				unique5[primes[v[i]]*primes[v[i]]*primes[v[i]]*primes[k[j]]*primes[k[l]]] = r3
 				r3++
 			}
 		}
 		// two pair
 		for j := i + 1; j < 13; j++ {
 			for _, n := range kickers(k, j) {
-				unique5[uint32(primes[v[i]])*uint32(primes[v[i]])*uint32(primes[v[j]])*uint32(primes[v[j]])*uint32(primes[n])] = r2
+				unique5[primes[v[i]]*primes[v[i]]*primes[v[j]]*primes[v[j]]*primes[n]] = r2
 				r2++
 			}
 		}
@@ -105,7 +105,7 @@ func cactusMaps() (map[uint32]uint16, map[uint32]uint16) {
 		for l := 0; l < len(k)-2; l++ {
 			for m := l + 1; m < len(k)-1; m++ {
 				for n := m + 1; n < len(k); n++ {
-					unique5[uint32(primes[v[i]])*uint32(primes[v[i]])*uint32(primes[k[l]])*uint32(primes[k[m]])*uint32(primes[k[n]])] = r1
+					unique5[primes[v[i]]*primes[v[i]]*primes[k[l]]*primes[k[m]]*primes[k[n]]] = r1
 					r1++
 				}
 			}

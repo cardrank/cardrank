@@ -15,17 +15,20 @@ type HandRank uint16
 //
 // See: https://archive.is/G6GZg
 const (
-	StraightFlush HandRank = 10
-	FourOfAKind   HandRank = 166
-	FullHouse     HandRank = 322
-	Flush         HandRank = 1599
-	Straight      HandRank = 1609
-	ThreeOfAKind  HandRank = 2467
-	TwoPair       HandRank = 3325
-	Pair          HandRank = 6185
-	Nothing       HandRank = 7462
-	HighCard      HandRank = Nothing
-	Invalid                = HandRank(^uint16(0))
+	StraightFlush        HandRank = 10
+	FourOfAKind          HandRank = 166
+	FullHouse            HandRank = 322
+	Flush                HandRank = 1599
+	Straight             HandRank = 1609
+	ThreeOfAKind         HandRank = 2467
+	TwoPair              HandRank = 3325
+	Pair                 HandRank = 6185
+	Nothing              HandRank = 7462
+	HighCard             HandRank = Nothing
+	Invalid                       = ^HandRank(0)
+	rankMax                       = Nothing + 1
+	rankEightOrBetterMax HandRank = 512
+	rankLowMax           HandRank = 16384
 )
 
 // Fixed converts a relative poker rank to a fixed hand rank.
@@ -104,7 +107,7 @@ func (r HandRank) Name() string {
 // RankEightOrBetter is a 8-or-better low hand rank func. Aces are low,
 // straights and flushes do not count. Any card with rank 8 or higher will
 // cause
-func RankEightOrBetter(c0, c1, c2, c3, c4 Card) uint16 {
+func RankEightOrBetter(c0, c1, c2, c3, c4 Card) HandRank {
 	return RankLowAceFive(0xff00, c0, c1, c2, c3, c4)
 }
 
@@ -113,40 +116,45 @@ func RankEightOrBetter(c0, c1, c2, c3, c4 Card) uint16 {
 //
 // When there is a pair (or higher) of matching ranks, will be the inverted
 // value of the regular hand rank.
-func RankRazz(c0, c1, c2, c3, c4 Card) uint16 {
+func RankRazz(c0, c1, c2, c3, c4 Card) HandRank {
 	if r := RankLowAceFive(0, c0, c1, c2, c3, c4); r < rankLowMax {
 		return r
 	}
-	return ^uint16(0) - DefaultCactus(c0, c1, c2, c3, c4)
+	return Invalid - DefaultCactus(c0, c1, c2, c3, c4)
 }
 
 // RankLowAceFive is a Ace-to-Five low hand rank func.
-func RankLowAceFive(mask uint16, c0, c1, c2, c3, c4 Card) uint16 {
-	rank := uint16(0)
+func RankLowAceFive(mask HandRank, c0, c1, c2, c3, c4 Card) HandRank {
+	rank := HandRank(0)
 	// c0
-	r := uint16(c0>>8&0xf+1) % 13
+	r := c0.AceIndex()
 	rank |= 1<<r | ((mask&(1<<r)>>r)&1)*0x8000
 	mask |= 1 << r
 	// c1
-	r = uint16(c1>>8&0xf+1) % 13
+	r = c1.AceIndex()
 	rank |= 1<<r | ((mask&(1<<r)>>r)&1)*0x8000
 	mask |= 1 << r
 	// c2
-	r = uint16(c2>>8&0xf+1) % 13
+	r = c2.AceIndex()
 	rank |= 1<<r | ((mask&(1<<r)>>r)&1)*0x8000
 	mask |= 1 << r
 	// c3
-	r = uint16(c3>>8&0xf+1) % 13
+	r = c3.AceIndex()
 	rank |= 1<<r | ((mask&(1<<r)>>r)&1)*0x8000
 	mask |= 1 << r
 	// c4
-	r = uint16(c4>>8&0xf+1) % 13
+	r = c4.AceIndex()
 	rank |= 1<<r | ((mask&(1<<r)>>r)&1)*0x8000
 	return rank
 }
 
-// NewHandRank creates a hand eval for 5, 6, or 7 cards using f.
-func NewHandRank(f RankFunc) HandRankFunc {
+// RankLowball is a Two-to-Seven low hand rank func.
+func RankLowball(c0, c1, c2, c3, c4 Card) HandRank {
+	return rankMax - DefaultCactus(c0, c1, c2, c3, c4)
+}
+
+// NewRankFunc creates a hand eval for 5, 6, or 7 cards using f.
+func NewRankFunc(f RankFunc) HandRankFunc {
 	return func(hand []Card) HandRank {
 		switch n := len(hand); {
 		case n == 5:
@@ -160,7 +168,7 @@ func NewHandRank(f RankFunc) HandRankFunc {
 			r = min(r, f(hand[1], hand[2], hand[3], hand[4], hand[5]))
 			return HandRank(r)
 		}
-		r, rank := uint16(0), uint16(9999)
+		r, rank := HandRank(0), Invalid
 		for i := 0; i < 21; i++ {
 			if r = f(
 				hand[t7c5[i][0]],
@@ -197,7 +205,7 @@ func NewHybrid(f5 RankFunc, f7 HandRankFunc) HandRankFunc {
 }
 
 // RankFunc ranks a hand of 5 cards.
-type RankFunc func(c0, c1, c2, c3, c4 Card) uint16
+type RankFunc func(c0, c1, c2, c3, c4 Card) HandRank
 
 // HandRankFunc ranks a hand of 5, 6, or 7 cards.
 type HandRankFunc func([]Card) HandRank
@@ -221,9 +229,9 @@ func Init() error {
 	case twoPlusTwo != nil && cactusFast != nil:
 		DefaultRank = NewHybrid(cactusFast, twoPlusTwo)
 	case cactusFast != nil:
-		DefaultRank = NewHandRank(cactusFast)
+		DefaultRank = NewRankFunc(cactusFast)
 	case cactus != nil:
-		DefaultRank = NewHandRank(cactus)
+		DefaultRank = NewRankFunc(cactus)
 	}
 	switch {
 	case cactusFast != nil:
@@ -255,7 +263,7 @@ const (
 )
 
 // min returns the min of a, b.
-func min(a, b uint16) uint16 {
+func min(a, b HandRank) HandRank {
 	if a < b {
 		return a
 	}
@@ -345,12 +353,4 @@ var t7c5 = [21][7]uint8{
 }
 
 // primes are the first 13 prime numbers (one per card rank).
-var primes = [...]uint8{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41}
-
-const (
-	// rankEightOrBetterMax is the eight-or-better max rank for a qualifying
-	// low hand.
-	rankEightOrBetterMax = 512
-	// rankLowMax is the low max rank for a qualifying low hand.
-	rankLowMax = 16384
-)
+var primes = [...]uint32{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41}

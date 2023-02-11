@@ -48,7 +48,7 @@ func TestEvalRank(t *testing.T) {
 		{"9h 7h 6h 5h 4h", 33144, RankEightOrBetter},
 	}
 	for i, test := range tests {
-		f := NewHandRank(test.f)
+		f := NewRankFunc(test.f)
 		if e, exp := f(Must(test.v)), test.r; e != exp {
 			t.Errorf("test %d expected rank %d, got: %d", i, exp, e)
 		}
@@ -87,7 +87,7 @@ func TestAllCards(t *testing.T) {
 		t.Logf("skipping: Cactus is not available")
 		return
 	}
-	f, tests := NewHandRank(cactus), evalTests(false)
+	f, tests := NewRankFunc(cactus), evalTests(false)
 	for c0 := 0; c0 < 52; c0++ {
 		for c1 := c0 + 1; c1 < 52; c1++ {
 			for c2 := c1 + 1; c2 < 52; c2++ {
@@ -115,7 +115,7 @@ var allCards []Card
 
 func init() {
 	allCards = make([]Card, 52)
-	copy(allCards, unshuffled)
+	copy(allCards, unshuffledFrench)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	r.Shuffle(52, func(i, j int) {
 		allCards[i], allCards[j] = allCards[j], allCards[i]
@@ -207,10 +207,10 @@ type evalTest struct {
 func evalTests(base bool) []evalTest {
 	var tests []evalTest
 	if base && cactus != nil {
-		tests = append(tests, evalTest{"Cactus", NewHandRank(cactus)})
+		tests = append(tests, evalTest{"Cactus", NewRankFunc(cactus)})
 	}
 	if cactusFast != nil {
-		tests = append(tests, evalTest{"CactusFast", NewHandRank(cactusFast)})
+		tests = append(tests, evalTest{"CactusFast", NewRankFunc(cactusFast)})
 	}
 	if twoPlusTwo != nil {
 		tests = append(tests, evalTest{"TwoPlusTwo", twoPlusTwo})

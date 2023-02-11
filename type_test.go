@@ -79,6 +79,48 @@ func TestBadugi(t *testing.T) {
 	}
 }
 
+func TestLowball(t *testing.T) {
+	tests := []struct {
+		v string
+		b string
+		u string
+		r HandRank
+	}{
+		{"7h 5h 4h 3h 2c", "7h 5h 4h 3h 2c", "", 1},
+		{"7h 6h 4h 3h 2c", "7h 6h 4h 3h 2c", "", 2},
+		{"7h 6h 5h 3h 2c", "7h 6h 5h 3h 2c", "", 3},
+		{"7h 6h 5h 4h 2c", "7h 6h 5h 4h 2c", "", 4},
+		{"8h 5h 4h 3h 2c", "8h 5h 4h 3h 2c", "", 5},
+		{"8h 6h 4h 3h 2c", "8h 6h 4h 3h 2c", "", 6},
+		{"8h 6h 5h 3h 2c", "8h 6h 5h 3h 2c", "", 7},
+		{"8h 6h 5h 4h 2c", "8h 6h 5h 4h 2c", "", 8},
+		{"8h 6h 5h 4h 3c", "8h 6h 5h 4h 3c", "", 9},
+		{"8h 7h 4h 3h 2c", "8h 7h 4h 3h 2c", "", 10},
+		{"8h 7h 5h 3h 2c", "8h 7h 5h 3h 2c", "", 11},
+		{"8h 7h 5h 4h 2c", "8h 7h 5h 4h 2c", "", 12},
+		{"8h 7h 5h 4h 3c", "8h 7h 5h 4h 3c", "", 13},
+		{"8h 7h 6h 3h 2c", "8h 7h 6h 3h 2c", "", 14},
+		{"8h 7h 6h 4h 2c", "8h 7h 6h 4h 2c", "", 15},
+		{"8h 7h 6h 4h 3c", "8h 7h 6h 4h 3c", "", 16},
+		{"8h 7h 6h 5h 2c", "8h 7h 6h 5h 2c", "", 17},
+		{"8h 7h 6h 5h 3c", "8h 7h 6h 5h 3c", "", 18},
+		{"9h 5h 4h 3h 2c", "9h 5h 4h 3h 2c", "", 19},
+	}
+	for i, test := range tests {
+		best, unused := Must(test.b), Must(test.u)
+		h := Lowball.RankHand(Must(test.v), nil)
+		if h.HiRank != test.r {
+			t.Errorf("test %d %v expected rank %d, got: %d", i, h.Pocket, test.r, h.HiRank)
+		}
+		if !reflect.DeepEqual(h.HiBest, best) {
+			t.Errorf("test %d %v expected best %v, got: %v", i, h.Pocket, best, h.HiBest)
+		}
+		if !reflect.DeepEqual(h.HiUnused, unused) {
+			t.Errorf("test %d %v expected unused %v, got: %v", i, h.Pocket, unused, h.HiUnused)
+		}
+	}
+}
+
 func TestNumberedStreets(t *testing.T) {
 	exp := []string{"Ante", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "101st", "102nd", "River"}
 	streets := NumberedStreets(0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 90, 1, 1)

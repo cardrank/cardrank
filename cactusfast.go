@@ -10,7 +10,7 @@ func init() {
 // perfect hash lookup.
 //
 // See: http://senzee.blogspot.com/2006/06/some-perfect-hash.html
-func CactusFast(c0, c1, c2, c3, c4 Card) uint16 {
+func CactusFast(c0, c1, c2, c3, c4 Card) HandRank {
 	// check for flushes and straight flushes
 	if c0&c1&c2&c3&c4&0xf000 != 0 {
 		return fastFlushes[(c0|c1|c2|c3|c4)>>16]
@@ -23,7 +23,7 @@ func CactusFast(c0, c1, c2, c3, c4 Card) uint16 {
 	u ^= u >> 16
 	u += u << 8
 	u ^= u >> 4
-	return hash[(u+(u<<2))>>19^uint32(hashAdjust[(u>>8)&0x1ff])]
+	return HandRank(hash[(u+(u<<2))>>19^uint32(hashAdjust[(u>>8)&0x1ff])])
 }
 
 var hash = [...]uint16{
@@ -544,7 +544,7 @@ var hash = [...]uint16{
 // fastFlushes is a table lookup for all "flush" hands (e.g.  both fastFlushes and
 // straight-fastFlushes. entries containing a zero mean that combination is not
 // possible with a five-card flush hand.
-var fastFlushes = [...]uint16{
+var fastFlushes = [...]HandRank{
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 1599, 0, 0, 0, 0, 0, 0, 0, 1598, 0, 0, 0, 1597, 0, 1596,
@@ -966,7 +966,7 @@ var fastFlushes = [...]uint16{
 ** of five unique ranks (i.e.  either Straights or High Card
 ** hands).  it's similar to the above "flushes" array.
  */
-var fastUnique5 = [...]uint16{
+var fastUnique5 = [...]HandRank{
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 1608, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 7462, 0, 0, 0, 0, 0, 0, 0, 7461, 0, 0, 0, 7460, 0,

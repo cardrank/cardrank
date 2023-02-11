@@ -20,7 +20,8 @@ type Hand struct {
 	LoUnused []Card
 }
 
-// NewUnevaluatedHand
+// NewUnevaluatedHand creates an unevaluated hand for the type, pocket, and
+// board.
 func NewUnevaluatedHand(typ Type, pocket, board []Card) *Hand {
 	p, b := make([]Card, len(pocket)), make([]Card, len(board))
 	copy(p, pocket)
@@ -35,7 +36,8 @@ func NewUnevaluatedHand(typ Type, pocket, board []Card) *Hand {
 	return h
 }
 
-// NewHand creates an eval for the type, pocket, and board.
+// NewHand creates a hand for the type, pocket, and board and evaluates the
+// hand's rank.
 func NewHand(typ Type, pocket, board []Card) *Hand {
 	h := NewUnevaluatedHand(typ, pocket, board)
 	typ.Eval(h)
@@ -44,9 +46,19 @@ func NewHand(typ Type, pocket, board []Card) *Hand {
 
 // Init inits best, unused.
 func (h *Hand) Init(n, m int, loMax HandRank) {
-	h.HiBest, h.HiUnused = make([]Card, n), make([]Card, m)
+	if 0 < n {
+		h.HiBest = make([]Card, n)
+	}
+	if 0 < m {
+		h.HiUnused = make([]Card, m)
+	}
 	if loMax != Invalid {
-		h.LoBest, h.LoUnused = make([]Card, n), make([]Card, m)
+		if 0 < n {
+			h.LoBest = make([]Card, n)
+		}
+		if 0 < m {
+			h.LoUnused = make([]Card, m)
+		}
 	}
 }
 
@@ -151,6 +163,19 @@ func (h *Hand) Description() string {
 		return strings.Join(s, ", ") + "-low"
 	case h.Type == Razz:
 		r = Invalid - r
+	case h.Type == Lowball,
+		h.Type == LowballTriple:
+		if r = rankMax - r; r > Pair {
+			s := make([]string, len(h.HiBest))
+			for i := 0; i < len(h.HiBest); i++ {
+				s[i] = h.HiBest[i].Rank().Name()
+			}
+			str := strings.Join(s, ", ") + "-low"
+			if r == Nothing {
+				str += ", Wheel"
+			}
+			return str
+		}
 	}
 	switch r.Fixed() {
 	case StraightFlush:

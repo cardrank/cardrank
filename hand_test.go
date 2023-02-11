@@ -119,28 +119,28 @@ func TestHandCompare(t *testing.T) {
 		{"Kd Qd Jd 9d 2d Ac Kc", "Ks Qs Js 9s 3s Ad Kd", +1, Flush},
 	}
 	for i, test := range tests {
-		a := Holdem.RankHand(Must(test.a), nil)
-		b := Holdem.RankHand(Must(test.b), nil)
-		switch r := a.Compare(b); {
+		h1 := Holdem.RankHand(Must(test.a), nil)
+		h2 := Holdem.RankHand(Must(test.b), nil)
+		switch r := h1.Compare(h2); {
 		case r != test.exp:
 			t.Errorf("test %d expected r == %d, got: %d", i, test.exp, r)
 		case r == +0:
-			if a.Fixed() != b.Fixed() && a.Fixed() != test.r {
+			if h1.Fixed() != h2.Fixed() && h1.Fixed() != test.r {
 				t.Errorf("test %d expected a == b == r", i)
 			}
 		case r == -1:
-			if r := a.Fixed(); r != test.r {
+			if r := h1.Fixed(); r != test.r {
 				t.Errorf("test %d expected a to be %s, got: %s", i, test.r, r)
 			}
 		case r == +1:
-			if r := b.Fixed(); r != test.r {
+			if r := h2.Fixed(); r != test.r {
 				t.Errorf("test %d expected b to be %s, got: %s", i, test.r, r)
 			}
 		}
 	}
 }
 
-func TestShortDeckRankHand(t *testing.T) {
+func TestShortDeck(t *testing.T) {
 	tests := []struct {
 		h   string
 		typ Type
@@ -157,11 +157,11 @@ func TestShortDeckRankHand(t *testing.T) {
 		{"9s 8s 7s 6s Ah", Short, Straight, "Straight, Nine-high [9♠ 8♠ 7♠ 6♠ A♥]"},
 	}
 	for i, test := range tests {
-		hand := test.typ.RankHand(Must(test.h), nil)
-		if r, exp := hand.Rank().Fixed(), test.r; r != exp {
-			t.Errorf("test %d expected rank %s, got: %s -- %d", i, exp, r, hand.Rank())
+		h := test.typ.RankHand(Must(test.h), nil)
+		if r, exp := h.Rank().Fixed(), test.r; r != exp {
+			t.Errorf("test %d expected rank %s, got: %s -- %d", i, exp, r, h.Rank())
 		}
-		if s, exp := fmt.Sprintf("%s %b", hand.Description(), hand.Best()), test.s; s != exp {
+		if s, exp := fmt.Sprintf("%s %b", h.Description(), h.Best()), test.s; s != exp {
 			t.Errorf("test %d expected description %q, got: %q", i, exp, s)
 		}
 	}
@@ -195,16 +195,24 @@ func TestHandRankCompare(t *testing.T) {
 		{Omaha, "Tc 6c 2s 3s As", "9h 9d 4h 4d", "Kd Qs Js 8h", Pair, Flush, +1},
 		{Omaha, "4s 3h 6c 2d Kd", "Kh Qs 5h 2c", "7s 7c 4h 2s", Straight, TwoPair, -1},
 		{Omaha, "4s 3h 6c 2d Kd", "7s 7c 4h 2s", "Kh Qs 5h 2c", TwoPair, Straight, +1},
+		/*
+			{Lowball, "7h 5h 4h 3h 2c", "7h 6h 4h 3h 2c", ""},
+			{Lowball, "7h 6h 4h 3h 2c", "", ""},
+			{Lowball, "", "", ""},
+			{Lowball, "", "", ""},
+		*/
 	}
 	for i, test := range tests {
 		board := Must(test.board)
 		a := test.typ.RankHand(Must(test.a), board)
 		b := test.typ.RankHand(Must(test.b), board)
-		if r := a.Fixed(); r != test.j {
-			t.Errorf("test %d %s expected rank %s, got: %s", i, test.typ, test.j, r)
+		af := a.Fixed()
+		if af != test.j {
+			t.Errorf("test %d %s expected rank %s, got: %s", i, test.typ, test.j, af)
 		}
-		if r := b.Fixed(); r != test.k {
-			t.Errorf("test %d %s expected rank %s, got: %s", i, test.typ, test.k, r)
+		bf := b.Fixed()
+		if bf != test.k {
+			t.Errorf("test %d %s expected rank %s, got: %s", i, test.typ, test.k, bf)
 		}
 		if n := a.Compare(b); n != test.exp {
 			t.Errorf("test %d %s compare expected %d, got: %d", i, test.typ, test.exp, n)
