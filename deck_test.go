@@ -194,13 +194,14 @@ func TestUnshuffled(t *testing.T) {
 
 func TestDealer(t *testing.T) {
 	// seed := time.Now().UnixNano()
-	seed := int64(1676119839206101829)
+	seed := int64(1676122011905868217)
 	t.Logf("seed: %d", seed)
+	r := rand.New(rand.NewSource(seed))
 	for _, tt := range Types() {
 		for i := 2; i <= tt.Max(); i++ {
-			typ, n := tt, i
+			typ, n, s := tt, i, r.Int63()
 			t.Run(fmt.Sprintf("%s/%d", typ, n), func(t *testing.T) {
-				testDealer(t, n, typ, seed)
+				testDealer(t, n, typ, s)
 			})
 		}
 	}
@@ -218,16 +219,16 @@ func testDealer(t *testing.T, hands int, typ Type, seed int64) {
 	for d.Next() {
 		t.Logf("%s:", d)
 		pockets, b1 = d.Deal(pockets, b1, hands)
+		if 0 < d.Pocket() {
+			for i := 0; i < hands; i++ {
+				t.Logf("  % 2d: %v", i, pockets[i])
+			}
+		}
 		if 0 < d.Board() {
 			t.Logf("  Board: %v", b1)
 			if double {
 				b2 = d.DealBoard(b2, false)
-				t.Logf("  Board: %v", b2)
-			}
-		}
-		if 0 < d.Pocket() {
-			for i := 0; i < hands; i++ {
-				t.Logf("  % 2d: %v", i, pockets[i])
+				t.Logf("         %v", b2)
 			}
 		}
 	}
@@ -241,9 +242,9 @@ func testDealer(t *testing.T, hands int, typ Type, seed int64) {
 		t.Logf("  % 2d: %s %v %v %d", i, h1[i].Description(), h1[i].HiBest, h1[i].HiUnused, h1[i].HiRank)
 		switch {
 		case double:
-			t.Logf("    : %s %v %v %d", h2[i].Description(), h2[i].HiBest, h2[i].HiUnused, h2[i].HiRank)
+			t.Logf("      %s %v %v %d", h2[i].Description(), h2[i].HiBest, h2[i].HiUnused, h2[i].HiRank)
 		case low:
-			t.Logf("    : %s %v %v %d", h1[i].LowDescription(), h1[i].LoBest, h1[i].LoUnused, h1[i].LoRank)
+			t.Logf("      %s %v %v %d", h1[i].LowDescription(), h1[i].LoBest, h1[i].LoUnused, h1[i].LoRank)
 		}
 	}
 	win := NewWin(h1, h2, low)
