@@ -76,7 +76,7 @@ func (typ DeckType) New() *Deck {
 	n := len(v)
 	d := &Deck{
 		v: make([]Card, n),
-		l: uint16(n),
+		l: n,
 	}
 	copy(d.v, v)
 	return d
@@ -99,8 +99,8 @@ func init() {
 
 // Deck is a set of playing cards.
 type Deck struct {
-	i uint16
-	l uint16
+	i int
+	l int
 	v []Card
 }
 
@@ -117,7 +117,7 @@ func NewShoeDeck(n int) *Deck {
 		copy(cards[i*len(unshuffledFrench):], unshuffledFrench)
 	}
 	return &Deck{
-		l: uint16(len(cards)),
+		l: len(cards),
 		v: cards,
 	}
 }
@@ -127,7 +127,7 @@ func NewShoeDeck(n int) *Deck {
 // Useful when using a card deck "shoe" composed of more than one deck of
 // cards.
 func (d *Deck) SetLimit(limit int) {
-	d.l = uint16(limit)
+	d.l = limit
 }
 
 // Shuffle shuffles the deck's cards using the provided shuffler.
@@ -152,7 +152,7 @@ func (d *Deck) Draw(n int) []Card {
 		return nil
 	}
 	var hand []Card
-	for l := uint16(min(HandRank(d.i)+HandRank(n), HandRank(d.l))); d.i < l; d.i++ {
+	for l := min(d.i+n, d.l); d.i < l; d.i++ {
 		hand = append(hand, d.v[d.i])
 	}
 	return hand
@@ -165,10 +165,17 @@ func (d *Deck) Empty() bool {
 
 // Remaining returns the number of remaining cards in the deck.
 func (d *Deck) Remaining() int {
-	if n := int(d.l) - int(d.i); 0 <= n {
+	if n := d.l - d.i; 0 <= n {
 		return n
 	}
 	return 0
+}
+
+// All returns a copy of all cards in the deck, without advancing.
+func (d *Deck) All() []Card {
+	v := make([]Card, d.l)
+	copy(v, d.v)
+	return v
 }
 
 // Reset resets the deck.
@@ -301,6 +308,11 @@ func (d *Dealer) Format(f fmt.State, verb rune) {
 		}
 		fmt.Fprintf(f, "%d:%q %s%s", d.i, desc.Id, desc.Name, s)
 	}
+}
+
+// All returns a copy of all cards in the deck, without advancing.
+func (d *Dealer) All() []Card {
+	return d.d.All()
 }
 
 // Next returns true when there are more betting streets defined.

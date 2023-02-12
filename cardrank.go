@@ -1,9 +1,6 @@
 // Package github.com/cardrank/cardrank is a library of types, utilities, and
 // interfaces for working with playing cards, card decks, and evaluating poker
 // hand ranks.
-//
-// Supports Texas Holdem, Texas Holdem Short (6+), Texas Holdem Royal (10+),
-// Omaha, Omaha Hi/Lo, Stud, Stud Hi/Lo, Razz, and Badugi.
 package cardrank
 
 // HandRank is a poker hand rank.
@@ -31,7 +28,7 @@ const (
 	rankLowMax           HandRank = 16384
 )
 
-// Fixed converts a relative poker rank to a fixed hand rank.
+// Fixed converts a relative poker rank to a fixed rank.
 func (r HandRank) Fixed() HandRank {
 	switch {
 	case r <= StraightFlush:
@@ -104,6 +101,9 @@ func (r HandRank) Name() string {
 	return "Nothing"
 }
 
+// RankFunc ranks a hand of 5 cards.
+type RankFunc func(c0, c1, c2, c3, c4 Card) HandRank
+
 // RankEightOrBetter is a 8-or-better low hand rank func. Aces are low,
 // straights and flushes do not count. Any card with rank 8 or higher will
 // cause
@@ -152,6 +152,9 @@ func RankLowAceFive(mask HandRank, c0, c1, c2, c3, c4 Card) HandRank {
 func RankLowball(c0, c1, c2, c3, c4 Card) HandRank {
 	return rankMax - DefaultCactus(c0, c1, c2, c3, c4)
 }
+
+// HandRankFunc ranks a hand of 5, 6, or 7 cards.
+type HandRankFunc func([]Card) HandRank
 
 // NewRankFunc creates a hand eval for 5, 6, or 7 cards using f.
 func NewRankFunc(f RankFunc) HandRankFunc {
@@ -203,12 +206,6 @@ func NewHybrid(f5 RankFunc, f7 HandRankFunc) HandRankFunc {
 		return f7(hand)
 	}
 }
-
-// RankFunc ranks a hand of 5 cards.
-type RankFunc func(c0, c1, c2, c3, c4 Card) HandRank
-
-// HandRankFunc ranks a hand of 5, 6, or 7 cards.
-type HandRankFunc func([]Card) HandRank
 
 var (
 	// DefaultRank is the default hand rank func.
@@ -262,8 +259,13 @@ const (
 	ErrInvalidType Error = "invalid type"
 )
 
+// ordered is the ordered constraint.
+type ordered interface {
+	~float32 | ~float64 | ~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
+}
+
 // min returns the min of a, b.
-func min(a, b HandRank) HandRank {
+func min[T ordered](a, b T) T {
 	if a < b {
 		return a
 	}

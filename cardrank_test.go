@@ -29,7 +29,7 @@ func TestEval(t *testing.T) {
 						t.Errorf("test %d %d expected %s, got: %s", i, j, test.exp, fixed)
 					}
 					h := NewHand(Holdem, test.hand[:5], test.hand[5:])
-					if s := fmt.Sprintf("%b %b", h, h.Unused()); s != test.v {
+					if s := fmt.Sprintf("%b %b", h, h.HiUnused); s != test.v {
 						t.Errorf("test %d %d expected %q, got: %q", i, j, test.v, s)
 					}
 				}

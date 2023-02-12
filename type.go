@@ -99,18 +99,17 @@ func (typ Type) Desc() TypeDesc {
 
 // Name returns the type name.
 func (typ Type) Name() string {
-	if desc, ok := descs[typ]; ok {
-		return desc.Name
-	}
-	return typ.String()
+	return descs[typ].Name
 }
 
 // Max returns the type max players.
 func (typ Type) Max() int {
-	if desc, ok := descs[typ]; ok {
-		return desc.Max
-	}
-	return 0
+	return descs[typ].Max
+}
+
+// Low returns true when the type has a low board.
+func (typ Type) Low() bool {
+	return descs[typ].Low
 }
 
 // Double returns true when the type has a double board.
@@ -123,9 +122,9 @@ func (typ Type) Show() bool {
 	return descs[typ].Show
 }
 
-// Low returns true when the type has a low board.
-func (typ Type) Low() bool {
-	return descs[typ].Low
+// Once returns true when draws are limited to one time.
+func (typ Type) Once() bool {
+	return descs[typ].Once
 }
 
 // Blinds returns the type's blind names.
@@ -155,10 +154,7 @@ func (typ Type) DeckType() DeckType {
 
 // Deck returns a new deck for the type.
 func (typ Type) Deck() *Deck {
-	if desc, ok := descs[typ]; ok {
-		return desc.Deck.New()
-	}
-	return nil
+	return descs[typ].Deck.New()
 }
 
 // Eval evals the hand for the type.
@@ -166,9 +162,9 @@ func (typ Type) Eval(h *Hand) {
 	evals[typ](h)
 }
 
-// HiCompare returns a hi compare func.
-func (typ Type) HiCompare() func(*Hand, *Hand) int {
-	f, low := descs[typ].HiComp.Compare, descs[typ].Low
+// HiComp returns a hi compare func.
+func (typ Type) HiComp() func(*Hand, *Hand) int {
+	f, low := descs[typ].HiComp.Comp, descs[typ].Low
 	loMax := Invalid
 	if low {
 		loMax = rankEightOrBetterMax
@@ -178,9 +174,9 @@ func (typ Type) HiCompare() func(*Hand, *Hand) int {
 	}
 }
 
-// LoCompare returns a lo compare func.
-func (typ Type) LoCompare() func(*Hand, *Hand) int {
-	f, low := descs[typ].LoComp.Compare, descs[typ].Low
+// LoComp returns a lo compare func.
+func (typ Type) LoComp() func(*Hand, *Hand) int {
+	f, low := descs[typ].LoComp.Comp, descs[typ].Low
 	loMax := Invalid
 	if low {
 		loMax = rankEightOrBetterMax
@@ -232,7 +228,7 @@ func (typ Type) RankHands(pockets [][]Card, board []Card) []*Hand {
 
 // String satisfies the fmt.Stringer interface.
 func (typ Type) String() string {
-	return string([]byte{byte(typ >> 8 & 0xff), byte(typ & 0xff)})
+	return string([]byte{byte(typ >> 8 & 0xf), byte(typ & 0xf)})
 }
 
 // Format satisfies the fmt.Formatter interface.
@@ -460,7 +456,7 @@ func WithSwap(opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithOmaha is a type description option to set standard Omaha definitions.
+// WithOmaha is a type description option to set Omaha definitions.
 func WithOmaha(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 9
@@ -473,8 +469,7 @@ func WithOmaha(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithOmahaDouble is a type description option to set standard OmahaDouble
-// definitions.
+// WithOmahaDouble is a type description option to set OmahaDouble definitions.
 func WithOmahaDouble(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 9
@@ -486,8 +481,7 @@ func WithOmahaDouble(opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithOmahaFive is a type description option to set standard OmahaFive
-// definitions.
+// WithOmahaFive is a type description option to set OmahaFive definitions.
 func WithOmahaFive(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8
@@ -500,8 +494,7 @@ func WithOmahaFive(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithOmahaSix is a type description option to set standard OmahaSix
-// definitions.
+// WithOmahaSix is a type description option to set OmahaSix definitions.
 func WithOmahaSix(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 7
@@ -514,8 +507,7 @@ func WithOmahaSix(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithCourchevel is a type description option to set standard Courchevel
-// definitions.
+// WithCourchevel is a type description option to set Courchevel definitions.
 func WithCourchevel(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8
@@ -535,7 +527,7 @@ func WithCourchevel(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithFusion is a type description option to set standard Fusion definitions.
+// WithFusion is a type description option to set Fusion definitions.
 func WithFusion(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 9
@@ -551,7 +543,7 @@ func WithFusion(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithStud is a type description option to set standard Stud definitions.
+// WithStud is a type description option to set Stud definitions.
 func WithStud(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 7
@@ -564,7 +556,7 @@ func WithStud(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithRazz is a type description option to set standard Razz definitions.
+// WithRazz is a type description option to set Razz definitions.
 //
 // Same as Stud, but with a Ace-to-Five low card ranking.
 func WithRazz(opts ...StreetOption) TypeOption {
@@ -577,7 +569,7 @@ func WithRazz(opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithBadugi is a type description option to set standard Badugi definitions.
+// WithBadugi is a type description option to set Badugi definitions.
 //
 // 4 cards, low evaluation of separate suits
 // All 4 face down pre-flop
@@ -595,8 +587,7 @@ func WithBadugi(opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithLowball is a type description option to set standard Lowball
-// definitions.
+// WithLowball is a type description option to set Lowball definitions.
 func WithLowball(multi bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8
@@ -612,8 +603,7 @@ func WithLowball(multi bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithSoko is a type description option to set standard Soko
-// definitions.
+// WithSoko is a type description option to set Soko definitions.
 func WithSoko(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8
@@ -665,7 +655,7 @@ func StudBlinds() []string {
 // HoldemStreets creates Holdem streets for the pre-flop, flop, turn, and
 // river.
 func HoldemStreets(pocket, discard, flop, turn, river int) []StreetDesc {
-	sd := func(id byte, name string, pocket int, board int) StreetDesc {
+	d := func(id byte, name string, pocket int, board int) StreetDesc {
 		return StreetDesc{
 			Id:           id,
 			Name:         name,
@@ -675,21 +665,21 @@ func HoldemStreets(pocket, discard, flop, turn, river int) []StreetDesc {
 		}
 	}
 	return []StreetDesc{
-		sd('p', "Pre-Flop", pocket, 0),
-		sd('f', "Flop", 0, flop),
-		sd('t', "Turn", 0, turn),
-		sd('r', "River", 0, river),
+		d('p', "Pre-Flop", pocket, 0),
+		d('f', "Flop", 0, flop),
+		d('t', "Turn", 0, turn),
+		d('r', "River", 0, river),
 	}
 }
 
 // StudStreets creates Stud streets for the ante, third street, fourth street,
 // fifth street, sixth street and river.
 func StudStreets() []StreetDesc {
-	streets := NumberedStreets(3, 1, 1, 1, 1)
+	v := NumberedStreets(3, 1, 1, 1, 1)
 	for i := 0; i < 4; i++ {
-		streets[0].PocketUp = 1
+		v[0].PocketUp = 1
 	}
-	return streets
+	return v
 }
 
 // NumberedStreets returns numbered streets (ante, first, second, ...).
@@ -783,7 +773,7 @@ func (typ EvalType) New(low bool) EvalFunc {
 // CompType is a compare type.
 type CompType uint8
 
-// Compare types.
+// Comp types.
 const (
 	CompHi CompType = iota
 	CompLo
@@ -793,8 +783,8 @@ const (
 	CompSoko
 )
 
-// Compare compares a, b.
-func (typ CompType) Compare(a, b *Hand, loMax HandRank) int {
+// Comp compares a, b.
+func (typ CompType) Comp(a, b *Hand, loMax HandRank) int {
 	switch typ {
 	case CompHi:
 		return HiComp(a, b, loMax)

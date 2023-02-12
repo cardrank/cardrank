@@ -70,44 +70,14 @@ func (h *Hand) Hand() []Card {
 	return hand
 }
 
-// Rank returns the hand's rank.
-func (h *Hand) Rank() HandRank {
-	return h.HiRank
-}
-
 // Fixed returns the hand's fixed rank.
 func (h *Hand) Fixed() HandRank {
 	return h.HiRank.Fixed()
 }
 
-// Best returns the hand's best-five cards.
-func (h *Hand) Best() []Card {
-	return h.HiBest
-}
-
-// Unused returns the hand's unused cards.
-func (h *Hand) Unused() []Card {
-	return h.HiUnused
-}
-
 // LowValid returns true if is a valid low hand.
 func (h *Hand) LowValid() bool {
 	return h.LoRank != Invalid
-}
-
-// LowRank returns the hand's low rank.
-func (h *Hand) LowRank() HandRank {
-	return h.LoRank
-}
-
-// LowBest returns the hand's best-five low cards.
-func (h *Hand) LowBest() []Card {
-	return h.LoBest
-}
-
-// LowUnused returns the poker hand's unused-five low cards.
-func (h *Hand) LowUnused() []Card {
-	return h.LoUnused
 }
 
 // Format satisfies the fmt.Formatter interface.
@@ -218,19 +188,19 @@ func (h *Hand) LowDescription() string {
 	return strings.Join(s, ", ") + "-low"
 }
 
-// Compare compares the hand ranks.
-func (h *Hand) Compare(b *Hand) int {
-	return h.Type.HiCompare()(h, b)
+// HiComp compares the hi hand rank.
+func (h *Hand) HiComp(b *Hand) int {
+	return h.Type.HiComp()(h, b)
 }
 
-// LowCompare compares the low hand ranks.
-func (h *Hand) LowCompare(b *Hand) int {
-	return h.Type.LoCompare()(h, b)
+// LoComp compares the lo hand rank.
+func (h *Hand) LoComp(b *Hand) int {
+	return h.Type.LoComp()(h, b)
 }
 
-// Order orders hands by rank, low to high, returning 'pivot' of winning vs
+// HiOrder orders hands by HiRank, low to high, returning 'pivot' of winning vs
 // losing hands. Pivot will always be 1 or higher.
-func Order(hands []*Hand) ([]int, int) {
+func HiOrder(hands []*Hand) ([]int, int) {
 	if len(hands) == 0 {
 		return nil, 0
 	}
@@ -239,7 +209,7 @@ func Order(hands []*Hand) ([]int, int) {
 	for ; i < n; i++ {
 		m[i], h[i] = hands[i], i
 	}
-	f := hands[0].Type.HiCompare()
+	f := hands[0].Type.HiComp()
 	sort.SliceStable(h, func(j, k int) bool {
 		return f(m[h[j]], m[h[k]]) < 0
 	})
@@ -248,9 +218,9 @@ func Order(hands []*Hand) ([]int, int) {
 	return h, i
 }
 
-// LowOrder orders hands by rank, low to high, returning 'pivot' of winning vs
+// LoOrder orders hands by LoRank, low to high, returning 'pivot' of winning vs
 // losing hands. If there are no low hands the pivot will be 0.
-func LowOrder(hands []*Hand) ([]int, int) {
+func LoOrder(hands []*Hand) ([]int, int) {
 	if len(hands) == 0 {
 		return nil, 0
 	}
@@ -259,7 +229,7 @@ func LowOrder(hands []*Hand) ([]int, int) {
 	for ; i < n; i++ {
 		m[i], h[i] = hands[i], i
 	}
-	f := hands[0].Type.LoCompare()
+	f := hands[0].Type.LoComp()
 	sort.SliceStable(h, func(j, k int) bool {
 		return f(m[h[j]], m[h[k]]) < 0
 	})
@@ -282,14 +252,14 @@ type Win struct {
 
 // NewWin creates a new win.
 func NewWin(h1, h2 []*Hand, low bool) Win {
-	h, hp := Order(h1)
+	h, hp := HiOrder(h1)
 	var l []int
 	var lp int
 	switch {
 	case low:
-		l, lp = LowOrder(h1)
+		l, lp = LoOrder(h1)
 	case h2 != nil:
-		l, lp = Order(h2)
+		l, lp = HiOrder(h2)
 	}
 	return Win{
 		Hi:      h,
@@ -304,20 +274,20 @@ func NewWin(h1, h2 []*Hand, low bool) Win {
 func (win Win) Format(f fmt.State, verb rune) {
 	switch verb {
 	case 's', 'v':
-		_, _ = f.Write([]byte(win.Describe(func(_, i int) string {
+		_, _ = f.Write([]byte(win.HiDesc(func(_, i int) string {
 			return strconv.Itoa(i + 1)
 		})))
 	}
 }
 
-// Describe returns a description.
-func (win Win) Describe(f func(int, int) string) string {
-	return win.Join(f, ", ") + " " + win.Verb()
+// HiDesc returns a description.
+func (win Win) HiDesc(f func(int, int) string) string {
+	return win.HiJoin(f, ", ") + " " + win.HiVerb()
 }
 
-// LowDescribe returns a low description.
-func (win Win) LowDescribe(f func(int, int) string) string {
-	return win.LowJoin(f, ", ") + " " + win.LowVerb()
+// LoDescribe returns a low description.
+func (win Win) LoDesc(f func(int, int) string) string {
+	return win.LoJoin(f, ", ") + " " + win.LoVerb()
 }
 
 // Scoop returns true when a pot is scooped.
@@ -331,18 +301,18 @@ func (win Win) Scoop() bool {
 	return false
 }
 
-// Verb returns the win verb.
-func (win Win) Verb() string {
+// HiVerb returns the win verb.
+func (win Win) HiVerb() string {
 	return WinVerb(win.HiPivot, win.Scoop())
 }
 
-// LowVerb returns the win verb.
-func (win Win) LowVerb() string {
+// LoVerb returns the win verb.
+func (win Win) LoVerb() string {
 	return WinVerb(win.LoPivot, win.Scoop())
 }
 
-// Join joins strings.
-func (win Win) Join(f func(int, int) string, sep string) string {
+// HiJoin joins strings.
+func (win Win) HiJoin(f func(int, int) string, sep string) string {
 	var v []string
 	for i := 0; i < win.HiPivot; i++ {
 		v = append(v, f(i, win.Hi[i]))
@@ -350,8 +320,8 @@ func (win Win) Join(f func(int, int) string, sep string) string {
 	return strings.Join(v, sep)
 }
 
-// LowJoin joins strings.
-func (win Win) LowJoin(f func(int, int) string, sep string) string {
+// LoJoin joins strings.
+func (win Win) LoJoin(f func(int, int) string, sep string) string {
 	var v []string
 	for i := 0; i < win.LoPivot; i++ {
 		v = append(v, f(i, win.Lo[i]))

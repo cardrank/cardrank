@@ -193,7 +193,7 @@ func testDealer(t *testing.T, hands int, typ Type, seed int64) {
 	d := typ.Dealer(rand.New(rand.NewSource(seed)), 3)
 	t.Logf("Deck (%s, %d):", typ.DeckType(), len(d.d.v))
 	for i := 0; i < len(d.d.v); i += 8 {
-		t.Logf("  %v", d.d.v[i:min(HandRank(i+8), HandRank(len(d.d.v)))])
+		t.Logf("  %v", d.d.v[i:min(i+8, len(d.d.v))])
 	}
 	double, low := typ.Double(), typ.Low()
 	var pockets [][]Card
@@ -231,11 +231,11 @@ func testDealer(t *testing.T, hands int, typ Type, seed int64) {
 	}
 	t.Logf("Result:")
 	win := NewWin(h1, h2, low)
-	t.Logf("  %s", win.Describe(func(_, i int) string {
+	t.Logf("  %s", win.HiDesc(func(_, i int) string {
 		return strconv.Itoa(i)
 	}))
 	if !win.Scoop() && (double || low) {
-		t.Logf("  %s", win.LowDescribe(func(_, i int) string {
+		t.Logf("  %s", win.LoDesc(func(_, i int) string {
 			return strconv.Itoa(i)
 		}))
 	}

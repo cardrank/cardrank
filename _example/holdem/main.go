@@ -20,16 +20,16 @@ func main() {
 	fmt.Printf("------ Holdem %d ------\n", seed)
 	fmt.Printf("Board:    %b\n", board)
 	for i := 0; i < players; i++ {
-		fmt.Printf("Player %d: %b %s %b %b\n", i+1, hands[i].Pocket, hands[i].Description(), hands[i].Best(), hands[i].Unused())
+		fmt.Printf("Player %d: %b %s %b %b\n", i+1, hands[i].Pocket, hands[i].Description(), hands[i].HiBest, hands[i].HiUnused)
 	}
-	h, pivot := cardrank.Order(hands)
+	h, pivot := cardrank.HiOrder(hands)
 	if pivot == 1 {
-		fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
+		fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].HiBest)
 	} else {
 		var s, b []string
 		for j := 0; j < pivot; j++ {
 			s = append(s, strconv.Itoa(h[j]+1))
-			b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+			b = append(b, fmt.Sprintf("%b", hands[h[j]].HiBest))
 		}
 		fmt.Printf("Result:   Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
 	}

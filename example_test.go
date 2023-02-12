@@ -100,16 +100,16 @@ func Example_holdem() {
 		fmt.Printf("------ Holdem %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
 		for j := 0; j < game.players; j++ {
-			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket, hands[j].Description(), hands[j].Best(), hands[j].Unused())
+			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket, hands[j].Description(), hands[j].HiBest, hands[j].HiUnused)
 		}
-		h, pivot := cardrank.Order(hands)
+		h, pivot := cardrank.HiOrder(hands)
 		if pivot == 1 {
-			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
+			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].HiBest)
 		} else {
 			var s, b []string
 			for j := 0; j < pivot; j++ {
 				s = append(s, strconv.Itoa(h[j]+1))
-				b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+				b = append(b, fmt.Sprintf("%b", hands[h[j]].HiBest))
 			}
 			fmt.Printf("Result:   Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
 		}
@@ -219,16 +219,16 @@ func Example_short() {
 		fmt.Printf("------ Short %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
 		for j := 0; j < game.players; j++ {
-			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket, hands[j].Description(), hands[j].Best(), hands[j].Unused())
+			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket, hands[j].Description(), hands[j].HiBest, hands[j].HiUnused)
 		}
-		h, pivot := cardrank.Order(hands)
+		h, pivot := cardrank.HiOrder(hands)
 		if pivot == 1 {
-			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
+			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].HiBest)
 		} else {
 			var s, b []string
 			for j := 0; j < pivot; j++ {
 				s = append(s, strconv.Itoa(h[j]+1))
-				b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+				b = append(b, fmt.Sprintf("%b", hands[h[j]].HiBest))
 			}
 			fmt.Printf("Result:   Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
 		}
@@ -311,16 +311,16 @@ func Example_royal() {
 		fmt.Printf("------ Royal %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
 		for j := 0; j < game.players; j++ {
-			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket, hands[j].Description(), hands[j].Best(), hands[j].Unused())
+			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket, hands[j].Description(), hands[j].HiBest, hands[j].HiUnused)
 		}
-		h, pivot := cardrank.Order(hands)
+		h, pivot := cardrank.HiOrder(hands)
 		if pivot == 1 {
-			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
+			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].HiBest)
 		} else {
 			var s, b []string
 			for j := 0; j < pivot; j++ {
 				s = append(s, strconv.Itoa(h[j]+1))
-				b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+				b = append(b, fmt.Sprintf("%b", hands[h[j]].HiBest))
 			}
 			fmt.Printf("Result:   Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
 		}
@@ -398,16 +398,16 @@ func Example_omaha() {
 		fmt.Printf("------ Omaha %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
 		for j := 0; j < game.players; j++ {
-			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket, hands[j].Description(), hands[j].Best(), hands[j].Unused())
+			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket, hands[j].Description(), hands[j].HiBest, hands[j].HiUnused)
 		}
-		h, pivot := cardrank.Order(hands)
+		h, pivot := cardrank.HiOrder(hands)
 		if pivot == 1 {
-			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
+			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].HiBest)
 		} else {
 			var s, b []string
 			for j := 0; j < pivot; j++ {
 				s = append(s, strconv.Itoa(h[j]+1))
-				b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+				b = append(b, fmt.Sprintf("%b", hands[h[j]].HiBest))
 			}
 			fmt.Printf("Result:   Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
 		}
@@ -474,32 +474,32 @@ func Example_omahaHiLo() {
 		fmt.Printf("Board: %b\n", board)
 		for j := 0; j < game.players; j++ {
 			fmt.Printf("Player %d: %b\n", j+1, pockets[j])
-			fmt.Printf("  Hi: %s %b %b\n", hands[j].Description(), hands[j].Best(), hands[j].Unused())
-			fmt.Printf("  Lo: %s %b %b\n", hands[j].LowDescription(), hands[j].LowBest(), hands[j].LowUnused())
+			fmt.Printf("  Hi: %s %b %b\n", hands[j].Description(), hands[j].HiBest, hands[j].HiUnused)
+			fmt.Printf("  Lo: %s %b %b\n", hands[j].LowDescription(), hands[j].LoBest, hands[j].LoUnused)
 		}
-		h, hPivot := cardrank.Order(hands)
-		l, lPivot := cardrank.LowOrder(hands)
+		h, hPivot := cardrank.HiOrder(hands)
+		l, lPivot := cardrank.LoOrder(hands)
 		typ := "wins"
 		if lPivot == 0 {
 			typ = "scoops"
 		}
 		if hPivot == 1 {
-			fmt.Printf("Result (Hi): Player %d %s with %s %b\n", h[0]+1, typ, hands[h[0]].Description(), hands[h[0]].Best())
+			fmt.Printf("Result (Hi): Player %d %s with %s %b\n", h[0]+1, typ, hands[h[0]].Description(), hands[h[0]].HiBest)
 		} else {
 			var s, b []string
 			for j := 0; j < hPivot; j++ {
 				s = append(s, strconv.Itoa(h[j]+1))
-				b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+				b = append(b, fmt.Sprintf("%b", hands[h[j]].HiBest))
 			}
 			fmt.Printf("Result (Hi): Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
 		}
 		if lPivot == 1 {
-			fmt.Printf("Result (Lo): Player %d wins with %s %b\n", l[0]+1, hands[l[0]].LowDescription(), hands[l[0]].LowBest())
+			fmt.Printf("Result (Lo): Player %d wins with %s %b\n", l[0]+1, hands[l[0]].LowDescription(), hands[l[0]].LoBest)
 		} else if lPivot > 1 {
 			var s, b []string
 			for j := 0; j < lPivot; j++ {
 				s = append(s, strconv.Itoa(l[j]+1))
-				b = append(b, fmt.Sprintf("%b", hands[l[j]].LowBest()))
+				b = append(b, fmt.Sprintf("%b", hands[l[j]].LoBest))
 			}
 			fmt.Printf("Result (Lo): Players %s push with %s %s\n", strings.Join(s, ", "), hands[l[0]].LowDescription(), strings.Join(b, ", "))
 		} else {
@@ -626,16 +626,16 @@ func Example_omahaMultiBoard() {
 			fmt.Printf("Board %d:    %b\n", j+1, boards[j])
 			hands := cardrank.Omaha.RankHands(pockets, boards[j])
 			for k := 0; k < game.players; k++ {
-				fmt.Printf("  Player %d: %b %s %b %b\n", k+1, hands[k].Pocket, hands[k].Description(), hands[k].Best(), hands[k].Unused())
+				fmt.Printf("  Player %d: %b %s %b %b\n", k+1, hands[k].Pocket, hands[k].Description(), hands[k].HiBest, hands[k].HiUnused)
 			}
-			h, pivot := cardrank.Order(hands)
+			h, pivot := cardrank.HiOrder(hands)
 			if pivot == 1 {
-				fmt.Printf("Result %d:   Player %d wins with %s %b\n", j+1, h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
+				fmt.Printf("Result %d:   Player %d wins with %s %b\n", j+1, h[0]+1, hands[h[0]].Description(), hands[h[0]].HiBest)
 			} else {
 				var s, b []string
 				for j := 0; j < pivot; j++ {
 					s = append(s, strconv.Itoa(h[j]+1))
-					b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+					b = append(b, fmt.Sprintf("%b", hands[h[j]].HiBest))
 				}
 				fmt.Printf("Result %d:   Players %s push with %s %s\n", j+1, strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
 			}
@@ -736,16 +736,16 @@ func Example_stud() {
 		hands := cardrank.Stud.RankHands(pockets, nil)
 		fmt.Printf("------ Stud %d ------\n", i+1)
 		for j := 0; j < game.players; j++ {
-			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket, hands[j].Description(), hands[j].Best(), hands[j].Unused())
+			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket, hands[j].Description(), hands[j].HiBest, hands[j].HiUnused)
 		}
-		h, pivot := cardrank.Order(hands)
+		h, pivot := cardrank.HiOrder(hands)
 		if pivot == 1 {
-			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
+			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].HiBest)
 		} else {
 			var s, b []string
 			for j := 0; j < pivot; j++ {
 				s = append(s, strconv.Itoa(h[j]+1))
-				b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+				b = append(b, fmt.Sprintf("%b", hands[h[j]].HiBest))
 			}
 			fmt.Printf("Result:   Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
 		}
@@ -806,32 +806,32 @@ func Example_studHiLo() {
 		fmt.Printf("------ StudHiLo %d ------\n", i+1)
 		for j := 0; j < game.players; j++ {
 			fmt.Printf("Player %d: %b\n", j+1, pockets[j])
-			fmt.Printf("  Hi: %s %b %b\n", hands[j].Description(), hands[j].Best(), hands[j].Unused())
-			fmt.Printf("  Lo: %s %b %b\n", hands[j].LowDescription(), hands[j].LowBest(), hands[j].LowUnused())
+			fmt.Printf("  Hi: %s %b %b\n", hands[j].Description(), hands[j].HiBest, hands[j].HiUnused)
+			fmt.Printf("  Lo: %s %b %b\n", hands[j].LowDescription(), hands[j].LoBest, hands[j].LoUnused)
 		}
-		h, hPivot := cardrank.Order(hands)
-		l, lPivot := cardrank.LowOrder(hands)
+		h, hPivot := cardrank.HiOrder(hands)
+		l, lPivot := cardrank.LoOrder(hands)
 		typ := "wins"
 		if lPivot == 0 {
 			typ = "scoops"
 		}
 		if hPivot == 1 {
-			fmt.Printf("Result (Hi): Player %d %s with %s %b\n", h[0]+1, typ, hands[h[0]].Description(), hands[h[0]].Best())
+			fmt.Printf("Result (Hi): Player %d %s with %s %b\n", h[0]+1, typ, hands[h[0]].Description(), hands[h[0]].HiBest)
 		} else {
 			var s, b []string
 			for j := 0; j < hPivot; j++ {
 				s = append(s, strconv.Itoa(h[j]+1))
-				b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+				b = append(b, fmt.Sprintf("%b", hands[h[j]].HiBest))
 			}
 			fmt.Printf("Result (Hi): Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
 		}
 		if lPivot == 1 {
-			fmt.Printf("Result (Lo): Player %d wins with %s %b\n", l[0]+1, hands[l[0]].LowDescription(), hands[l[0]].LowBest())
+			fmt.Printf("Result (Lo): Player %d wins with %s %b\n", l[0]+1, hands[l[0]].LowDescription(), hands[l[0]].LoBest)
 		} else if lPivot > 1 {
 			var s, b []string
 			for j := 0; j < lPivot; j++ {
 				s = append(s, strconv.Itoa(l[j]+1))
-				b = append(b, fmt.Sprintf("%b", hands[l[j]].LowBest()))
+				b = append(b, fmt.Sprintf("%b", hands[l[j]].LoBest))
 			}
 			fmt.Printf("Result (Lo): Players %s push with %s %s\n", strings.Join(s, ", "), hands[l[0]].LowDescription(), strings.Join(b, ", "))
 		} else {
@@ -948,16 +948,16 @@ func Example_razz() {
 		hands := cardrank.Razz.RankHands(pockets, nil)
 		fmt.Printf("------ Razz %d ------\n", i+1)
 		for j := 0; j < game.players; j++ {
-			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket, hands[j].Description(), hands[j].Best(), hands[j].Unused())
+			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket, hands[j].Description(), hands[j].HiBest, hands[j].HiUnused)
 		}
-		h, pivot := cardrank.Order(hands)
+		h, pivot := cardrank.HiOrder(hands)
 		if pivot == 1 {
-			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
+			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].HiBest)
 		} else {
 			var s, b []string
 			for j := 0; j < pivot; j++ {
 				s = append(s, strconv.Itoa(h[j]+1))
-				b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+				b = append(b, fmt.Sprintf("%b", hands[h[j]].HiBest))
 			}
 			fmt.Printf("Result:   Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
 		}
@@ -1017,16 +1017,16 @@ func Example_badugi() {
 		hands := cardrank.Badugi.RankHands(pockets, nil)
 		fmt.Printf("------ Badugi %d ------\n", i+1)
 		for j := 0; j < game.players; j++ {
-			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket, hands[j].Description(), hands[j].Best(), hands[j].Unused())
+			fmt.Printf("Player %d: %b %s %b %b\n", j+1, hands[j].Pocket, hands[j].Description(), hands[j].HiBest, hands[j].HiUnused)
 		}
-		h, pivot := cardrank.Order(hands)
+		h, pivot := cardrank.HiOrder(hands)
 		if pivot == 1 {
-			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
+			fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].HiBest)
 		} else {
 			var s, b []string
 			for j := 0; j < pivot; j++ {
 				s = append(s, strconv.Itoa(h[j]+1))
-				b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+				b = append(b, fmt.Sprintf("%b", hands[h[j]].HiBest))
 			}
 			fmt.Printf("Result:   Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
 		}
