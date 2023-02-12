@@ -1,12 +1,15 @@
 # About
 
-Package `github.com/cardrank/cardrank` is a library of types, utilities, and interfaces
-for working with playing cards, card decks, and evaluating poker hand ranks.
+Package `github.com/cardrank/cardrank` is a library of types, utilities, and
+interfaces for working with playing cards, card decks, and evaluating poker
+hand ranks.
 
+<!-- START supports -->
 Supports [Texas Holdem][holdem-example], [Texas Holdem Short (6+)][short-example],
 [Texas Holdem Royal (10+)][royal-example], [Omaha][omaha-example],
 [Omaha Hi/Lo][omaha-hi-lo-example], [Stud][stud-example], [Stud Hi/Lo][stud-hi-lo-example],
 [Razz][razz-example], and [Badugi][badugi-example].
+<!-- END -->
 
 [![Tests](https://github.com/cardrank/cardrank/workflows/Test/badge.svg)](https://github.com/cardrank/cardrank/actions?query=workflow%3ATest)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cardrank/cardrank)](https://goreportcard.com/report/github.com/cardrank/cardrank)
@@ -22,6 +25,7 @@ cards][hand].
 A single [package level type][type] provides a standard interface for dealing
 cards for, and evaluating [poker hands][hand] of the following:
 
+<!-- START overview -->
 * [Texas Holdem][holdem-example]
 * [Texas Holdem Short (6+)][short-example]
 * [Texas Holdem Royal (10+)][royal-example]
@@ -31,14 +35,12 @@ cards for, and evaluating [poker hands][hand] of the following:
 * [Stud Hi/Lo][stud-hi-lo-example]
 * [Razz][razz-example]
 * [Badugi][badugi-example]
+<!-- END -->
 
 [Hand evaluation and ranking][hand-ranking] of the different [poker hand
 types][type] is accomplished through pure Go implementations of [well-known
 poker rank evaluation algorithms](#cactus-kev). [Poker hands][hand] can be
-compared and [ordered to determine the hand's winner(s)][hand-ordering].
-
-[Development of additional poker variants][future], such as Kansas City Lowball
-and Candian Stud (Sökö), is planned.
+compared and [ordered to determine the hand's winner(s)][winners].
 
 ## Using
 
@@ -52,17 +54,18 @@ See package level [Go documentation][pkg].
 
 ### Quickstart
 
-Complete examples for [Texas Holdem][holdem-example], [Texas Holdem Short (6+)][short-example],
-[Texas Holdem Royal (10+)][royal-example], [Omaha][omaha-example], [Omaha Hi/Lo][omaha-hi-lo-example],
-[Stud][stud-example], [Stud Hi/Lo][stud-hi-lo-example], [Razz][razz-example],
-and [Badugi][badugi-example] are available in the source repository. [Other examples][examples]
-are available in the [Go package documentation][pkg] showing use of the
-package's types, utilities, and interfaces.
+Complete [examples for all `Type`'s][examples] are available, including
+additional examples showing use of various types, utilities, and interfaces is
+available in the [Go package documentation][pkg].
+
+Below are quick examples for `Holdem` and `OmahaHiLo` included in the
+[example](/_example) directory:
 
 ##### Texas Holdem
 
 The following showcases a simple game of Texas Holdem:
 
+<!-- START holdem -->
 ```go
 package main
 
@@ -86,16 +89,16 @@ func main() {
 	fmt.Printf("------ Holdem %d ------\n", seed)
 	fmt.Printf("Board:    %b\n", board)
 	for i := 0; i < players; i++ {
-		fmt.Printf("Player %d: %b %s %b %b\n", i+1, hands[i].Pocket, hands[i].Description(), hands[i].Best(), hands[i].Unused())
+		fmt.Printf("Player %d: %b %s %b %b\n", i+1, hands[i].Pocket, hands[i].Description(), hands[i].HiBest, hands[i].HiUnused)
 	}
-	h, pivot := cardrank.Order(hands)
+	h, pivot := cardrank.HiOrder(hands)
 	if pivot == 1 {
-		fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].Best())
+		fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].HiBest)
 	} else {
 		var s, b []string
 		for j := 0; j < pivot; j++ {
 			s = append(s, strconv.Itoa(h[j]+1))
-			b = append(b, fmt.Sprintf("%b", hands[h[j]].Best()))
+			b = append(b, fmt.Sprintf("%b", hands[h[j]].HiBest))
 		}
 		fmt.Printf("Result:   Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
 	}
@@ -115,12 +118,14 @@ Player 5: [7♠ 2♥] Three of a Kind, Twos, kickers Jack, Nine [2♣ 2♦ 2♥ 
 Player 6: [T♠ 3♠] Pair, Twos, kickers Jack, Ten, Nine [2♣ 2♦ J♦ T♠ 9♠] [8♦ 3♠]
 Result:   Player 5 wins with Three of a Kind, Twos, kickers Jack, Nine [2♣ 2♦ 2♥ J♦ 9♠]
 ```
+<!-- END -->
 
 ##### Omaha Hi/Lo
 
 The following showcases a simple game of Omaha Hi/Lo, highlighting Hi/Lo winner
 determination:
 
+<!-- START omahaHiLo -->
 ```go
 package main
 
@@ -145,32 +150,32 @@ func main() {
 	fmt.Printf("Board: %b\n", board)
 	for i := 0; i < players; i++ {
 		fmt.Printf("Player %d: %b\n", i+1, pockets[i])
-		fmt.Printf("  Hi: %s %b %b\n", hands[i].Description(), hands[i].Best(), hands[i].Unused())
-		fmt.Printf("  Lo: %s %b %b\n", hands[i].LowDescription(), hands[i].LowBest(), hands[i].LowUnused())
+		fmt.Printf("  Hi: %s %b %b\n", hands[i].Description(), hands[i].HiBest, hands[i].HiUnused)
+		fmt.Printf("  Lo: %s %b %b\n", hands[i].LowDescription(), hands[i].LoBest, hands[i].LoUnused)
 	}
-	h, hPivot := cardrank.Order(hands)
-	l, lPivot := cardrank.LowOrder(hands)
+	h, hPivot := cardrank.HiOrder(hands)
+	l, lPivot := cardrank.LoOrder(hands)
 	typ := "wins"
 	if lPivot == 0 {
 		typ = "scoops"
 	}
 	if hPivot == 1 {
-		fmt.Printf("Result (Hi): Player %d %s with %s %b\n", h[0]+1, typ, hands[h[0]].Description(), hands[h[0]].Best())
+		fmt.Printf("Result (Hi): Player %d %s with %s %b\n", h[0]+1, typ, hands[h[0]].Description(), hands[h[0]].HiBest)
 	} else {
 		var s, b []string
 		for i := 0; i < hPivot; i++ {
 			s = append(s, strconv.Itoa(h[i]+1))
-			b = append(b, fmt.Sprintf("%b", hands[h[i]].Best()))
+			b = append(b, fmt.Sprintf("%b", hands[h[i]].HiBest))
 		}
 		fmt.Printf("Result (Hi): Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
 	}
 	if lPivot == 1 {
-		fmt.Printf("Result (Lo): Player %d wins with %s %b\n", l[0]+1, hands[l[0]].LowDescription(), hands[l[0]].LowBest())
+		fmt.Printf("Result (Lo): Player %d wins with %s %b\n", l[0]+1, hands[l[0]].LowDescription(), hands[l[0]].LoBest)
 	} else if lPivot > 1 {
 		var s, b []string
 		for j := 0; j < lPivot; j++ {
 			s = append(s, strconv.Itoa(l[j]+1))
-			b = append(b, fmt.Sprintf("%b", hands[l[j]].LowBest()))
+			b = append(b, fmt.Sprintf("%b", hands[l[j]].LoBest))
 		}
 		fmt.Printf("Result (Lo): Players %s push with %s %s\n", strings.Join(s, ", "), hands[l[0]].LowDescription(), strings.Join(b, ", "))
 	} else {
@@ -205,6 +210,7 @@ Player 6: [T♠ 6♠ 5♠ 5♦]
 Result (Hi): Player 4 wins with Three of a Kind, Nines, kickers Ace, Jack [9♣ 9♦ 9♥ A♣ J♥]
 Result (Lo): Player 6 wins with Six, Five, Four, Two, Ace-low [6♠ 5♠ 4♦ 2♣ A♣]
 ```
+<!-- END -->
 
 ### Hand Ranking
 
@@ -215,15 +221,14 @@ have a lower value `HandRank` than lower poker hands. For example, a
 [`FullHouse`][hand-rank].
 
 When a [`Hand`][hand] is created, a Hi and Lo (if applicable) `HandRank` is
-evaluated, and made available via [`Hand.Rank`][hand.rank] and
-[`Hand.LowRank`][hand.low-rank] methods, respectively. The Hi and Lo
+evaluated, and made available via [`Hand.HiRank`][hand.hi-rank] and
+[`Hand.LoRank`][hand.lo-rank] methods, respectively. The Hi and Lo
 `HandRank`'s are evaluated by a `EvalRankFunc`, dependent on the `Hand`'s
 [`Type`][type]:
 
 #### Cactus Kev
 
-For regular poker hand types ([`Holdem`][type], [`Royal`][type],
-[`Omaha`][type], and [`Stud`][type]), poker hand rank is determined by Go
+For regular poker hand types, poker hand rank is determined by Go
 implementations of different [Cactus Kev][cactus-kev] evaluators:
 
 * [`Cactus`][cactus] - the original [Cactus Kev][cactus-kev] poker hand evaluator
@@ -260,44 +265,50 @@ can be enabled using the [`forcefat` build tag][build-tags].
 ### Winner Determination
 
 Winner(s) are determined by the lowest possible [`HandRank`][hand-rank] when
-comparing a `Hand`'s [`Rank`][hand.rank] or [`LowRank`][hand.low-rank]
-against another hand. Two or more hands having a `HandRank` of equal value
-indicate that the hands have equivalent `HandRank`, and thus have both won.
+comparing a [`Hand`'s][hand] [`HiRank`][hand.hi-rank] or [`LoRank`][hand.lo-rank]
+against another hand's. Two or more hands having a `HandRank` of equal value
+indicate that the hands have equivalent ranks, and thus have both won.
 
-As such, when hands are sorted (low-to-high) by `Rank` or `LowRank`, the
-winner(s) of a hand will be all the hands in the lowest position and having the
-same `HandRank`.
+Thus, when `Hand`'s are sorted (low-to-high) by `HiRank` or `LoRank`, the
+winner(s) of a hand will be the hands in the lowest position and having
+equivalent `HiRank`'s or `LoRank`'s.
 
 #### Comparing Hands
 
-A [`Hand`][hand] can be compared to another `Hand` using [`Compare`][hand.compare]
-and [`LowCompare`][hand.low-compare].
+A [`Hand`][hand] can be compared to another `Hand` using
+[`HiComp`][hand.hi-comp] and [`LoComp`][hand.lo-comp].
 
-`Compare` and `LowCompare` return `-1`, `0`, or `+1`, making it easy to compare
+`HiComp` and `LowComp` return `-1`, `0`, or `+1`, making it easy to compare
 or sort hands:
 
 ```go
-// Compare hands:
-if hand1.Compare(hand2) < 0 {
+// Compare hi hands:
+if hand1.HiComp()(hand1, hand2) < 0 {
 	fmt.Printf("%s is a winner!", hand1)
 }
 
-// Compare low hands:
-// (applicable only for a hand types that supports low hands)
-if hand1.LowCompare(hand2) == 0 {
+// Compare lo hands:
+if hand1.LoComp()(hand1, hand2) == 0 {
 	fmt.Printf("%s and %s are equal!", hand1, hand2)
 }
 
-// Sort hands:
+// Sort hi hands:
+hi := hands[0].HiComp()
 sort.Slice(hands, func(i, j int) bool {
-	return hands[i].Compare(hands[j]) < 0
+	return hi(hands[i], hands[j]) < 0
+})
+
+// Sort lo hands:
+lo := hands[0].LoComp()
+sort.Slice(hands, func(i, j int) bool {
+	return lo(hands[i], hands[j]) < 0
 })
 ```
 
 #### Ordering Hands
 
-[`Order`][order] and [`LowOrder`][low-order] determine the winner(s) of a hand
-by ordering the indexes of a [`[]*Hand`][hand] and returning the list of
+[`HiOrder`][hi-order] and [`LoOrder`][lo-order] determine the winner(s) of a
+hand by ordering the indexes of a [`[]*Hand`][hand] and returning the list of
 ordered hands as a `[]int` and an `int` pivot indicating the position within
 the returned list demarcating winning and losing hands.
 
@@ -306,15 +317,15 @@ winner(s) of the hand. Hi hands are guaranteed to have 1 or more winner(s),
 while Lo hands have 0 or more winner(s):
 
 ```go
-// Order hands by lowest hand rank, low to high:
-h, pivot := cardrank.Order(hands)
+// Order hi hands by lowest hand rank, low to high:
+h, pivot := cardrank.HiOrder(hands)
 for i := 0; i < pivot; i++ {
 	fmt.Printf("%s is a Hi winner!", hands[h[i]])
 }
 
-// Order low hands by lowest hand rank, low to high:
-// (applicable only for a hand types that supports low hands)
-l, pivot := cardrank.LowOrder(hands)
+// Order lo hands by lowest hand rank, low to high:
+// (applicable only for a hand types that supports lo hands)
+l, pivot := cardrank.LoOrder(hands)
 for i := 0; i < pivot; i++ {
 	fmt.Printf("%s is a Lo winner!", hands[h[i]])
 }
@@ -393,12 +404,6 @@ large lookup table, irrespective of other build tags:
 GOOS=js GOARCH=wasm go build -tags 'forcefat' -o cardrank.wasm
 ```
 
-## Future Development
-
-Rank funcs for Kansas City Lowball, Sökö, and other poker variants will be
-added to this package in addition to standardized interfaces for managing poker
-tables and games.
-
 ## Links
 
 * [Overview of Cactus Kev][cactus-kev] - original Cactus Kev article
@@ -415,8 +420,7 @@ tables and games.
 [examples]: https://pkg.go.dev/github.com/cardrank/cardrank#pkg-examples
 [hand-ranking]: #hand-ranking
 [build-tags]: #build-tags
-[future]: #future-development
-[hand-ordering]: #winner-determination
+[winners]: #winner-determination
 
 [card]: https://pkg.go.dev/github.com/cardrank/cardrank#Card
 [suit]: https://pkg.go.dev/github.com/cardrank/cardrank#Suit
@@ -425,14 +429,20 @@ tables and games.
 [hand]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand
 [hand-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#HandRank
 [type]: https://pkg.go.dev/github.com/cardrank/cardrank#Type
-[order]: https://pkg.go.dev/github.com/cardrank/cardrank#Order
 [init]: https://pkg.go.dev/github.com/cardrank/cardrank#Init
-[low-order]: https://pkg.go.dev/github.com/cardrank/cardrank#LowOrder
-[hand.compare]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.Compare
-[hand.low-compare]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.LowCompare
-[hand.rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.Rank
-[hand.low-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.LowRank
+[hi-order]: https://pkg.go.dev/github.com/cardrank/cardrank#HiOrder
+[lo-order]: https://pkg.go.dev/github.com/cardrank/cardrank#LoOrder
+[hand.hi-comp]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.HiComp
+[hand.lo-comp]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.LoComp
+[hand.hi-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.HiRank
+[hand.lo-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.LoRank
+[default-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#DefaultRank
+[cactus]: https://pkg.go.dev/github.com/cardrank/cardrank#Cactus
+[cactus-fast]: https://pkg.go.dev/github.com/cardrank/cardrank#CactusFast
+[two-plus-two]: https://pkg.go.dev/github.com/cardrank/cardrank#TwoPlusTwo
+[hybrid]: https://pkg.go.dev/github.com/cardrank/cardrank#Hybrid
 
+<!-- START links -->
 [holdem-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Holdem
 [short-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Short
 [royal-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Royal
@@ -442,9 +452,4 @@ tables and games.
 [stud-hi-lo-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-StudHiLo
 [razz-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Razz
 [badugi-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Badugi
-
-[default-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#DefaultRank
-[cactus]: https://pkg.go.dev/github.com/cardrank/cardrank#Cactus
-[cactus-fast]: https://pkg.go.dev/github.com/cardrank/cardrank#CactusFast
-[two-plus-two]: https://pkg.go.dev/github.com/cardrank/cardrank#TwoPlusTwo
-[hybrid]: https://pkg.go.dev/github.com/cardrank/cardrank#Hybrid
+<!-- END -->
