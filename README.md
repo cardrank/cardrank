@@ -91,7 +91,7 @@ func main() {
 	for i := 0; i < players; i++ {
 		fmt.Printf("Player %d: %b %s %b %b\n", i+1, hands[i].Pocket, hands[i].Description(), hands[i].HiBest, hands[i].HiUnused)
 	}
-	h, pivot := cardrank.HiOrder(hands)
+	h, pivot := cardrank.Order(hands)
 	if pivot == 1 {
 		fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].HiBest)
 	} else {
@@ -153,7 +153,7 @@ func main() {
 		fmt.Printf("  Hi: %s %b %b\n", hands[i].Description(), hands[i].HiBest, hands[i].HiUnused)
 		fmt.Printf("  Lo: %s %b %b\n", hands[i].LowDescription(), hands[i].LoBest, hands[i].LoUnused)
 	}
-	h, hPivot := cardrank.HiOrder(hands)
+	h, hPivot := cardrank.Order(hands)
 	l, lPivot := cardrank.LoOrder(hands)
 	typ := "wins"
 	if lPivot == 0 {
@@ -318,14 +318,14 @@ while Lo hands have 0 or more winner(s):
 
 ```go
 // Order hi hands by lowest hand rank, low to high:
-h, pivot := cardrank.HiOrder(hands)
+h, pivot := cardrank.Order(hands)
 for i := 0; i < pivot; i++ {
 	fmt.Printf("%s is a Hi winner!", hands[h[i]])
 }
 
 // Order lo hands by lowest hand rank, low to high:
 // (applicable only for a hand types that supports lo hands)
-l, pivot := cardrank.LoOrder(hands)
+l, pivot := cardrank.LowOrder(hands)
 for i := 0; i < pivot; i++ {
 	fmt.Printf("%s is a Lo winner!", hands[h[i]])
 }
