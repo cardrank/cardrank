@@ -264,8 +264,8 @@ func (typ *Type) UnmarshalText(buf []byte) error {
 		}
 	}
 	if len(name) == 2 {
-		if id, err := IdToUint16(name); err == nil {
-			*typ = Type(id)
+		if id, err := IdToType(name); err == nil {
+			*typ = id
 			return nil
 		}
 	}
@@ -308,8 +308,6 @@ func RegisterDefaultTypes() error {
 
 // TypeDesc is a type description.
 type TypeDesc struct {
-	// Id is the type id.
-	Id uint16
 	// Num is the registered number.
 	Num int
 	// Type is the type.
@@ -341,16 +339,14 @@ type TypeDesc struct {
 }
 
 // NewTypeDesc creates a new type description.
-func NewTypeDesc(idstr string, typ Type, name string, opts ...TypeOption) (*TypeDesc, error) {
-	id, err := IdToUint16(idstr)
-	switch {
+func NewTypeDesc(id string, typ Type, name string, opts ...TypeOption) (*TypeDesc, error) {
+	switch id, err := IdToType(id); {
 	case err != nil:
 		return nil, err
-	case id != uint16(typ):
+	case id != typ:
 		return nil, ErrInvalidId
 	}
 	desc := &TypeDesc{
-		Id:   id,
 		Type: typ,
 		Name: name,
 	}
@@ -1168,11 +1164,11 @@ func SokoComp(a, b *Hand, _ HandRank) int {
 }
 
 // IdToType converts an id to a type.
-func IdToUint16(id string) (uint16, error) {
+func IdToType(id string) (Type, error) {
 	if len(id) != 2 {
 		return 0, ErrInvalidId
 	}
-	return uint16(id[0])<<8 | uint16(id[1]), nil
+	return Type(id[0])<<8 | Type(id[1]), nil
 }
 
 // bestHoldem sets the best holdem.
