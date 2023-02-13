@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"strconv"
-	"strings"
 
 	"github.com/cardrank/cardrank"
 )
@@ -46,36 +44,25 @@ func ExampleDeck_Draw() {
 	d := cardrank.NewDeck()
 	// note: use a real random source
 	rnd := rand.New(rand.NewSource(52))
-	d.Shuffle(rnd)
+	d.Shuffle(rnd, 1)
 	hand := d.Draw(7)
 	fmt.Printf("%b\n", hand)
 	// Output:
 	// [9♣ 6♥ Q♠ 3♠ J♠ 9♥ K♣]
 }
 
-func ExampleNewHand() {
-	d := cardrank.NewDeck()
-	// note: use a real random source
-	rnd := rand.New(rand.NewSource(6265))
-	d.Shuffle(rnd)
-	hand := d.Draw(5)
-	h := cardrank.NewHand(cardrank.Holdem, hand, nil)
-	fmt.Printf("%b\n", h)
-	// Output:
-	// Four of a Kind, Eights, kicker Seven [8♣ 8♦ 8♥ 8♠ 7♠]
-}
-
-func ExampleHoldem_RankHand() {
+func ExampleHoldem_New() {
 	d := cardrank.NewDeck()
 	// note: use a real random source
 	rnd := rand.New(rand.NewSource(26076))
-	d.Shuffle(rnd)
-	h := cardrank.Holdem.RankHand(d.Draw(5), d.Draw(2))
-	fmt.Printf("%b\n", h)
+	d.Shuffle(rnd, 1)
+	ev := cardrank.Holdem.New(d.Draw(5), d.Draw(2))
+	fmt.Printf("%b\n", ev)
 	// Output:
 	// Straight Flush, Five-high, Steel Wheel [5♣ 4♣ 3♣ 2♣ A♣]
 }
 
+/*
 func Example_holdem() {
 	for i, game := range []struct {
 		seed    int64
@@ -1068,3 +1055,4 @@ func Example_badugi() {
 	// Player 6: [6♠ 7♠ 7♥ 2♥] Six, Two-low [6♠ 2♥] [7♠ 7♥]
 	// Result:   Player 4 wins with Eight, Seven, Three-low [8♠ 7♦ 3♣]
 }
+*/

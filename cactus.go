@@ -1,31 +1,31 @@
 package cardrank
 
 func init() {
-	flushes, unique5 = cactusMaps()
+	flush5, unique5 = cactusMaps()
 	cactus = Cactus
 }
 
-// flushes is the flush map.
-var flushes map[uint32]HandRank
+// flush5 is the flush map.
+var flush5 map[uint32]EvalRank
 
 // unique5 is the unique5 map.
-var unique5 map[uint32]HandRank
+var unique5 map[uint32]EvalRank
 
 // Cactus is a Cactus Kev hand rank func that generates the lookup maps on the
 // fly.
 //
 // See: https://archive.is/G6GZg
-func Cactus(c0, c1, c2, c3, c4 Card) HandRank {
+func Cactus(c0, c1, c2, c3, c4 Card) EvalRank {
 	if c0&c1&c2&c3&c4&0xf000 != 0 {
-		return flushes[primeProductBits(uint32(c0|c1|c2|c3|c4)>>16)]
+		return flush5[primeProductBits(uint32(c0|c1|c2|c3|c4)>>16)]
 	}
 	return unique5[primeProduct(c0, c1, c2, c3, c4)]
 }
 
 // cactusMaps builds the cactus flush and unique5 maps.
-func cactusMaps() (map[uint32]HandRank, map[uint32]HandRank) {
-	flushes, unique5 := make(map[uint32]HandRank), make(map[uint32]HandRank)
-	// rank orders
+func cactusMaps() (map[uint32]EvalRank, map[uint32]EvalRank) {
+	flush5, unique5 := make(map[uint32]EvalRank), make(map[uint32]EvalRank)
+	// straight orders
 	orders := [10]uint32{
 		0x1f00, // royal
 		0x0f80, // king
@@ -57,15 +57,15 @@ func cactusMaps() (map[uint32]HandRank, map[uint32]HandRank) {
 	}
 	for i := 0; i < len(orders); i++ {
 		// straight flush
-		flushes[primeProductBits(orders[i])] = 1 + HandRank(i)
+		flush5[primeProductBits(orders[i])] = 1 + EvalRank(i)
 		// straight
-		unique5[primeProductBits(orders[i])] = 1 + Flush + HandRank(i)
+		unique5[primeProductBits(orders[i])] = 1 + Flush + EvalRank(i)
 	}
 	for i := 0; i < len(r); i++ {
 		// flush
-		flushes[primeProductBits(r[i])] = 1 + FullHouse + HandRank(i)
+		flush5[primeProductBits(r[i])] = 1 + FullHouse + EvalRank(i)
 		// nothing (high cards)
-		unique5[primeProductBits(r[i])] = 1 + Pair + HandRank(i)
+		unique5[primeProductBits(r[i])] = 1 + Pair + EvalRank(i)
 	}
 	v := [13]int{12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0}
 	kickers := func(z []int, n int) []int {
@@ -83,9 +83,9 @@ func cactusMaps() (map[uint32]HandRank, map[uint32]HandRank) {
 		k := kickers(v[:], i)
 		for j, n := range k {
 			// four of a kind
-			unique5[primes[v[i]]*primes[v[i]]*primes[v[i]]*primes[v[i]]*primes[n]] = 1 + StraightFlush + HandRank(i*len(k)+j)
+			unique5[primes[v[i]]*primes[v[i]]*primes[v[i]]*primes[v[i]]*primes[n]] = 1 + StraightFlush + EvalRank(i*len(k)+j)
 			// full house
-			unique5[primes[v[i]]*primes[v[i]]*primes[v[i]]*primes[n]*primes[n]] = 1 + FourOfAKind + HandRank(i*len(k)+j)
+			unique5[primes[v[i]]*primes[v[i]]*primes[v[i]]*primes[n]*primes[n]] = 1 + FourOfAKind + EvalRank(i*len(k)+j)
 		}
 		// three of a kind
 		for j := 0; j < len(k)-1; j++ {
@@ -111,7 +111,7 @@ func cactusMaps() (map[uint32]HandRank, map[uint32]HandRank) {
 			}
 		}
 	}
-	return flushes, unique5
+	return flush5, unique5
 }
 
 // nextBitPermutation calculates the lexicographical next bit permutation.

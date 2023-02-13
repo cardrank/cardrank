@@ -3,219 +3,24 @@
 // hand ranks.
 package cardrank
 
-// HandRank is a poker hand rank.
-//
-// Ranks are ordered low-to-high.
-type HandRank uint16
-
-// Poker hand rank values.
-//
-// See: https://archive.is/G6GZg
-const (
-	StraightFlush        HandRank = 10
-	FourOfAKind          HandRank = 166
-	FullHouse            HandRank = 322
-	Flush                HandRank = 1599
-	Straight             HandRank = 1609
-	ThreeOfAKind         HandRank = 2467
-	TwoPair              HandRank = 3325
-	Pair                 HandRank = 6185
-	Nothing              HandRank = 7462
-	HighCard             HandRank = Nothing
-	Invalid                       = ^HandRank(0)
-	rankMax                       = Nothing + 1
-	rankEightOrBetterMax HandRank = 512
-	rankLowMax           HandRank = 16384
-)
-
-// Fixed converts a relative poker rank to a fixed rank.
-func (r HandRank) Fixed() HandRank {
-	switch {
-	case r <= StraightFlush:
-		return StraightFlush
-	case r <= FourOfAKind:
-		return FourOfAKind
-	case r <= FullHouse:
-		return FullHouse
-	case r <= Flush:
-		return Flush
-	case r <= Straight:
-		return Straight
-	case r <= ThreeOfAKind:
-		return ThreeOfAKind
-	case r <= TwoPair:
-		return TwoPair
-	case r <= Pair:
-		return Pair
-	case r != Invalid:
-		return Nothing
-	}
-	return Invalid
-}
-
-// String satisfies the fmt.Stringer interface.
-func (r HandRank) String() string {
-	switch r.Fixed() {
-	case StraightFlush:
-		return "Straight Flush"
-	case FourOfAKind:
-		return "Four of a Kind"
-	case FullHouse:
-		return "Full House"
-	case Flush:
-		return "Flush"
-	case Straight:
-		return "Straight"
-	case ThreeOfAKind:
-		return "Three of a Kind"
-	case TwoPair:
-		return "Two Pair"
-	case Pair:
-		return "Pair"
-	case Nothing:
-		return "Nothing"
-	}
-	return "Invalid"
-}
-
-// Name returns the hand rank name.
-func (r HandRank) Name() string {
-	switch r.Fixed() {
-	case StraightFlush:
-		return "StraightFlush"
-	case FourOfAKind:
-		return "FourOfAKind"
-	case FullHouse:
-		return "FullHouse"
-	case Flush:
-		return "Flush"
-	case Straight:
-		return "Straight"
-	case ThreeOfAKind:
-		return "ThreeOfAKind"
-	case TwoPair:
-		return "TwoPair"
-	case Pair:
-		return "Pair"
-	}
-	return "Nothing"
-}
-
-// RankFunc ranks a hand of 5 cards.
-type RankFunc func(c0, c1, c2, c3, c4 Card) HandRank
-
-// RankEightOrBetter is a 8-or-better low hand rank func. Aces are low,
-// straights and flushes do not count.
-func RankEightOrBetter(c0, c1, c2, c3, c4 Card) HandRank {
-	return RankLowAceFive(0xff00, c0, c1, c2, c3, c4)
-}
-
-// RankRazz is a Razz (Ace-to-Five) low hand rank func. Aces are low, straights
-// and flushes do not count.
-//
-// When there is a pair (or higher) of matching ranks, will be the inverted
-// value of the regular hand rank.
-func RankRazz(c0, c1, c2, c3, c4 Card) HandRank {
-	if r := RankLowAceFive(0, c0, c1, c2, c3, c4); r < rankLowMax {
-		return r
-	}
-	return Invalid - DefaultCactus(c0, c1, c2, c3, c4)
-}
-
-// RankLowAceFive is a Ace-to-Five low hand rank func.
-func RankLowAceFive(mask HandRank, c0, c1, c2, c3, c4 Card) HandRank {
-	rank := HandRank(0)
-	// c0
-	r := c0.AceIndex()
-	rank |= 1<<r | ((mask&(1<<r)>>r)&1)*0x8000
-	mask |= 1 << r
-	// c1
-	r = c1.AceIndex()
-	rank |= 1<<r | ((mask&(1<<r)>>r)&1)*0x8000
-	mask |= 1 << r
-	// c2
-	r = c2.AceIndex()
-	rank |= 1<<r | ((mask&(1<<r)>>r)&1)*0x8000
-	mask |= 1 << r
-	// c3
-	r = c3.AceIndex()
-	rank |= 1<<r | ((mask&(1<<r)>>r)&1)*0x8000
-	mask |= 1 << r
-	// c4
-	r = c4.AceIndex()
-	rank |= 1<<r | ((mask&(1<<r)>>r)&1)*0x8000
-	return rank
-}
-
-// RankLowball is a Two-to-Seven low hand rank func.
-func RankLowball(c0, c1, c2, c3, c4 Card) HandRank {
-	return rankMax - DefaultCactus(c0, c1, c2, c3, c4)
-}
-
-// HandRankFunc ranks a hand of 5, 6, or 7 cards.
-type HandRankFunc func([]Card) HandRank
-
-// NewRankFunc creates a hand eval for 5, 6, or 7 cards using f.
-func NewRankFunc(f RankFunc) HandRankFunc {
-	return func(hand []Card) HandRank {
-		switch n := len(hand); {
-		case n == 5:
-			return f(hand[0], hand[1], hand[2], hand[3], hand[4])
-		case n == 6:
-			r := f(hand[0], hand[1], hand[2], hand[3], hand[4])
-			r = min(r, f(hand[0], hand[1], hand[2], hand[3], hand[5]))
-			r = min(r, f(hand[0], hand[1], hand[2], hand[4], hand[5]))
-			r = min(r, f(hand[0], hand[1], hand[3], hand[4], hand[5]))
-			r = min(r, f(hand[0], hand[2], hand[3], hand[4], hand[5]))
-			r = min(r, f(hand[1], hand[2], hand[3], hand[4], hand[5]))
-			return r
-		}
-		r, rank := HandRank(0), Invalid
-		for i := 0; i < 21; i++ {
-			if r = f(
-				hand[t7c5[i][0]],
-				hand[t7c5[i][1]],
-				hand[t7c5[i][2]],
-				hand[t7c5[i][3]],
-				hand[t7c5[i][4]],
-			); r < rank {
-				rank = r
-			}
-		}
-		return rank
-	}
-}
-
-// NewHybrid creates a hybrid rank func using f5 for hands with 5 and 6 cards,
-// and f7 for hands with 7 cards.
-func NewHybrid(f5 RankFunc, f7 HandRankFunc) HandRankFunc {
-	return func(hand []Card) HandRank {
-		switch len(hand) {
-		case 5:
-			return f5(hand[0], hand[1], hand[2], hand[3], hand[4])
-		case 6:
-			r := f5(hand[0], hand[1], hand[2], hand[3], hand[4])
-			r = min(r, f5(hand[0], hand[1], hand[2], hand[3], hand[5]))
-			r = min(r, f5(hand[0], hand[1], hand[2], hand[4], hand[5]))
-			r = min(r, f5(hand[0], hand[1], hand[3], hand[4], hand[5]))
-			r = min(r, f5(hand[0], hand[2], hand[3], hand[4], hand[5]))
-			r = min(r, f5(hand[1], hand[2], hand[3], hand[4], hand[5]))
-			return r
-		}
-		return f7(hand)
-	}
-}
+import "unicode"
 
 var (
-	// DefaultRank is the default hand rank func.
-	DefaultRank HandRankFunc
+	// DefaultEval is the default eval rank func.
+	DefaultEval EvalRankFunc
 	// DefaultCactus is the default Cactus Kev implementation.
 	DefaultCactus RankFunc
 
 	// Package rank funcs (set in z.go).
 	cactus     RankFunc
 	cactusFast RankFunc
-	twoPlusTwo HandRankFunc
+	twoPlusTwo EvalRankFunc
+
+	// descs are the registered type descriptions.
+	descs = make(map[Type]TypeDesc)
+
+	// evals are eval funcs.
+	evals = make(map[Type]EvalFunc)
 )
 
 // Init inits the package level default variables. Must be manually called
@@ -223,11 +28,11 @@ var (
 func Init() error {
 	switch {
 	case twoPlusTwo != nil && cactusFast != nil:
-		DefaultRank = NewHybrid(cactusFast, twoPlusTwo)
+		DefaultEval = NewHybrid(cactusFast, twoPlusTwo)
 	case cactusFast != nil:
-		DefaultRank = NewRankFunc(cactusFast)
+		DefaultEval = NewRankFunc(cactusFast)
 	case cactus != nil:
-		DefaultRank = NewRankFunc(cactus)
+		DefaultEval = NewRankFunc(cactus)
 	}
 	switch {
 	case cactusFast != nil:
@@ -236,6 +41,34 @@ func Init() error {
 		DefaultCactus = cactus
 	}
 	return RegisterDefaultTypes()
+}
+
+// RegisterType registers a type.
+func RegisterType(desc TypeDesc) error {
+	if _, ok := descs[desc.Type]; ok {
+		return ErrInvalidId
+	}
+	// check street ids
+	m := make(map[byte]bool)
+	for _, street := range desc.Streets {
+		if (!unicode.IsLetter(rune(street.Id)) && !unicode.IsNumber(rune(street.Id))) || m[street.Id] {
+			return ErrInvalidId
+		}
+	}
+	desc.Num = len(descs)
+	descs[desc.Type] = desc
+	evals[desc.Type] = desc.Eval.New(desc.Low)
+	return nil
+}
+
+// RegisterDefaultTypes registers default types.
+func RegisterDefaultTypes() error {
+	for _, desc := range DefaultTypes() {
+		if err := RegisterType(desc); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Error is a error.
@@ -269,6 +102,30 @@ func min[T ordered](a, b T) T {
 		return a
 	}
 	return b
+}
+
+// equals returns true when a equals b.
+func equals[T ordered](a, b []T) bool {
+	n := len(a)
+	if n != len(b) {
+		return false
+	}
+	for i := 0; i < n; i++ {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// contains returns true when v contains a.
+func contains[T ordered](v []T, a T) bool {
+	for i := 0; i < len(v); i++ {
+		if v[i] == a {
+			return true
+		}
+	}
+	return false
 }
 
 // t4c2 is used for taking 4, choosing 2.

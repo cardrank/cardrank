@@ -376,9 +376,9 @@ func FromIndex(i int) Card {
 // Cards can described using common text strings (such as "Ah", "ah", "aH", or
 // "AH"), or having a white or black unicode pip for the suit (such as "J♤" or
 // "K♠"), or single unicode playing card runes (such as "🃆" or "🂣").
-func Parse(v ...string) ([]Card, error) {
-	var hand []Card
-	for n, s := range v {
+func Parse(strs ...string) ([]Card, error) {
+	var v []Card
+	for n, s := range strs {
 		for i, r := 0, []rune(s); i < len(r); i++ {
 			switch {
 			case unicode.IsSpace(r[i]):
@@ -393,7 +393,7 @@ func Parse(v ...string) ([]Card, error) {
 						Err: ErrInvalidCard,
 					}
 				}
-				hand = append(hand, c)
+				v = append(v, c)
 				continue
 			case len(r)-i < 2:
 				return nil, &ParseError{
@@ -404,8 +404,8 @@ func Parse(v ...string) ([]Card, error) {
 				}
 			}
 			c := r[i]
-			// handle '10'
-			if len(r)-i > 2 && c == '1' && r[i+1] == '0' {
+			// parse '10'
+			if 2 < len(r)-i && c == '1' && r[i+1] == '0' {
 				c, i = 'T', i+1
 			}
 			card := New(RankFromRune(c), SuitFromRune(r[i+1]))
@@ -417,20 +417,20 @@ func Parse(v ...string) ([]Card, error) {
 					Err: ErrInvalidCard,
 				}
 			}
-			hand = append(hand, card)
+			v = append(v, card)
 			i++
 		}
 	}
-	return hand, nil
+	return v, nil
 }
 
 // Must creates a Card slice from v.
 //
 // See Parse for overview of accepted string representations of cards.
-func Must(v ...string) []Card {
-	hand, err := Parse(v...)
+func Must(strs ...string) []Card {
+	v, err := Parse(strs...)
 	if err == nil {
-		return hand
+		return v
 	}
 	panic(err)
 }
@@ -632,7 +632,7 @@ func runeCardRank(rank, ace rune) Rank {
 	switch {
 	case r == 0:
 		return Ace
-	case r >= 11:
+	case 11 <= r:
 		return r - 2
 	}
 	return r - 1

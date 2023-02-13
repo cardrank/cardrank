@@ -17,16 +17,16 @@ func TestNextBitPermutation(t *testing.T) {
 
 func TestPrimeProduct(t *testing.T) {
 	tests := []struct {
-		hand []Card
-		exp  uint32
+		v   []Card
+		exp uint32
 	}{
 		{[]Card{0x802713, 0x8004b25, 0x200291d, 0x21103, 0x22103}, 0x2ccbb},
 		{[]Card{0x802713, 0x8004b25, 0x200291d, 0x21103, 0x00001}, 0x0eee9},
 		{[]Card{0x802713, 0x8004b25, 0x200291d, 0x00001, 0x00001}, 0x04fa3},
 	}
 	for i, test := range tests {
-		if n := primeProduct(test.hand[0], test.hand[1], test.hand[2], test.hand[3], test.hand[4]); n != test.exp {
-			t.Errorf("test %d %v expected %d == %d", i, test.hand, test.exp, n)
+		if n, exp := primeProduct(test.v[0], test.v[1], test.v[2], test.v[3], test.v[4]), test.exp; n != exp {
+			t.Errorf("test %d %v expected %d == %d", i, test.v, exp, n)
 		}
 	}
 }
@@ -47,8 +47,8 @@ func TestPrimeProductBits(t *testing.T) {
 		{0x001, 0x0002},
 	}
 	for i, test := range tests {
-		if n := primeProductBits(test.bits); n != test.exp {
-			t.Errorf("test %d expected primeProductBits(%d) == %d, got: %d", i, test.bits, test.exp, n)
+		if n, exp := primeProductBits(test.bits), test.exp; n != exp {
+			t.Errorf("test %d expected primeProductBits(%d) == %d, got: %d", i, test.bits, exp, n)
 		}
 	}
 }
@@ -60,7 +60,7 @@ func TestCactusMaps(t *testing.T) {
 	}
 	flushesTests := []struct {
 		r   uint32
-		exp HandRank
+		exp EvalRank
 	}{
 		{0x005ffe37, 0x0184},
 		{0x003d1623, 0x0185},
@@ -98,7 +98,7 @@ func TestCactusMaps(t *testing.T) {
 	}
 	unique5Tests := []struct {
 		r   uint32
-		exp HandRank
+		exp EvalRank
 	}{
 		{0x01c51151, 0x0a3e},
 		{0x005f112f, 0x0695},
@@ -127,8 +127,8 @@ func TestCactusMaps(t *testing.T) {
 		{0x000010fb, 0x094a},
 	}
 	for i, test := range unique5Tests {
-		if n := unique5[test.r]; n != test.exp {
-			t.Fatalf("test %d unique5[%d] to be %d, got: %d", i, test.r, test.exp, n)
+		if n, exp := unique5[test.r], test.exp; n != exp {
+			t.Fatalf("test %d unique5[%d] to be %d, got: %d", i, test.r, exp, n)
 		}
 	}
 }

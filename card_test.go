@@ -26,17 +26,17 @@ func TestParse(t *testing.T) {
 		{"10D 10C 10S 10h", []Card{New(Ten, Diamond), New(Ten, Club), New(10, Spade), New(10, Heart)}, nil},
 	}
 	for i, test := range tests {
-		hand, err := Parse(test.s)
+		v, err := Parse(test.s)
 		switch {
 		case test.err != nil && !errors.Is(err, test.err):
 			t.Fatalf("test %d %q expected error %v, got: %v", i, test.s, test.err, err)
 		case errors.Is(test.err, err):
 			continue
 		}
-		if n, exp := len(hand), len(test.exp); n != exp {
-			t.Fatalf("test %d %q expected len(hand) == %d, got: %d", i, test.s, exp, n)
+		if n, exp := len(v), len(test.exp); n != exp {
+			t.Fatalf("test %d %q expected len(v) == %d, got: %d", i, test.s, exp, n)
 		}
-		for j, c := range hand {
+		for j, c := range v {
 			if exp := test.exp[j]; c != exp {
 				t.Errorf("test %d %q card %d expected %s, got %s", i, test.s, j, exp, c)
 			}
@@ -45,24 +45,24 @@ func TestParse(t *testing.T) {
 }
 
 func TestCardUnmarshal(t *testing.T) {
-	v := struct {
+	z := struct {
 		Card Card
 	}{
-		Card: Must("Ah")[0],
+		Card: New(Ace, Heart),
 	}
-	switch err := json.Unmarshal([]byte(`{"card": "bz"}`), &v); {
+	switch err := json.Unmarshal([]byte(`{"card": "bz"}`), &z); {
 	case err == nil || !errors.Is(err, ErrInvalidCard):
 		t.Errorf("expected %v, got: %v", ErrInvalidCard, err)
-	case v.Card != InvalidCard:
-		t.Errorf("expected %d, got: %d", InvalidCard, v.Card)
+	case z.Card != InvalidCard:
+		t.Errorf("expected %d, got: %d", InvalidCard, z.Card)
 	}
-	var hand []Card
-	if err := json.Unmarshal([]byte(`["Ah","Kh","Qh","Jh","Th"]`), &hand); err != nil {
+	var v []Card
+	if err := json.Unmarshal([]byte(`["Ah","Kh","Qh","Jh","Th"]`), &v); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 	for i, c := range Must("Ah Kh Qh Jh Th") {
-		if !contains(hand, c) {
-			t.Errorf("test %d hand does not contain %s", i, c)
+		if !contains(v, c) {
+			t.Errorf("test %d v does not contain %s", i, c)
 		}
 	}
 }
@@ -83,7 +83,7 @@ func TestCardMarshal(t *testing.T) {
 }
 
 func TestCardIndex(t *testing.T) {
-	i := 0
+	v, i := DeckFrench.Unshuffled(), 0
 	for _, s := range []Suit{Spade, Heart, Diamond, Club} {
 		for r := Two; r <= Ace; r++ {
 			c := New(r, s)
@@ -103,8 +103,8 @@ func TestCardIndex(t *testing.T) {
 			if n, exp := c.Index(), i; n != exp {
 				t.Errorf("card %s expected index %d, got: %d", c, exp, n)
 			}
-			if unshuffledFrench[i] != c {
-				t.Errorf("expected unshuffled[%d] == %s, has: %s", i, c, unshuffledFrench[i])
+			if v[i] != c {
+				t.Errorf("expected v[%d] == %s, has: %s", i, c, v[i])
 			}
 			i++
 		}
@@ -224,13 +224,4 @@ func TestCardFormat(t *testing.T) {
 			t.Errorf("test %d expected %%d to be %q, got: %q", i, exp, s)
 		}
 	}
-}
-
-func contains(v []Card, c Card) bool {
-	for i := 0; i < len(v); i++ {
-		if v[i] == c {
-			return true
-		}
-	}
-	return false
 }

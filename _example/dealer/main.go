@@ -10,14 +10,14 @@ import (
 )
 
 func main() {
-	const players = 3
+	const players = 4
 	seed := time.Now().UnixNano()
 	for _, typ := range []cardrank.Type{cardrank.Royal, cardrank.CourchevelHiLo, cardrank.Badugi} {
 		// note: use a better pseudo-random number generator
 		r := rand.New(rand.NewSource(seed))
 		fmt.Printf("------ %s %d ------\n", typ, seed)
 		// setup dealer
-		d := typ.Dealer(r, 3)
+		d := typ.Dealer(r, 3, players)
 		// display cards in deck
 		all := d.All()
 		fmt.Printf("Deck (%s, %d):\n", typ.DeckType(), len(all))
@@ -27,8 +27,6 @@ func main() {
 		// need to know if type supports double or supports lows as it
 		// determines the output display below
 		double, low := typ.Double(), typ.Low()
-		var pockets [][]cardrank.Card
-		var hiBoard, loBoard []cardrank.Card
 		for d.Next() {
 			fmt.Printf("%s:\n", d)
 			// collect pockets and hi board

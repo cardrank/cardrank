@@ -42,11 +42,11 @@ func run(verbose bool, out, sum string) error {
 	// in!! stepping through the ID array is perfect!!
 	ranks := NewTwoPlusTwoGenerator(logf)
 	counts := make([]int, 10)
-	// Store the count of each type of hand (One Pair, Flush, etc)
+	// Store the total of each type of hand (One Pair, Flush, etc)
 	// another algorithm right off the thread
 	// var c0, c1, c2, c3, c4, c5, c6 int
 	// var u0, u1, u2, u3, u4, u5 int
-	var count int
+	var total int
 	for c0 := uint32(1); c0 < 53; c0++ {
 		u0 := ranks[53+c0]
 		for c1 := c0 + 1; c1 < 53; c1++ {
@@ -61,7 +61,7 @@ func run(verbose bool, out, sum string) error {
 							u5 := ranks[u4+c5]
 							for c6 := c5 + 1; c6 < 53; c6++ {
 								counts[ranks[u5+c6]>>12]++
-								count++
+								total++
 							}
 						}
 					}
@@ -70,7 +70,7 @@ func run(verbose bool, out, sum string) error {
 		}
 	}
 	expected := []struct {
-		r     HandRank
+		r     EvalRank
 		count int
 	}{
 		{Invalid, 0},
@@ -90,10 +90,10 @@ func run(verbose bool, out, sum string) error {
 		}
 		logf("%16s: %d\n", expected[i].r, counts[i])
 	}
-	if count != 133784560 {
-		return fmt.Errorf("expected total count of %d, got: %d", 133784560, count)
+	if total != 133784560 {
+		return fmt.Errorf("expected total count of %d, got: %d", 133784560, total)
 	}
-	logf("%16s: %d\n", "Total Hands", count)
+	logf("%16s: %d\n", "Total", total)
 	buf := new(bytes.Buffer)
 	if err := binary.Write(buf, binary.LittleEndian, ranks); err != nil {
 		return err
@@ -115,26 +115,26 @@ func run(verbose bool, out, sum string) error {
 
 const TenMiB = 10 * (1 << 20)
 
-// HandRank is a poker hand rank.
-type HandRank uint16
+// EvalRank is a poker eval rank.
+type EvalRank uint16
 
-// Poker hand rank values.
+// Poker eval rank values.
 const (
-	StraightFlush HandRank = 10
-	FourOfAKind   HandRank = 166
-	FullHouse     HandRank = 322
-	Flush         HandRank = 1599
-	Straight      HandRank = 1609
-	ThreeOfAKind  HandRank = 2467
-	TwoPair       HandRank = 3325
-	Pair          HandRank = 6185
-	Nothing       HandRank = 7462
-	HighCard      HandRank = Nothing
-	Invalid                = HandRank(^uint16(0))
+	StraightFlush EvalRank = 10
+	FourOfAKind   EvalRank = 166
+	FullHouse     EvalRank = 322
+	Flush         EvalRank = 1599
+	Straight      EvalRank = 1609
+	ThreeOfAKind  EvalRank = 2467
+	TwoPair       EvalRank = 3325
+	Pair          EvalRank = 6185
+	Nothing       EvalRank = 7462
+	HighCard      EvalRank = Nothing
+	Invalid                = EvalRank(^uint16(0))
 )
 
 // Fixed converts a relative poker rank to a fixed hand rank.
-func (r HandRank) Fixed() HandRank {
+func (r EvalRank) Fixed() EvalRank {
 	switch {
 	case r <= StraightFlush:
 		return StraightFlush
@@ -159,7 +159,7 @@ func (r HandRank) Fixed() HandRank {
 }
 
 // String satisfies the fmt.Stringer interface.
-func (r HandRank) String() string {
+func (r EvalRank) String() string {
 	switch r.Fixed() {
 	case StraightFlush:
 		return "Straight Flush"
@@ -184,7 +184,7 @@ func (r HandRank) String() string {
 }
 
 // Name returns the hand rank name.
-func (r HandRank) Name() string {
+func (r EvalRank) Name() string {
 	switch r.Fixed() {
 	case StraightFlush:
 		return "StraightFlush"
@@ -271,20 +271,20 @@ func NewTwoPlusTwoGenerator(logf func(string, ...interface{})) []uint32 {
 // id creates an id for card returning the number of cards and created id.
 // generated id is a 64 bit value with each card represented by 8 bits.
 func (g *TwoPlusTwoGenerator) id(id int64, card uint32) (int, int64) {
-	hand := make([]uint32, 8) // intentionally keeping one as a 0 end
+	v := make([]uint32, 8) // intentionally keeping one as a 0 end
 	// add first card. formats card to rrrr00ss
-	hand[0] = (((card >> 2) + 1) << 4) + (card & 3) + 1
+	v[0] = (((card >> 2) + 1) << 4) + (card & 3) + 1
 	// can't have more than 6 cards!
 	for i := 0; i < 6; i++ {
 		// leave the 0 hole for new card
-		hand[i+1] = uint32((id >> (8 * i)) & 0xff)
+		v[i+1] = uint32((id >> (8 * i)) & 0xff)
 	}
 	ranks, suits, dupe := make([]int, 13+1), make([]int, 4+1), false
 	var n int
-	for n = 0; hand[n] != 0; n++ {
-		suits[hand[n]&0xf]++
-		ranks[(hand[n]>>4)&0xf]++
-		if n != 0 && hand[0] == hand[n] {
+	for n = 0; v[n] != 0; n++ {
+		suits[v[n]&0xf]++
+		ranks[(v[n]>>4)&0xf]++
+		if n != 0 && v[0] == v[n] {
 			// can't have the same card twice, so need to bail
 			dupe = true
 		}
@@ -309,19 +309,19 @@ func (g *TwoPlusTwoGenerator) id(id int64, card uint32) (int, int64) {
 	// have at least 2 cards of the same suit for 4, we make this card suit 0.
 	if required := n - 2; required > 1 {
 		for i := 0; i < n; i++ { // for each card
-			if suits[hand[i]&0xf] < required {
+			if suits[v[i]&0xf] < required {
 				// check suitcount to the number I need to have suits
 				// significant if not enough - 0 out the suit - now this suit
 				// would be a 0 vs 1-4
-				hand[i] &= 0xf0
+				v[i] &= 0xf0
 			}
 		}
 	}
 
 	// sort
 	swap := func(i, j int) {
-		if hand[i] < hand[j] {
-			hand[i], hand[j] = hand[j], hand[i]
+		if v[i] < v[j] {
+			v[i], v[j] = v[j], v[i]
 		}
 	}
 	swap(0, 4)
@@ -343,13 +343,13 @@ func (g *TwoPlusTwoGenerator) id(id int64, card uint32) (int, int64) {
 
 	// put the pieces into a int64 -- cards in bytes -- 66554433221100
 	// id is a 64 bit value with each card represented by 8 bits.
-	return n, int64(hand[0]) +
-		(int64(hand[1]) << 8) +
-		(int64(hand[2]) << 16) +
-		(int64(hand[3]) << 24) +
-		(int64(hand[4]) << 32) +
-		(int64(hand[5]) << 40) +
-		(int64(hand[6]) << 48)
+	return n, int64(v[0]) +
+		(int64(v[1]) << 8) +
+		(int64(v[2]) << 16) +
+		(int64(v[3]) << 24) +
+		(int64(v[4]) << 32) +
+		(int64(v[5]) << 40) +
+		(int64(v[6]) << 48)
 }
 
 // insert inserts a hand ID into ids.
@@ -399,15 +399,15 @@ func (g *TwoPlusTwoGenerator) eval(id int64) uint32 {
 	if id == 0 {
 		return 0
 	}
-	hand, n, suit := make([]uint32, 8), 0, uint32(20)
+	v, n, suit := make([]uint32, 8), 0, uint32(20)
 	for i := 0; i < 7; i, n = i+1, n+1 {
 		// convert all 7 cards (0s are ok)
-		if hand[i] = uint32((id >> (8 * i)) & 0xff); hand[i] == 0 {
+		if v[i] = uint32((id >> (8 * i)) & 0xff); v[i] == 0 {
 			// once I hit a 0 I know I am done
 			break
 		}
 		// if not 0 then count the card
-		if s := hand[i] & 0xf; s != 0 {
+		if s := v[i] & 0xf; s != 0 {
 			// if suit is significant, save
 			suit = s
 		}
@@ -427,7 +427,7 @@ func (g *TwoPlusTwoGenerator) eval(id int64) uint32 {
 		// b = bit turned on depending on rank of card
 		// rank is top 4 bits 1-13 so convert
 		// suit is bottom 4 bits 1-4, order is different, but who cares?
-		r, s := (hand[i]>>4)-1, hand[i]&0xf
+		r, s := (v[i]>>4)-1, v[i]&0xf
 		if s == 0 {
 			// if suit is not significant
 			s = j
@@ -508,11 +508,11 @@ func (g *TwoPlusTwoGenerator) eval(id int64) uint32 {
 
 // This is a non-optimized method of determining the best five-card hand
 // possible out of seven cards. I am working on a faster algorithm.
-func eval_7(hand []uint32) uint32 {
+func eval_7(v []uint32) uint32 {
 	h, rank := make([]uint32, 5), uint32(9999)
 	for i := 0; i < 21; i++ {
 		for j := 0; j < 5; j++ {
-			h[j] = hand[perm7[i][j]]
+			h[j] = v[perm7[i][j]]
 		}
 		if r := eval_5(h[0], h[1], h[2], h[3], h[4]); r < rank {
 			rank = r
@@ -1503,11 +1503,9 @@ var flushes = [...]uint32{
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
 }
 
-/*
-** this is a table lookup for all non-flush hands consisting
-** of five unique ranks (i.e.  either Straights or High Card
-** hands).  it's similar to the above "flushes" array.
- */
+// this is a table lookup for all non-flush hands consisting of five unique
+// ranks (i.e.  either Straights or High Card hands). it's similar to the
+// above "flushes" array.
 var unique5 = [...]uint32{
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 1608, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

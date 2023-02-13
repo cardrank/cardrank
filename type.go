@@ -3,13 +3,15 @@ package cardrank
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
+	"unicode"
 )
 
-// Type is a hand type.
+// Type is a hand eval type.
 type Type uint16
 
-// Hand types.
+// Hand eval types.
 const (
 	Holdem         Type = 'H'<<8 | 'h' // Hh
 	Short          Type = 'H'<<8 | 's' // Hs
@@ -26,6 +28,7 @@ const (
 	Courchevel     Type = 'O'<<8 | 'c' // Oc
 	CourchevelHiLo Type = 'O'<<8 | 'e' // Oe
 	Fusion         Type = 'O'<<8 | 'f' // Of
+	FusionHiLo     Type = 'O'<<8 | 'F' // OF
 	Stud           Type = 'S'<<8 | 'h' // Sh
 	StudHiLo       Type = 'S'<<8 | 'l' // Sl
 	Razz           Type = 'R'<<8 | 'a' // Ra
@@ -59,6 +62,7 @@ func DefaultTypes() []TypeDesc {
 		{"Oc", Courchevel, "Courchevel", WithCourchevel(false)},
 		{"Oe", CourchevelHiLo, "CourchevelHiLo", WithCourchevel(true)},
 		{"Of", Fusion, "Fusion", WithFusion(false)},
+		{"OF", FusionHiLo, "FusionHiLo", WithFusion(true)},
 		{"Sh", Stud, "Stud", WithStud(false)},
 		{"Sl", StudHiLo, "StudHiLo", WithStud(true)},
 		{"Ra", Razz, "Razz", WithRazz()},
@@ -90,6 +94,48 @@ func Types() []Type {
 		types[i] = v[i].Type
 	}
 	return types
+}
+
+// MarshalText satisfies the encoding.TextMarshaler interface.
+func (typ Type) MarshalText() ([]byte, error) {
+	return []byte(typ.String()), nil
+}
+
+// UnmarshalText satisfies the encoding.TextUnmarshaler interface.
+func (typ *Type) UnmarshalText(buf []byte) error {
+	name := strings.ToLower(string(buf))
+	for t, desc := range descs {
+		if strings.ToLower(desc.Name) == name {
+			*typ = t
+			return nil
+		}
+	}
+	if len(name) == 2 {
+		if id, err := IdToType(string(buf)); err == nil {
+			*typ = id
+			return nil
+		}
+	}
+	return ErrInvalidType
+}
+
+// String satisfies the fmt.Stringer interface.
+func (typ Type) String() string {
+	return string([]byte{byte(typ >> 8 & 0xf), byte(typ & 0xf)})
+}
+
+// Format satisfies the fmt.Formatter interface.
+func (typ Type) Format(f fmt.State, verb rune) {
+	switch verb {
+	case 'c':
+		fmt.Fprint(f, typ.String())
+		return
+	}
+	if desc, ok := descs[typ]; ok {
+		fmt.Fprint(f, desc.Name)
+	} else {
+		fmt.Fprintf(f, "Type(%d)", typ)
+	}
 }
 
 // Desc returns the type description.
@@ -147,6 +193,54 @@ func (typ Type) Streets() []StreetDesc {
 	return nil
 }
 
+// Pocket returns the type's total dealt pocket cards.
+func (typ Type) Pocket() int {
+	if desc, ok := descs[typ]; ok {
+		var count int
+		for i := 0; i < len(desc.Streets); i++ {
+			count += desc.Streets[i].Pocket
+		}
+		return count
+	}
+	return 0
+}
+
+// PocketDiscard returns the type's total pocket discard.
+func (typ Type) PocketDiscard() int {
+	if desc, ok := descs[typ]; ok {
+		var count int
+		for i := 0; i < len(desc.Streets); i++ {
+			count += desc.Streets[i].PocketDiscard
+		}
+		return count
+	}
+	return 0
+}
+
+// Board returns the type's total dealt board cards.
+func (typ Type) Board() int {
+	if desc, ok := descs[typ]; ok {
+		var count int
+		for i := 0; i < len(desc.Streets); i++ {
+			count += desc.Streets[i].Board
+		}
+		return count
+	}
+	return 0
+}
+
+// BoardDiscard returns the type's total board discard.
+func (typ Type) BoardDiscard() int {
+	if desc, ok := descs[typ]; ok {
+		var count int
+		for i := 0; i < len(desc.Streets); i++ {
+			count += desc.Streets[i].BoardDiscard
+		}
+		return count
+	}
+	return 0
+}
+
 // DeckType returns the type's deck type.
 func (typ Type) DeckType() DeckType {
 	return descs[typ].Deck
@@ -157,149 +251,88 @@ func (typ Type) Deck() *Deck {
 	return descs[typ].Deck.New()
 }
 
-// Eval evals the hand for the type.
-func (typ Type) Eval(h *Hand) {
-	evals[typ](h)
-}
-
 // HiComp returns a hi compare func.
-func (typ Type) HiComp() func(*Hand, *Hand) int {
+func (typ Type) HiComp() func(*Eval, *Eval) int {
 	f, low := descs[typ].HiComp.Comp, descs[typ].Low
 	loMax := Invalid
 	if low {
 		loMax = rankEightOrBetterMax
 	}
-	return func(a, b *Hand) int {
+	return func(a, b *Eval) int {
+		switch {
+		case a == nil && b == nil:
+			return -1
+		case a == nil:
+			return +1
+		case b == nil:
+			return -1
+		}
 		return f(a, b, loMax)
 	}
 }
 
 // LoComp returns a lo compare func.
-func (typ Type) LoComp() func(*Hand, *Hand) int {
+func (typ Type) LoComp() func(*Eval, *Eval) int {
 	f, low := descs[typ].LoComp.Comp, descs[typ].Low
 	loMax := Invalid
 	if low {
 		loMax = rankEightOrBetterMax
 	}
-	return func(a, b *Hand) int {
+	return func(a, b *Eval) int {
+		switch {
+		case a == nil && b == nil:
+			return -1
+		case a == nil:
+			return +1
+		case b == nil:
+			return -1
+		}
 		return f(a, b, loMax)
 	}
 }
 
-// Dealer creates a new dealer for the type.
-func (typ Type) Dealer(shuffler Shuffler, n int) *Dealer {
+// HiDesc returns the type's hi desc type.
+func (typ Type) HiDesc() DescType {
+	return descs[typ].HiDesc
+}
+
+// LoDesc returns the type's lo desc type.
+func (typ Type) LoDesc() DescType {
+	return descs[typ].LoDesc
+}
+
+// Dealer creates a new dealer with a deck shuffled by shuffles, for the pocket
+// count.
+func (typ Type) Dealer(shuffler Shuffler, shuffles, count int) *Dealer {
 	if desc, ok := descs[typ]; ok {
-		return NewDealer(desc, shuffler, n)
+		return NewShuffledDealer(desc, shuffler, shuffles, count)
 	}
 	return nil
 }
 
-// DealShuffle creates a new deck for the type and shuffles the deck count
-// number of times, returning the pockets and board for the number of hands
-// specified.
-func (typ Type) DealShuffle(shuffler Shuffler, count, hands int) ([][]Card, []Card) {
-	if d := typ.Dealer(shuffler, count); d != nil {
-		return d.DealAll(hands)
+// Deal creates a new dealer for the type, shuffling the deck by shuffles and
+// returning the count dealt pockets and hi board.
+func (typ Type) Deal(shuffler Shuffler, shuffles, count int) ([][]Card, []Card) {
+	if d := typ.Dealer(shuffler, shuffles, count); d != nil {
+		for d.Next() {
+		}
+		return d.Pockets, d.Boards[0].Hi
 	}
 	return nil, nil
 }
 
-// Deal creates a new deck for the type, shuffling it once, returning the
-// pockets and board for the number of hands specified.
-//
-// Use DealShuffle when needing to shuffle the deck more than once.
-func (typ Type) Deal(shuffler Shuffler, hands int) ([][]Card, []Card) {
-	return typ.DealShuffle(shuffler, 1, hands)
+// New creates a new eval for the type, and evaluates the pocket and board.
+func (typ Type) New(pocket, board []Card) *Eval {
+	return EvalOf(typ).Eval(pocket, board)
 }
 
-// RankHand creates a new hand for the pocket, board.
-func (typ Type) RankHand(pocket, board []Card) *Hand {
-	return NewHand(typ, pocket, board)
-}
-
-// RankHands creates a new hand for the provided pockets and board.
-func (typ Type) RankHands(pockets [][]Card, board []Card) []*Hand {
-	hands := make([]*Hand, len(pockets))
+// Eval creates a new eval for the type for each of the pockets and board.
+func (typ Type) Eval(pockets [][]Card, board []Card) []*Eval {
+	evs := make([]*Eval, len(pockets))
 	for i := 0; i < len(pockets); i++ {
-		hands[i] = typ.RankHand(pockets[i], board)
+		evs[i] = typ.New(pockets[i], board)
 	}
-	return hands
-}
-
-// String satisfies the fmt.Stringer interface.
-func (typ Type) String() string {
-	return string([]byte{byte(typ >> 8 & 0xf), byte(typ & 0xf)})
-}
-
-// Format satisfies the fmt.Formatter interface.
-func (typ Type) Format(f fmt.State, verb rune) {
-	switch verb {
-	case 'c':
-		fmt.Fprint(f, typ.String())
-		return
-	}
-	if desc, ok := descs[typ]; ok {
-		fmt.Fprint(f, desc.Name)
-	} else {
-		fmt.Fprintf(f, "Type(%d)", typ)
-	}
-}
-
-// MarshalText satisfies the encoding.TextMarshaler interface.
-func (typ Type) MarshalText() ([]byte, error) {
-	return []byte(typ.String()), nil
-}
-
-// UnmarshalText satisfies the encoding.TextUnmarshaler interface.
-func (typ *Type) UnmarshalText(buf []byte) error {
-	name := strings.ToLower(string(buf))
-	for t, desc := range descs {
-		if strings.ToLower(desc.Name) == name {
-			*typ = t
-			return nil
-		}
-	}
-	if len(name) == 2 {
-		if id, err := IdToType(name); err == nil {
-			*typ = id
-			return nil
-		}
-	}
-	return ErrInvalidType
-}
-
-// descs are the registered type descriptions.
-var descs = make(map[Type]TypeDesc)
-
-// evals are eval funcs.
-var evals = make(map[Type]EvalFunc)
-
-// RegisterType registers a type.
-func RegisterType(desc TypeDesc) error {
-	if _, ok := descs[desc.Type]; ok {
-		return ErrInvalidId
-	}
-	// check street ids
-	m := make(map[byte]bool)
-	for _, street := range desc.Streets {
-		if m[street.Id] {
-			return ErrInvalidId
-		}
-	}
-	desc.Num = len(descs)
-	descs[desc.Type] = desc
-	evals[desc.Type] = desc.Eval.New(desc.Low)
-	return nil
-}
-
-// RegisterDefaultTypes registers default types.
-func RegisterDefaultTypes() error {
-	for _, desc := range DefaultTypes() {
-		if err := RegisterType(desc); err != nil {
-			return err
-		}
-	}
-	return nil
+	return evs
 }
 
 // TypeDesc is a type description.
@@ -332,6 +365,10 @@ type TypeDesc struct {
 	HiComp CompType
 	// LoComp is the lo compare type.
 	LoComp CompType
+	// HiDesc is the hi desc type.
+	HiDesc DescType
+	// LoDesc is the lo desc type.
+	LoDesc DescType
 }
 
 // NewTypeDesc creates a new type description.
@@ -343,8 +380,14 @@ func NewTypeDesc(id string, typ Type, name string, opts ...TypeOption) (*TypeDes
 		return nil, ErrInvalidId
 	}
 	desc := &TypeDesc{
-		Type: typ,
-		Name: name,
+		Type:   typ,
+		Name:   name,
+		Deck:   DeckFrench,
+		Eval:   EvalCactus,
+		HiComp: CompHi,
+		LoComp: CompLo,
+		HiDesc: DescCactus,
+		LoDesc: DescLow,
 	}
 	for _, o := range opts {
 		o(desc)
@@ -386,6 +429,8 @@ func WithShort(opts ...StreetOption) TypeOption {
 		desc.Deck = DeckShort
 		desc.Eval = EvalShort
 		desc.HiComp = CompShort
+		desc.HiDesc = DescShort
+		desc.LoDesc = DescShort
 		desc.Apply(opts...)
 	}
 }
@@ -399,6 +444,8 @@ func WithManila(opts ...StreetOption) TypeOption {
 		desc.Deck = DeckManila
 		desc.Eval = EvalManila
 		desc.HiComp = CompShort
+		desc.HiDesc = DescManila
+		desc.LoDesc = DescManila
 		desc.Streets[0].Board = 1
 		desc.Streets = append(desc.Streets[:2], append([]StreetDesc{
 			{
@@ -429,6 +476,8 @@ func WithDouble(opts ...StreetOption) TypeOption {
 		desc.Double = true
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
+		desc.LoComp = CompLo
+		desc.LoDesc = DescCactus
 		desc.Apply(opts...)
 	}
 }
@@ -479,6 +528,8 @@ func WithOmahaDouble(opts ...StreetOption) TypeOption {
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(4, 1, 3, 1, 1)
 		desc.Eval = EvalOmaha
+		desc.LoComp = CompHi
+		desc.LoDesc = DescCactus
 		desc.Apply(opts...)
 	}
 }
@@ -567,6 +618,8 @@ func WithRazz(opts ...StreetOption) TypeOption {
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = StudStreets()
 		desc.Eval = EvalRazz
+		desc.HiDesc = DescRazz
+		desc.LoDesc = DescRazz
 		desc.Apply(opts...)
 	}
 }
@@ -582,6 +635,8 @@ func WithBadugi(opts ...StreetOption) TypeOption {
 		desc.Streets = NumberedStreets(4, 0, 0, 0)
 		desc.Blinds = HoldemBlinds()
 		desc.Eval = EvalBadugi
+		desc.HiDesc = DescLow
+		desc.LoDesc = DescLow
 		for i := 1; i < 4; i++ {
 			desc.Streets[i].PocketDraw = 4
 		}
@@ -597,6 +652,8 @@ func WithLowball(multi bool, opts ...StreetOption) TypeOption {
 		desc.Streets = NumberedStreets(5, 0, 0, 0)
 		desc.Blinds = HoldemBlinds()
 		desc.Eval = EvalLowball
+		desc.HiDesc = DescLowball
+		desc.LoDesc = DescLowball
 		desc.HiComp = CompLowball
 		for i := 1; i < 4; i++ {
 			desc.Streets[1].PocketDraw = 5
@@ -612,6 +669,8 @@ func WithSoko(opts ...StreetOption) TypeOption {
 		desc.Streets = NumberedStreets(2, 3)
 		desc.Blinds = HoldemBlinds()
 		desc.Eval = EvalSoko
+		desc.HiDesc = DescSoko
+		desc.LoDesc = DescSoko
 		desc.HiComp = CompSoko
 		desc.Apply(opts...)
 	}
@@ -637,6 +696,31 @@ type StreetDesc struct {
 	BoardDiscard int
 }
 
+// Desc returns a description of the street.
+func (desc StreetDesc) Desc() string {
+	var v []string
+	if 0 < desc.Pocket {
+		if 0 < desc.PocketDiscard {
+			v = append(v, fmt.Sprintf("D: %d", desc.PocketDiscard))
+		}
+		v = append(v, fmt.Sprintf("p: %d", desc.Pocket))
+		if 0 < desc.PocketUp {
+			v = append(v, fmt.Sprintf("u: %d", desc.PocketUp))
+		}
+	}
+	if 0 < desc.Board {
+		if 0 < desc.BoardDiscard {
+			v = append(v, fmt.Sprintf("d: %d", desc.BoardDiscard))
+		}
+		v = append(v, fmt.Sprintf("b: %d", desc.Board))
+	}
+	var s string
+	if len(v) != 0 {
+		s = " (" + strings.Join(v, ", ") + ")"
+	}
+	return fmt.Sprintf("%c: %s%s", desc.Id, desc.Name, s)
+}
+
 // HoldemBlinds returns the Holdem blind names.
 func HoldemBlinds() []string {
 	return []string{
@@ -658,12 +742,16 @@ func StudBlinds() []string {
 // river.
 func HoldemStreets(pocket, discard, flop, turn, river int) []StreetDesc {
 	d := func(id byte, name string, pocket int, board int) StreetDesc {
+		n := discard
+		if id == 'p' {
+			n = 0
+		}
 		return StreetDesc{
 			Id:           id,
 			Name:         name,
 			Pocket:       pocket,
 			Board:        board,
-			BoardDiscard: discard,
+			BoardDiscard: n,
 		}
 	}
 	return []StreetDesc{
@@ -715,32 +803,29 @@ func NumberedStreets(pockets ...int) []StreetDesc {
 	return v
 }
 
-// EvalFunc is a hand rank eval func.
-type EvalFunc func(*Hand)
-
-// EvalType is a hand rank eval type.
+// EvalType is a eval type.
 type EvalType uint8
 
 // Eval types.
 const (
-	EvalHoldem EvalType = iota
-	EvalShort
-	EvalManila
-	EvalOmaha
-	EvalOmahaFive
-	EvalOmahaSix
-	EvalStud
-	EvalRazz
-	EvalBadugi
-	EvalLowball
-	EvalSoko
+	EvalCactus    EvalType = 0
+	EvalShort     EvalType = 't'
+	EvalManila    EvalType = 'm'
+	EvalOmaha     EvalType = 'o'
+	EvalOmahaFive EvalType = 'v'
+	EvalOmahaSix  EvalType = 'i'
+	EvalStud      EvalType = 's'
+	EvalRazz      EvalType = 'r'
+	EvalBadugi    EvalType = 'b'
+	EvalLowball   EvalType = '2'
+	EvalSoko      EvalType = 'k'
 )
 
 // New creates the eval type.
 func (typ EvalType) New(low bool) EvalFunc {
 	switch typ {
-	case EvalHoldem:
-		return NewHoldemEval(DefaultRank, Five)
+	case EvalCactus:
+		return NewHoldemEval(DefaultEval, Five)
 	case EvalShort:
 		return NewShortEval()
 	case EvalManila:
@@ -772,21 +857,86 @@ func (typ EvalType) New(low bool) EvalFunc {
 	return nil
 }
 
+// Format satisfies the fmt.Formatter interface.
+func (typ EvalType) Format(f fmt.State, verb rune) {
+	var buf []byte
+	switch verb {
+	case 'd':
+		buf = []byte(strconv.Itoa(int(typ)))
+	case 'c':
+		buf = []byte{typ.Byte()}
+	case 's', 'v':
+		buf = []byte(typ.Name())
+	default:
+		buf = []byte(fmt.Sprintf("%%!%c(ERROR=unknown verb, eval: %d)", verb, int(typ)))
+	}
+	_, _ = f.Write(buf)
+}
+
+// Byte returns the eval type as a byte.
+func (typ EvalType) Byte() byte {
+	switch typ {
+	case EvalCactus:
+		return 'h'
+	case EvalShort,
+		EvalManila,
+		EvalOmaha,
+		EvalOmahaFive,
+		EvalOmahaSix,
+		EvalStud,
+		EvalRazz,
+		EvalBadugi,
+		EvalLowball,
+		EvalSoko:
+		return byte(typ)
+	}
+	return ' '
+}
+
+// Name returns the eval type's name.
+func (typ EvalType) Name() string {
+	switch typ {
+	case EvalCactus:
+		return "Cactus"
+	case EvalShort:
+		return "Short"
+	case EvalManila:
+		return "Manila"
+	case EvalOmaha:
+		return "Omaha"
+	case EvalOmahaFive:
+		return "OmahaFive"
+	case EvalOmahaSix:
+		return "OmahaSix"
+	case EvalStud:
+		return "Stud"
+	case EvalRazz:
+		return "Razz"
+	case EvalBadugi:
+		return "Badugi"
+	case EvalLowball:
+		return "Lowball"
+	case EvalSoko:
+		return "Soko"
+	}
+	return ""
+}
+
 // CompType is a compare type.
 type CompType uint8
 
 // Comp types.
 const (
-	CompHi CompType = iota
-	CompLo
-	CompShort
-	CompManila
-	CompLowball
-	CompSoko
+	CompHi      CompType = 0
+	CompLo      CompType = 'l'
+	CompShort   CompType = 's'
+	CompManila  CompType = 'm'
+	CompLowball CompType = '2'
+	CompSoko    CompType = 'k'
 )
 
 // Comp compares a, b.
-func (typ CompType) Comp(a, b *Hand, loMax HandRank) int {
+func (typ CompType) Comp(a, b *Eval, loMax EvalRank) int {
 	switch typ {
 	case CompHi:
 		return HiComp(a, b, loMax)
@@ -804,6 +954,152 @@ func (typ CompType) Comp(a, b *Hand, loMax HandRank) int {
 	return 0
 }
 
+// Format satisfies the fmt.Formatter interface.
+func (typ CompType) Format(f fmt.State, verb rune) {
+	var buf []byte
+	switch verb {
+	case 'd':
+		buf = []byte(strconv.Itoa(int(typ)))
+	case 'c':
+		buf = []byte{typ.Byte()}
+	case 's', 'v':
+		buf = []byte(typ.Name())
+	default:
+		buf = []byte(fmt.Sprintf("%%!%c(ERROR=unknown verb, comp: %d)", verb, int(typ)))
+	}
+	_, _ = f.Write(buf)
+}
+
+// Byte returns the comp type as a byte.
+func (typ CompType) Byte() byte {
+	switch typ {
+	case CompHi:
+		return 'h'
+	case CompLo,
+		CompShort,
+		CompManila,
+		CompLowball,
+		CompSoko:
+		return byte(typ)
+	}
+	return ' '
+}
+
+// Name returns the comp type's name.
+func (typ CompType) Name() string {
+	switch typ {
+	case CompHi:
+		return "Hi"
+	case CompLo:
+		return "Lo"
+	case CompShort:
+		return "Short"
+	case CompManila:
+		return "Manila"
+	case CompLowball:
+		return "Lowball"
+	case CompSoko:
+		return "Soko"
+	}
+	return ""
+}
+
+// DescType is a description type.
+type DescType uint8
+
+// Desc types.
+const (
+	DescCactus  DescType = 0
+	DescLow     DescType = 'l'
+	DescShort   DescType = 's'
+	DescManila  DescType = 'm'
+	DescRazz    DescType = 'r'
+	DescLowball DescType = '2'
+	DescSoko    DescType = 'k'
+)
+
+// Format satisfies the fmt.Formatter interface.
+func (typ DescType) Format(f fmt.State, verb rune) {
+	var buf []byte
+	switch verb {
+	case 'd':
+		buf = []byte(strconv.Itoa(int(typ)))
+	case 'c':
+		buf = []byte{typ.Byte()}
+	case 's', 'v':
+		buf = []byte(typ.Name())
+	default:
+		buf = []byte(fmt.Sprintf("%%!%c(ERROR=unknown verb, desc: %d)", verb, int(typ)))
+	}
+	_, _ = f.Write(buf)
+}
+
+// Byte returns the desc type as a byte.
+func (typ DescType) Byte() byte {
+	switch typ {
+	case DescCactus:
+		return 'h'
+	case DescLow,
+		DescShort,
+		DescManila,
+		DescRazz,
+		DescLowball,
+		DescSoko:
+		return byte(typ)
+	}
+	return ' '
+}
+
+// Name returns the desc type's name.
+func (typ DescType) Name() string {
+	switch typ {
+	case DescCactus:
+		return "Cactus"
+	case DescLow:
+		return "Low"
+	case DescShort:
+		return "Short"
+	case DescManila:
+		return "Manila"
+	case DescRazz:
+		return "Razz"
+	case DescLowball:
+		return "Lowball"
+	case DescSoko:
+		return "Soko"
+	}
+	return ""
+}
+
+// Desc writes a description for the verb to f.
+func (typ DescType) Desc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
+	switch verb {
+	case 'd':
+		fmt.Fprintf(f, "%d", int(rank))
+	case 'u':
+		CardFormatter(unused).Format(f, 's')
+	case 'v', 's':
+		switch typ {
+		case DescCactus:
+			HoldemDesc(f, verb, rank, best, unused, low)
+		case DescLow:
+			LowDesc(f, verb, rank, best, unused, low)
+		case DescShort:
+			ShortDesc(f, verb, rank, best, unused, low)
+		case DescManila:
+			ManilaDesc(f, verb, rank, best, unused, low)
+		case DescRazz:
+			RazzDesc(f, verb, rank, best, unused, low)
+		case DescLowball:
+			LowballDesc(f, verb, rank, best, unused, low)
+		case DescSoko:
+			SokoDesc(f, verb, rank, best, unused, low)
+		}
+	default:
+		fmt.Fprintf(f, "%%!%c(ERROR=unknown verb, desc: %d)", verb, int(typ))
+	}
+}
+
 // StreetOption is a street option.
 type StreetOption func(int, *StreetDesc)
 
@@ -816,288 +1112,19 @@ func WithStreetPocket(street, pocket int) StreetOption {
 	}
 }
 
-// NewHoldemEval creates a Holdem hand rank eval func.
-func NewHoldemEval(f HandRankFunc, straightHigh Rank) EvalFunc {
-	return func(h *Hand) {
-		hand := h.Hand()
-		h.HiRank = f(hand)
-		bestHoldem(h, hand, straightHigh)
-	}
-}
-
-// NewShortEval creates a Short hand rank eval func.
-func NewShortEval() EvalFunc {
-	return NewHoldemEval(NewRankFunc(func(c0, c1, c2, c3, c4 Card) HandRank {
-		r := DefaultCactus(c0, c1, c2, c3, c4)
-		switch r {
-		case 747: // Straight Flush, 9, 8, 7, 6, Ace
-			return 6
-		case 6610: // Straight, 9, 8, 7, 6, Ace
-			return 1605
-		}
-		return r
-	}), Nine)
-}
-
-// NewManilaEval creates a Manila hand rank eval func.
-func NewManilaEval() EvalFunc {
-	return NewHoldemEval(NewRankFunc(func(c0, c1, c2, c3, c4 Card) HandRank {
-		r := DefaultCactus(c0, c1, c2, c3, c4)
-		switch r {
-		case 747: // Straight Flush, 10, 9, 8, 7, Ace
-			return 6
-		case 6610: // Straight, 10, 9, 8, 7, Ace
-			return 1605
-		}
-		return r
-	}), Ten)
-}
-
-// NewOmahaEval creates a Omaha hand rank eval func.
-func NewOmahaEval(loMax HandRank) EvalFunc {
-	return func(h *Hand) {
-		h.Init(5, 4, loMax)
-		v, r := make([]Card, 5), HandRank(0)
-		for i := 0; i < 6; i++ {
-			for j := 0; j < 10; j++ {
-				v[0], v[1] = h.Pocket[t4c2[i][0]], h.Pocket[t4c2[i][1]] // pocket
-				v[2], v[3] = h.Board[t5c3[j][0]], h.Board[t5c3[j][1]]   // board
-				v[4] = h.Board[t5c3[j][2]]                              // board
-				if r = DefaultRank(v); r < h.HiRank {
-					copy(h.HiBest, v)
-					h.HiRank = r
-					h.HiUnused[0], h.HiUnused[1] = h.Pocket[t4c2[i][2]], h.Pocket[t4c2[i][3]] // pocket
-					h.HiUnused[2], h.HiUnused[3] = h.Board[t5c3[j][3]], h.Board[t5c3[j][4]]   // board
-				}
-				if loMax != Invalid {
-					if r = RankEightOrBetter(v[0], v[1], v[2], v[3], v[4]); r < h.LoRank && r < loMax {
-						copy(h.LoBest, v)
-						h.LoRank = r
-						h.LoUnused[0], h.LoUnused[1] = h.Pocket[t4c2[i][2]], h.Pocket[t4c2[i][3]] // pocket
-						h.LoUnused[2], h.LoUnused[3] = h.Board[t5c3[j][3]], h.Board[t5c3[j][4]]   // board
-					}
-				}
-			}
-		}
-		bestOmaha(h, loMax)
-	}
-}
-
-// NewOmahaFiveEval creates a new Omaha5 hand rank eval func.
-func NewOmahaFiveEval(loMax HandRank) EvalFunc {
-	return func(h *Hand) {
-		h.Init(5, 5, loMax)
-		v, r := make([]Card, 5), HandRank(0)
-		for i := 0; i < 10; i++ {
-			for j := 0; j < 10; j++ {
-				v[0], v[1] = h.Pocket[t5c2[i][0]], h.Pocket[t5c2[i][1]] // pocket
-				v[2], v[3] = h.Board[t5c3[j][0]], h.Board[t5c3[j][1]]   // board
-				v[4] = h.Board[t5c3[j][2]]                              // board
-				if r = DefaultRank(v); r < h.HiRank {
-					copy(h.HiBest, v)
-					h.HiRank = r
-					h.HiUnused[0], h.HiUnused[1] = h.Pocket[t5c2[i][2]], h.Pocket[t5c2[i][3]] // pocket
-					h.HiUnused[2] = h.Pocket[t5c2[i][4]]                                      // pocket
-					h.HiUnused[3], h.HiUnused[4] = h.Board[t5c3[j][3]], h.Board[t5c3[j][4]]   // board
-				}
-				if loMax != Invalid {
-					if r = RankEightOrBetter(v[0], v[1], v[2], v[3], v[4]); r < h.LoRank && r < loMax {
-						copy(h.LoBest, v)
-						h.LoRank = r
-						h.LoUnused[0], h.LoUnused[1] = h.Pocket[t5c2[i][2]], h.Pocket[t5c2[i][3]] // pocket
-						h.LoUnused[2] = h.Pocket[t5c2[i][4]]                                      // pocket
-						h.LoUnused[3], h.LoUnused[4] = h.Board[t5c3[j][3]], h.Board[t5c3[j][4]]   // board
-					}
-				}
-			}
-		}
-		bestOmaha(h, loMax)
-	}
-}
-
-// NewOmahaSixEval creates a new Omaha6 hand rank eval func.
-func NewOmahaSixEval(loMax HandRank) EvalFunc {
-	return func(h *Hand) {
-		h.Init(5, 6, loMax)
-		v, r := make([]Card, 5), HandRank(0)
-		for i := 0; i < 15; i++ {
-			for j := 0; j < 10; j++ {
-				v[0], v[1] = h.Pocket[t6c2[i][0]], h.Pocket[t6c2[i][1]] // pocket
-				v[2], v[3] = h.Board[t5c3[j][0]], h.Board[t5c3[j][1]]   // board
-				v[4] = h.Board[t5c3[j][2]]                              // board
-				if r = DefaultRank(v); r < h.HiRank {
-					copy(h.HiBest, v)
-					h.HiRank = r
-					h.HiUnused[0], h.HiUnused[1] = h.Pocket[t6c2[i][2]], h.Pocket[t6c2[i][3]] // pocket
-					h.HiUnused[2], h.HiUnused[3] = h.Pocket[t6c2[i][4]], h.Pocket[t6c2[i][5]] // pocket
-					h.HiUnused[4], h.HiUnused[5] = h.Board[t5c3[j][3]], h.Board[t5c3[j][4]]   // board
-				}
-				if loMax != Invalid {
-					if r = RankEightOrBetter(v[0], v[1], v[2], v[3], v[4]); r < h.LoRank && r < loMax {
-						copy(h.LoBest, v)
-						h.LoRank = r
-						h.LoUnused[0], h.LoUnused[1] = h.Pocket[t6c2[i][2]], h.Pocket[t6c2[i][3]] // pocket
-						h.LoUnused[2], h.LoUnused[3] = h.Pocket[t6c2[i][4]], h.Pocket[t6c2[i][5]] // pocket
-						h.LoUnused[4], h.LoUnused[5] = h.Board[t5c3[j][3]], h.Board[t5c3[j][4]]   // board
-					}
-				}
-			}
-		}
-		bestOmaha(h, loMax)
-	}
-}
-
-// NewStudEval creates a Stud hand rank eval func.
-func NewStudEval(loMax HandRank) EvalFunc {
-	hi := NewHoldemEval(DefaultRank, Five)
-	lo := NewLowEval(RankEightOrBetter, loMax)
-	return func(h *Hand) {
-		hi(h)
-		if loMax != Invalid {
-			v := NewUnevaluatedHand(StudHiLo, h.Pocket, h.Board)
-			lo(v)
-			if v.HiRank < loMax {
-				h.LoRank, h.LoBest, h.LoUnused = v.HiRank, v.HiBest, v.HiUnused
-			}
-		}
-	}
-}
-
-// NewRazzEval creates a Razz hand rank eval func.
-func NewRazzEval() EvalFunc {
-	f := NewLowEval(RankRazz, Invalid)
-	return func(h *Hand) {
-		f(h)
-		if rankLowMax <= h.HiRank {
-			switch r := Invalid - h.HiRank; r.Fixed() {
-			case FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, Pair:
-				h.HiBest, _ = bestSet(h.HiBest)
-			default:
-				panic("bad rank")
-			}
-		}
-	}
-}
-
-// NewBadugiEval creates a Badugi hand rank eval func.
-func NewBadugiEval() EvalFunc {
-	return func(h *Hand) {
-		s := make([][]Card, 4)
-		for i := 0; i < len(h.Pocket) && i < 4; i++ {
-			idx := h.Pocket[i].SuitIndex()
-			s[idx] = append(s[idx], h.Pocket[i])
-		}
-		sort.SliceStable(s, func(i, j int) bool {
-			a, b := len(s[i]), len(s[j])
-			switch {
-			case a != b:
-				return a < b
-			case a == 0:
-				return true
-			case b == 0:
-				return false
-			}
-			return s[i][0].AceIndex() < s[j][0].AceIndex()
-		})
-		count, rank := 4, 0
-		for i := 0; i < 4; i++ {
-			sort.Slice(s[i], func(j, k int) bool {
-				return s[i][j].AceIndex() < s[i][k].AceIndex()
-			})
-			captured, r := false, 0
-			for j := 0; j < len(s[i]); j++ {
-				if r = 1 << s[i][j].AceIndex(); rank&r == 0 && !captured {
-					captured, h.HiBest = true, append(h.HiBest, s[i][j])
-					rank |= r
-					count--
-				} else {
-					h.HiUnused = append(h.HiUnused, s[i][j])
-				}
-			}
-		}
-		sort.Slice(h.HiBest, func(i, j int) bool {
-			return h.HiBest[i].AceIndex() > h.HiBest[j].AceIndex()
-		})
-		sort.Slice(h.HiUnused, func(i, j int) bool {
-			if a, b := h.HiUnused[i].AceIndex(), h.HiUnused[j].AceIndex(); a != b {
-				return a > b
-			}
-			return h.HiUnused[i].Suit() < h.HiUnused[j].Suit()
-		})
-		h.HiRank = HandRank(count<<13 | rank)
-	}
-}
-
-// NewLowballEval creates a Lowball hand rank eval func.
-func NewLowballEval() EvalFunc {
-	f := NewRankFunc(RankLowball)
-	return func(h *Hand) {
-		if len(h.Pocket) != 5 {
-			panic("bad pocket")
-		}
-		h.HiRank = f(h.Pocket)
-		h.Init(5, 0, Invalid)
-		copy(h.HiBest, h.Pocket)
-	}
-}
-
-// NewSokoEval creates a Soko hand rank eval func.
-func NewSokoEval() EvalFunc {
-	f := NewHoldemEval(DefaultRank, Five)
-	return func(h *Hand) {
-		f(h)
-	}
-}
-
-// NewLowEval creates a low hand rank eval func, using f to determine the best
-// low hand of a 7 card hand.
-func NewLowEval(f RankFunc, loMax HandRank) EvalFunc {
-	return func(h *Hand) {
-		hand := h.Hand()
-		if len(hand) != 7 {
-			panic("bad hand")
-		}
-		best, unused := make([]Card, 5), make([]Card, 2)
-		rank, r := Invalid, HandRank(0)
-		for i := 0; i < 21; i++ {
-			if r = f(
-				hand[t7c5[i][0]],
-				hand[t7c5[i][1]],
-				hand[t7c5[i][2]],
-				hand[t7c5[i][3]],
-				hand[t7c5[i][4]],
-			); r < rank && r < loMax {
-				rank = r
-				best[0], best[1] = hand[t7c5[i][0]], hand[t7c5[i][1]]
-				best[2], best[3] = hand[t7c5[i][2]], hand[t7c5[i][3]]
-				best[4] = hand[t7c5[i][4]]
-				unused[0], unused[1] = hand[t7c5[i][5]], hand[t7c5[i][6]]
-			}
-		}
-		if loMax <= rank {
-			return
-		}
-		// order
-		sort.Slice(best, func(i, j int) bool {
-			return (best[i].Rank()+1)%13 > (best[j].Rank()+1)%13
-		})
-		h.HiRank, h.HiBest, h.HiUnused = rank, best, unused
-	}
-}
-
 // HiComp is a hi eval compare func.
-func HiComp(a, b *Hand, _ HandRank) int {
+func HiComp(a, b *Eval, _ EvalRank) int {
 	switch {
 	case a.HiRank < b.HiRank:
 		return -1
-	case a.HiRank > b.HiRank:
+	case b.HiRank < a.HiRank:
 		return +1
 	}
 	return 0
 }
 
 // LoComp is a lo eval compare func.
-func LoComp(a, b *Hand, loMax HandRank) int {
+func LoComp(a, b *Eval, loMax EvalRank) int {
 	switch low := loMax != Invalid; {
 	case low && a.LoRank == Invalid && b.LoRank != Invalid:
 		return +1
@@ -1105,14 +1132,14 @@ func LoComp(a, b *Hand, loMax HandRank) int {
 		return -1
 	case a.LoRank < b.LoRank:
 		return -1
-	case a.LoRank > b.LoRank:
+	case b.LoRank < a.LoRank:
 		return +1
 	}
 	return 0
 }
 
 // ShortComp is the Short compare func.
-func ShortComp(a, b *Hand, _ HandRank) int {
+func ShortComp(a, b *Eval, _ EvalRank) int {
 	switch af, bf := a.HiRank.Fixed(), b.HiRank.Fixed(); {
 	case af == Flush && bf == FullHouse:
 		return -1
@@ -1127,7 +1154,7 @@ func ShortComp(a, b *Hand, _ HandRank) int {
 }
 
 // ManilaComp is the Manila compare func.
-func ManilaComp(a, b *Hand, _ HandRank) int {
+func ManilaComp(a, b *Eval, _ EvalRank) int {
 	switch af, bf := a.HiRank.Fixed(), b.HiRank.Fixed(); {
 	case af == Flush && bf == FullHouse:
 		return -1
@@ -1142,132 +1169,271 @@ func ManilaComp(a, b *Hand, _ HandRank) int {
 }
 
 // LowballComp is the Lowball compare func.
-func LowballComp(a, b *Hand, _ HandRank) int {
+func LowballComp(a, b *Eval, _ EvalRank) int {
 	switch af, bf := rankMax-a.HiRank, rankMax-b.HiRank; {
 	case af == bf:
 	}
-	// log.Printf(">>> a: %v // b: %v", a.HiRank, b.HiRank)
+	// log.Printf("a: %v // b: %v", a.HiRank, b.HiRank)
 	return 0
 }
 
 // SokoComp is the Soko compare func.
-func SokoComp(a, b *Hand, _ HandRank) int {
+func SokoComp(a, b *Eval, _ EvalRank) int {
 	return 0
+}
+
+// HoldemDesc returns a Holdew description for the rank, best, and unused
+// cards.
+//
+// Examples:
+//
+//	Straight Flush, Ace-high, Royal
+//	Straight Flush, King-high
+//	Straight Flush, Five-high, Steel Wheel
+//	Four of a Kind, Nines, kicker Jack
+//	Full House, Sixes full of Fours
+//	Flush, Ten-high
+//	Straight, Eight-high
+//	Three of a Kind, Fours, kickers Ace, King
+//	Two Pair, Nines over Sixes, kicker Jack
+//	Pair, Aces, kickers King, Queen, Nine
+//	Nothing, Seven-high, kickers Six, Five, Three, Two
+func HoldemDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
+	// add additional straight flush names (at some point)
+	// A: Royal
+	// K: Platinum Oxide
+	// Q: Silver Tongue
+	// J: Bronze Fist
+	// T: Golden Ratio
+	// 9: Iron Maiden
+	// 8: Tin Cup
+	// 7: Brass Axe
+	// 6: Aluminum Window
+	// 5: Steel Wheel
+	switch rank.Fixed() {
+	case StraightFlush:
+		switch best[0].Rank() {
+		case Ace:
+			fmt.Fprintf(f, "Straight Flush, %N-high, Royal", best[0])
+		case Five:
+			fmt.Fprintf(f, "Straight Flush, %N-high, Steel Wheel", best[0])
+		default:
+			fmt.Fprintf(f, "Straight Flush, %N-high", best[0])
+		}
+	case FourOfAKind:
+		fmt.Fprintf(f, "Four of a Kind, %P, kicker %N", best[0], best[4])
+	case FullHouse:
+		fmt.Fprintf(f, "Full House, %P full of %P", best[0], best[3])
+	case Flush:
+		fmt.Fprintf(f, "Flush, %N-high, kickers %N, %N, %N, %N", best[0], best[1], best[2], best[3], best[4])
+	case Straight:
+		fmt.Fprintf(f, "Straight, %N-high", best[0])
+	case ThreeOfAKind:
+		fmt.Fprintf(f, "Three of a Kind, %P, kickers %N, %N", best[0], best[3], best[4])
+	case TwoPair:
+		fmt.Fprintf(f, "Two Pair, %P over %P, kicker %N", best[0], best[2], best[4])
+	case Pair:
+		fmt.Fprintf(f, "Pair, %P, kickers %N, %N, %N", best[0], best[2], best[3], best[4])
+	default:
+		fmt.Fprintf(f, "Nothing, %N-high, kickers %N, %N, %N, %N", best[0], best[1], best[2], best[3], best[4])
+	}
+}
+
+// LowDesc returns a Low description for the rank, best, and unused cards.
+func LowDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
+	switch {
+	case rank == 0, rank == Invalid, !low:
+		fmt.Fprint(f, "None")
+	default:
+		v := make([]string, len(best))
+		for i := 0; i < len(best); i++ {
+			v[i] = best[i].Rank().Name()
+		}
+		fmt.Fprint(f, strings.Join(v, ", ")+"-low")
+	}
+}
+
+// ShortDesc returns a Short description for the rank, best, and unused cards.
+func ShortDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
+	switch {
+	case rank.Fixed() == StraightFlush && best[0].Rank() == Nine:
+		fmt.Fprintf(f, "Straight Flush, %N-high, Iron Maiden", best[0])
+	default:
+		HoldemDesc(f, verb, rank, best, unused, low)
+	}
+}
+
+// ManilaDesc returns a Manila description for the rank, best, and unused cards.
+func ManilaDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
+	switch {
+	case rank.Fixed() == StraightFlush && best[0].Rank() == Ten:
+		fmt.Fprintf(f, "Straight Flush, %N-high, Golden Ratio", best[0])
+	default:
+		HoldemDesc(f, verb, rank, best, unused, low)
+	}
+}
+
+// RazzDesc returns a Razz description for the rank, best, and unused cards.
+func RazzDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
+	switch {
+	case rank < rankAceFiveMax:
+		LowDesc(f, verb, rank, best, unused, true)
+	default:
+		HoldemDesc(f, verb, Invalid-rank, best, unused, false)
+	}
+}
+
+// LowballDesc returns a Lowball description for the rank, best, and unused cards.
+func LowballDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
+	fmt.Fprintf(f, "(lowball desc incomplete: %d)", rank)
+}
+
+// SokoDesc returns a Soko description for the rank, best, and unused cards.
+func SokoDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
+	fmt.Fprintf(f, "(soko desc incomplete: %d)", rank)
 }
 
 // IdToType converts an id to a type.
 func IdToType(id string) (Type, error) {
-	if len(id) != 2 {
+	switch {
+	case len(id) != 2,
+		!unicode.IsLetter(rune(id[0])) && !unicode.IsNumber(rune(id[0])),
+		!unicode.IsLetter(rune(id[1])) && !unicode.IsNumber(rune(id[1])):
 		return 0, ErrInvalidId
 	}
 	return Type(id[0])<<8 | Type(id[1]), nil
 }
 
 // bestHoldem sets the best holdem.
-func bestHoldem(h *Hand, hand []Card, straightHigh Rank) {
-	// order hand high to low
-	sort.Slice(hand, func(i, j int) bool {
-		m, n := hand[i].Rank(), hand[j].Rank()
+func bestHoldem(ev *Eval, v []Card, straightHigh Rank) {
+	// order high to low
+	sort.Slice(v, func(i, j int) bool {
+		m, n := v[i].Rank(), v[j].Rank()
 		if m == n {
-			return hand[i].Suit() > hand[j].Suit()
+			return v[j].Suit() < v[i].Suit()
 		}
-		return m > n
+		return n < m
 	})
 	// set best, unused
-	switch h.HiRank.Fixed() {
+	switch ev.HiRank.Fixed() {
 	case StraightFlush:
-		h.HiBest, h.HiUnused = bestStraightFlush(hand, straightHigh)
+		v = bestStraightFlush(v, straightHigh, true)
 	case Flush:
-		h.HiBest, h.HiUnused = bestFlush(hand)
+		v = bestFlush(v)
 	case Straight:
-		h.HiBest, h.HiUnused = bestStraight(hand, straightHigh)
+		v = bestStraight(v, straightHigh, true)
 	case FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, Pair:
-		h.HiBest, h.HiUnused = bestSet(hand)
+		v = bestSet(v)
 	case Nothing:
-		h.HiBest, h.HiUnused = hand[:5], hand[5:]
 	default:
 		panic("bad rank")
 	}
+	ev.HiBest, ev.HiUnused = v[:5], v[5:]
 }
 
 // bestOmaha sets the best omaha on the eval.
-func bestOmaha(h *Hand, loMax HandRank) {
+func bestOmaha(ev *Eval, loMax EvalRank) {
 	// order best
-	sort.Slice(h.HiBest, func(i, j int) bool {
-		m, n := h.HiBest[i].Rank(), h.HiBest[j].Rank()
+	sort.Slice(ev.HiBest, func(i, j int) bool {
+		m, n := ev.HiBest[i].Rank(), ev.HiBest[j].Rank()
 		if m == n {
-			return h.HiBest[i].Suit() > h.HiBest[j].Suit()
+			return ev.HiBest[j].Suit() < ev.HiBest[i].Suit()
 		}
-		return m > n
+		return n < m
 	})
-	switch h.HiRank.Fixed() {
+	switch ev.HiRank.Fixed() {
 	case StraightFlush:
-		h.HiBest, _ = bestStraightFlush(h.HiBest, Five)
+		ev.HiBest = bestStraightFlush(ev.HiBest, Five, true)
 	case Flush:
-		h.HiBest, _ = bestFlush(h.HiBest)
+		ev.HiBest = bestFlush(ev.HiBest)
 	case Straight:
-		h.HiBest, _ = bestStraight(h.HiBest, Five)
+		ev.HiBest = bestStraight(ev.HiBest, Five, true)
 	case FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, Pair:
-		h.HiBest, _ = bestSet(h.HiBest)
+		ev.HiBest = bestSet(ev.HiBest)
 	case Nothing:
 	default:
 		panic("bad rank")
 	}
-	if loMax != Invalid && h.LoRank < loMax {
-		sort.Slice(h.LoBest, func(i, j int) bool {
-			return (h.LoBest[i].Rank()+1)%13 > (h.LoBest[j].Rank()+1)%13
+	if loMax != Invalid && ev.LoRank < loMax {
+		sort.Slice(ev.LoBest, func(i, j int) bool {
+			return ev.LoBest[j].AceIndex() < ev.LoBest[i].AceIndex()
 		})
 	} else {
-		h.LoBest, h.LoUnused = nil, nil
+		ev.LoBest, ev.LoUnused = nil, nil
 	}
 }
 
-// bestStraightFlush returns the best-five straight flush in the hand.
-func bestStraightFlush(hand []Card, high Rank) ([]Card, []Card) {
-	v := orderSuits(hand)
+// bestLowball returns the best lowball.
+func bestLowball(ev *Eval, v []Card) {
+	// order high to low
+	sort.Slice(v, func(i, j int) bool {
+		m, n := v[i].Rank(), v[j].Rank()
+		if m == n {
+			return v[j].Suit() < v[i].Suit()
+		}
+		return n < m
+	})
+	// set best, unused
+	switch ev.HiRank.Fixed() {
+	case StraightFlush:
+		ev.HiBest = bestStraightFlush(v, Seven, false)
+	case Flush:
+		ev.HiBest = bestFlush(v)
+	case Straight:
+		ev.HiBest = bestStraight(v, Seven, false)
+	case FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, Pair:
+		ev.HiBest = bestSet(v)
+	case Nothing:
+		ev.HiBest = v
+	default:
+		panic("bad rank")
+	}
+	bestHoldem(ev, v, Six)
+}
+
+// bestStraightFlush returns the best-five straight flush in v.
+func bestStraightFlush(v []Card, high Rank, wrap bool) []Card {
+	s := orderSuits(v)
 	var b, d []Card
-	for _, c := range hand {
+	for _, c := range v {
 		switch c.Suit() {
-		case v[0]:
+		case s[0]:
 			b = append(b, c)
 		default:
 			d = append(d, c)
 		}
 	}
-	e, f := bestStraight(b, high)
-	e = append(e, append(d, f...)...)
-	return e[:5], e[5:]
+	return append(bestStraight(b, high, wrap), d...)
 }
 
-// bestFlush returns the best-five flush in the hand.
-func bestFlush(hand []Card) ([]Card, []Card) {
-	v := orderSuits(hand)
+// bestFlush returns the best-five flush in v.
+func bestFlush(v []Card) []Card {
+	suits := orderSuits(v)
 	var b, d []Card
-	for _, c := range hand {
+	for _, c := range v {
 		switch c.Suit() {
-		case v[0]:
+		case suits[0]:
 			b = append(b, c)
 		default:
 			d = append(d, c)
 		}
 	}
-	b = append(b, d...)
-	return b[:5], b[5:]
+	return append(b, d...)
 }
 
-// bestStraight returns the best-five straight in the hand.
-func bestStraight(hand []Card, high Rank) ([]Card, []Card) {
+// bestStraight returns the best-five straight in v.
+func bestStraight(v []Card, high Rank, wrap bool) []Card {
 	m := make(map[Rank][]Card)
-	for _, c := range hand {
+	for _, c := range v {
 		r := c.Rank()
 		m[r] = append(m[r], c)
 	}
 	var b []Card
-	for i := Ace; i >= high; i-- {
+	for i := Ace; high <= i; i-- {
 		// last card index
 		j := i - Six
 		// check ace
-		if i == high {
+		if i == high && wrap {
 			j = Ace
 		}
 		if m[i] != nil && m[i-1] != nil && m[i-2] != nil && m[i-3] != nil && m[j] != nil {
@@ -1283,71 +1449,69 @@ func bestStraight(hand []Card, high Rank) ([]Card, []Card) {
 	}
 	// collect remaining
 	var d []Card
-	for i := int(Ace); i >= 0; i-- {
+	for i := int(Ace); 0 <= i; i-- {
 		if _, ok := m[Rank(i)]; ok && m[Rank(i)] != nil {
 			d = append(d, m[Rank(i)]...)
 		}
 	}
-	b = append(b, d...)
-	return b[:5], b[5:]
+	return append(b, d...)
 }
 
-// bestSet returns the best matching sets in the hand.
-func bestSet(hand []Card) ([]Card, []Card) {
-	v := orderRanks(hand)
+// bestSet returns the best matching sets in v.
+func bestSet(v []Card) []Card {
+	ranks := orderRanks(v)
 	var a, b, d []Card
-	for _, c := range hand {
+	for _, c := range v {
 		switch c.Rank() {
-		case v[0]:
+		case ranks[0]:
 			a = append(a, c)
-		case v[1]:
+		case ranks[1]:
 			b = append(b, c)
 		default:
 			d = append(d, c)
 		}
 	}
-	a = append(a, append(b, d...)...)
-	return a[:5], a[5:]
+	return append(a, append(b, d...)...)
 }
 
-// orderSuits order's a hand's card suits by count.
-func orderSuits(hand []Card) []Suit {
+// orderSuits orders v's card suits by count.
+func orderSuits(v []Card) []Suit {
 	m := make(map[Suit]int)
-	var v []Suit
-	for _, c := range hand {
+	var suits []Suit
+	for _, c := range v {
 		s := c.Suit()
 		if _, ok := m[s]; !ok {
-			v = append(v, s)
+			suits = append(suits, s)
 		}
 		m[s]++
 	}
-	sort.Slice(v, func(i, j int) bool {
-		if m[v[i]] == m[v[j]] {
-			return v[i] > v[j]
+	sort.Slice(suits, func(i, j int) bool {
+		if m[suits[i]] == m[suits[j]] {
+			return suits[j] < suits[i]
 		}
-		return m[v[i]] > m[v[j]]
+		return m[suits[j]] < m[suits[i]]
 	})
-	return v
+	return suits
 }
 
-// orderRanks orders a hand's card ranks by count.
-func orderRanks(hand []Card) []Rank {
+// orderRanks orders v's card ranks by count.
+func orderRanks(v []Card) []Rank {
 	m := make(map[Rank]int)
-	var v []Rank
-	for _, c := range hand {
+	var ranks []Rank
+	for _, c := range v {
 		r := c.Rank()
 		if _, ok := m[r]; !ok {
-			v = append(v, r)
+			ranks = append(ranks, r)
 		}
 		m[r]++
 	}
-	sort.Slice(v, func(i, j int) bool {
-		if m[v[i]] == m[v[j]] {
-			return v[i] > v[j]
+	sort.Slice(ranks, func(i, j int) bool {
+		if m[ranks[i]] == m[ranks[j]] {
+			return ranks[j] < ranks[i]
 		}
-		return m[v[i]] > m[v[j]]
+		return m[ranks[j]] < m[ranks[i]]
 	})
-	return v
+	return ranks
 }
 
 // ordinal returns the ordinal string for n (1st, 2nd, ...).

@@ -10,20 +10,20 @@ func init() {
 // perfect hash lookup.
 //
 // See: http://senzee.blogspot.com/2006/06/some-perfect-hash.html
-func CactusFast(c0, c1, c2, c3, c4 Card) HandRank {
+func CactusFast(c0, c1, c2, c3, c4 Card) EvalRank {
 	// check for flushes and straight flushes
 	if c0&c1&c2&c3&c4&0xf000 != 0 {
-		return fastFlushes[(c0|c1|c2|c3|c4)>>16]
+		return fastFlush5[(c0|c1|c2|c3|c4)>>16]
 	}
 	// check for straights and high card hands
 	if r := fastUnique5[(c0|c1|c2|c3|c4)>>16]; r != 0 {
 		return r
 	}
-	u := 0xe91aaa35 + uint32((c0&0xff)*(c1&0xff)*(c2&0xff)*(c3&0xff)*(c4&0xff))
+	u := 0xe91aaa35 + (c0&0xff)*(c1&0xff)*(c2&0xff)*(c3&0xff)*(c4&0xff)
 	u ^= u >> 16
 	u += u << 8
 	u ^= u >> 4
-	return HandRank(hash[(u+(u<<2))>>19^uint32(hashAdjust[(u>>8)&0x1ff])])
+	return EvalRank(hash[(u+u<<2)>>19^Card(hashAdjust[u>>8&0x1ff])])
 }
 
 var hash = [...]uint16{
@@ -541,10 +541,10 @@ var hash = [...]uint16{
 	166, 5438, 2627, 2266, 2320, 166, 2588, 4790, 4290, 166, 4767, 5829, 2925, 5916, 2133, 166,
 }
 
-// fastFlushes is a table lookup for all "flush" hands (e.g.  both fastFlushes and
-// straight-fastFlushes. entries containing a zero mean that combination is not
-// possible with a five-card flush hand.
-var fastFlushes = [...]HandRank{
+// fastFlush5 is a table lookup for all "flush" hands (e.g.  both fastFlush5
+// and straight-fastFlush5. entries containing a zero mean that combination is
+// not possible with a five-card flush hand.
+var fastFlush5 = [...]EvalRank{
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 1599, 0, 0, 0, 0, 0, 0, 0, 1598, 0, 0, 0, 1597, 0, 1596,
@@ -961,12 +961,10 @@ var fastFlushes = [...]HandRank{
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
 }
 
-/*
-** this is a table lookup for all non-flush hands consisting
-** of five unique ranks (i.e.  either Straights or High Card
-** hands).  it's similar to the above "flushes" array.
- */
-var fastUnique5 = [...]HandRank{
+// fastUnique5 a table lookup for all non-flush hands consisting of five unique
+// ranks (i.e.  either Straights or High Card hands).  it's similar to the
+// above "flush5".
+var fastUnique5 = [...]EvalRank{
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 1608, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 7462, 0, 0, 0, 0, 0, 0, 0, 7461, 0, 0, 0, 7460, 0,

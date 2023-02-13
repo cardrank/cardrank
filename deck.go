@@ -2,6 +2,7 @@ package cardrank
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -16,7 +17,7 @@ type DeckType uint8
 
 // Deck types.
 const (
-	// DeckFrench is deck of French (52) cards.
+	// DeckFrench is a standard deck of 52 cards (aka "French" deck).
 	DeckFrench = DeckType(Two)
 	// DeckShort is a deck of Short (6+) cards.
 	DeckShort = DeckType(Six)
@@ -26,8 +27,8 @@ const (
 	DeckRoyal = DeckType(Ten)
 )
 
-// String satisfies the fmt.Stringer interface.
-func (typ DeckType) String() string {
+// Name returns the deck name.
+func (typ DeckType) Name() string {
 	switch typ {
 	case DeckFrench:
 		return "French"
@@ -39,6 +40,40 @@ func (typ DeckType) String() string {
 		return "Royal"
 	}
 	return ""
+}
+
+// Desc returns the deck description.
+func (typ DeckType) Desc(short bool) string {
+	switch french := typ == DeckFrench; {
+	case french && short:
+		return ""
+	case french:
+		return typ.Name()
+	}
+	return typ.Name() + " (" + strconv.Itoa(int(typ+2)) + "+)"
+}
+
+// Ordinal returns the ordinal for the deck.
+func (typ DeckType) Ordinal() int {
+	return int(typ + 2)
+}
+
+// Format satisfies the fmt.Formatter interface.
+func (typ DeckType) Format(f fmt.State, verb rune) {
+	var buf []byte
+	switch verb {
+	case 'd':
+		buf = []byte(strconv.Itoa(int(typ)))
+	case 'n':
+		buf = []byte(typ.Name())
+	case 'o':
+		buf = []byte(strconv.Itoa(typ.Ordinal()))
+	case 's', 'S':
+		buf = []byte(typ.Desc(verb != 's'))
+	case 'v':
+		buf = []byte("DeckType(" + Rank(typ).Name() + ")")
+	}
+	_, _ = f.Write(buf)
 }
 
 // Unshuffled returns a set of unshuffled cards for the deck type.
@@ -58,43 +93,51 @@ func (typ DeckType) Unshuffled() []Card {
 	return nil
 }
 
-// New returns a new deck for the deck type.
-func (typ DeckType) New() *Deck {
+// deck cards.
+var (
+	deckFrench []Card
+	deckShort  []Card
+	deckManila []Card
+	deckRoyal  []Card
+)
+
+func init() {
+	deckFrench = DeckFrench.Unshuffled()
+	deckShort = DeckShort.Unshuffled()
+	deckManila = DeckManila.Unshuffled()
+	deckRoyal = DeckRoyal.Unshuffled()
+}
+
+// Shoe creates a card shoe composed of count number of decks of unshuffled
+// cards.
+func (typ DeckType) Shoe(count int) *Deck {
 	var v []Card
 	switch typ {
 	case DeckFrench:
-		v = unshuffledFrench
+		v = deckFrench
 	case DeckShort:
-		v = unshuffledShort
+		v = deckShort
 	case DeckManila:
-		v = unshuffledManila
+		v = deckManila
 	case DeckRoyal:
-		v = unshuffledRoyal
+		v = deckRoyal
 	default:
 		return nil
 	}
 	n := len(v)
 	d := &Deck{
-		v: make([]Card, n),
-		l: n,
+		v: make([]Card, n*count),
+		l: count * n,
 	}
-	copy(d.v, v)
+	for i := 0; i < count; i++ {
+		copy(d.v[i*n:], v)
+	}
 	return d
 }
 
-// unshuffled cards.
-var (
-	unshuffledFrench []Card
-	unshuffledShort  []Card
-	unshuffledManila []Card
-	unshuffledRoyal  []Card
-)
-
-func init() {
-	unshuffledFrench = DeckFrench.Unshuffled()
-	unshuffledShort = DeckShort.Unshuffled()
-	unshuffledManila = DeckManila.Unshuffled()
-	unshuffledRoyal = DeckRoyal.Unshuffled()
+// New returns a new deck for the deck type.
+func (typ DeckType) New() *Deck {
+	return typ.Shoe(1)
 }
 
 // Deck is a set of playing cards.
@@ -104,58 +147,28 @@ type Deck struct {
 	v []Card
 }
 
-// NewDeck returns a new deck of 52 unshuffled cards.
+// DeckOf creates a deck for the provided cards.
+func DeckOf(cards ...Card) *Deck {
+	return &Deck{
+		v: cards,
+		l: len(cards),
+	}
+}
+
+// NewDeck creates a deck of 52 unshuffled cards.
 func NewDeck() *Deck {
 	return DeckFrench.New()
 }
 
-// NewShoeDeck creates a new unshuffled deck "shoe" composed of n decks of
-// unshuffled cards.
-func NewShoeDeck(n int) *Deck {
-	cards := make([]Card, len(unshuffledFrench)*n)
-	for i := 0; i < n; i++ {
-		copy(cards[i*len(unshuffledFrench):], unshuffledFrench)
-	}
-	return &Deck{
-		l: len(cards),
-		v: cards,
-	}
+// NewShoe creates a card shoe with multiple sets of 52 unshuffled cards.
+func NewShoe(count int) *Deck {
+	return DeckFrench.Shoe(count)
 }
 
-// SetLimit sets a limit for the deck.
-//
-// Useful when using a card deck "shoe" composed of more than one deck of
-// cards.
-func (d *Deck) SetLimit(limit int) {
+// Limit limits the cards for the deck, for use with card shoes composed of
+// more than one deck of cards.
+func (d *Deck) Limit(limit int) {
 	d.l = limit
-}
-
-// Shuffle shuffles the deck's cards using the provided shuffler.
-func (d *Deck) Shuffle(shuffler Shuffler) {
-	shuffler.Shuffle(len(d.v), func(i, j int) {
-		d.v[i], d.v[j] = d.v[j], d.v[i]
-	})
-}
-
-// ShuffleN shuffles the deck's cards, n times, using the provided shuffler.
-func (d *Deck) ShuffleN(shuffler Shuffler, n int) {
-	for m := 0; m < n; m++ {
-		shuffler.Shuffle(len(d.v), func(i, j int) {
-			d.v[i], d.v[j] = d.v[j], d.v[i]
-		})
-	}
-}
-
-// Draw draws the next n cards from the top (front) of the deck.
-func (d *Deck) Draw(n int) []Card {
-	if n < 0 {
-		return nil
-	}
-	var hand []Card
-	for l := min(d.i+n, d.l); d.i < l; d.i++ {
-		hand = append(hand, d.v[d.i])
-	}
-	return hand
 }
 
 // Empty returns true when there are no cards remaining in the deck.
@@ -183,207 +196,443 @@ func (d *Deck) Reset() {
 	d.i = 0
 }
 
-// Deal draws one card successively for each hand until each hand has n cards.
-func (d *Deck) Deal(hands, n int) [][]Card {
-	// deal pockets
-	pockets := make([][]Card, hands)
-	for i := 0; i < hands; i++ {
-		pockets[i] = make([]Card, n)
+// Draw draws the next n cards from the top (front) of the deck.
+func (d *Deck) Draw(n int) []Card {
+	if n < 0 {
+		return nil
 	}
-	for j := 0; j < n; j++ {
-		for i := 0; i < hands; i++ {
-			pockets[i][j] = d.Draw(1)[0]
-		}
+	var cards []Card
+	for l := min(d.i+n, d.l); d.i < l; d.i++ {
+		cards = append(cards, d.v[d.i])
 	}
-	return pockets
+	return cards
 }
 
-// Board draws board cards by discarding discard cards, and drawing count cards each
-// for each count in counts.
-func (d *Deck) Board(discard int, counts ...int) []Card {
-	var board []Card
-	for _, count := range counts {
-		_ = d.Draw(discard)
-		board = append(board, d.Draw(count)...)
+// Shuffle shuffles the deck's cards using the shuffler multiple times.
+func (d *Deck) Shuffle(shuffler Shuffler, shuffles int) {
+	for m := 0; m < shuffles; m++ {
+		shuffler.Shuffle(len(d.v), func(i, j int) {
+			d.v[i], d.v[j] = d.v[j], d.v[i]
+		})
 	}
-	return board
 }
 
-// MultiBoard draws n boards of cards, discarding cards, and drawing count
-// cards for each count in counts.
-func (d *Deck) MultiBoard(n int, discard int, counts ...int) [][]Card {
-	boards := make([][]Card, n)
-	for _, count := range counts {
-		for i := 0; i < n; i++ {
-			_ = d.Draw(discard)
-			boards[i] = append(boards[i], d.Draw(count)...)
-		}
-	}
-	return boards
-}
-
-// DealFor deals hands for the type.
-func (d *Deck) DealFor(typ Type, hands int) ([][]Card, []Card) {
-	return NewShuffledDealer(typ.Desc(), d).DealAll(hands)
-}
-
-// Holdem draws hands for Texas Holdem, returning the set of pockets (one per
-// hand) and board cards. Deals 1 card per player until each player has 2
-// pocket cards, then discards a card, deals 3 board cards, discards another,
-// deals another board card, discards another, and deals a final card to the
-// board.
-func (d *Deck) Holdem(hands int) ([][]Card, []Card) {
-	return d.DealFor(Holdem, hands)
-}
-
-// Omaha draws hands for Omaha, returning the set of pockets (one per hand) and
-// board cards.
-func (d *Deck) Omaha(hands int) ([][]Card, []Card) {
-	return d.DealFor(Omaha, hands)
-}
-
-// Stud draws hands for Stud, returning the sets of pockets (one per hand).
-// Deals no board cards.
-func (d *Deck) Stud(hands int) ([][]Card, []Card) {
-	return d.DealFor(Stud, hands)
-}
-
-// Badugi draws hands for Badugi, returning the sets of pockets (one per hand).
-// Deals no board cards.
-func (d *Deck) Badugi(hands int) ([][]Card, []Card) {
-	return d.DealFor(Badugi, hands)
-}
-
-// Dealer is a deck and street iterator.
+// Dealer maintains deal state for a type, deck, streets, positions, runs, and
+// wins.
 type Dealer struct {
 	TypeDesc
-	d *Deck
-	i int
+	Count   int
+	Deck    *Deck
+	Active  map[int]bool
+	Discard []Card
+	Pockets [][]Card
+	Boards  []Board
+	Results []*Result
+	runs    int
+	d       int
+	i       int
+	r       int
 }
 
-// NewDealer creates a new dealer.
-func NewDealer(desc TypeDesc, shuffler Shuffler, n int) *Dealer {
-	d := desc.Type.Deck()
-	d.ShuffleN(shuffler, n)
-	return &Dealer{
+// NewDealer creates a new dealer for a provided deck and pocket count.
+func NewDealer(desc TypeDesc, deck *Deck, count int) *Dealer {
+	d := &Dealer{
 		TypeDesc: desc,
-		d:        d,
-		i:        -1,
+		Count:    count,
+		Deck:     deck,
 	}
+	d.init()
+	return d
 }
 
-// NewShuffledDealer creates a new dealer for an already shuffled deck.
-func NewShuffledDealer(desc TypeDesc, d *Deck) *Dealer {
-	return &Dealer{
-		TypeDesc: desc,
-		d:        d,
-		i:        -1,
+// NewShuffledDealer creates a new deck and dealer, shuffling the deck multiple
+// times and returning the dealer with the created deck and pocket count.
+func NewShuffledDealer(desc TypeDesc, shuffler Shuffler, shuffles, count int) *Dealer {
+	d := desc.Type.Deck()
+	d.Shuffle(shuffler, shuffles)
+	return NewDealer(desc, d, count)
+}
+
+// init inits the street position and active positions.
+func (d *Dealer) init() {
+	d.Pockets = make([][]Card, d.Count)
+	d.Active = make(map[int]bool)
+	d.Boards = make([]Board, 1)
+	d.Results = nil
+	d.runs = 1
+	d.d = 0
+	d.i = -1
+	d.r = -1
+	for i := 0; i < d.Count; i++ {
+		d.Active[i] = true
 	}
 }
 
 // Format satisfies the fmt.Formatter interface.
 func (d *Dealer) Format(f fmt.State, verb rune) {
+	var buf []byte
 	switch verb {
-	case 's', 'v':
-		desc := d.Street()
-		var v []string
-		if 0 < desc.Pocket {
-			if 0 < desc.PocketDiscard {
-				v = append(v, fmt.Sprintf("D: %d", desc.PocketDiscard))
-			}
-			v = append(v, fmt.Sprintf("p: %d", desc.Pocket))
-			if 0 < desc.PocketUp {
-				v = append(v, fmt.Sprintf("u: %d", desc.PocketUp))
-			}
-		}
-		if 0 < desc.Board {
-			if 0 < desc.BoardDiscard {
-				v = append(v, fmt.Sprintf("d: %d", desc.BoardDiscard))
-			}
-			v = append(v, fmt.Sprintf("b: %d", desc.Board))
-		}
-		var s string
-		if len(v) != 0 {
-			s = " (" + strings.Join(v, ", ") + ")"
-		}
-		fmt.Fprintf(f, "%d:%q %s%s", d.i, desc.Id, desc.Name, s)
+	case 'n': // name
+		buf = []byte(d.Streets[d.i].Name)
+	case 's':
+		buf = []byte(d.Streets[d.i].Desc())
 	}
+	_, _ = f.Write(buf)
 }
 
-// All returns a copy of all cards in the deck, without advancing.
-func (d *Dealer) All() []Card {
-	return d.d.All()
+// Id returns the street id.
+func (d *Dealer) Id() byte {
+	if 0 <= d.i && d.i < len(d.Streets) {
+		return d.Streets[d.i].Id
+	}
+	return 0
 }
 
-// Next returns true when there are more betting streets defined.
-func (d *Dealer) Next() bool {
-	d.i++
-	return d.i < len(d.Streets)
+// NextId returns the next street id.
+func (d *Dealer) NextId() byte {
+	if -1 <= d.i && d.i < len(d.Streets)-1 {
+		return d.Streets[d.i+1].Id
+	}
+	return 0
 }
 
-// Street returns the current street.
-func (d *Dealer) Street() StreetDesc {
-	return d.Streets[d.i]
+// HasPocket returns true when one or more pocket cards are dealt for the
+// street.
+func (d *Dealer) HasPocket() bool {
+	return 0 <= d.i && d.i < len(d.Streets) && 0 < d.Streets[d.i].Pocket
 }
 
-// Pocket returns the current street pocket.
+// HasBoard returns true when one or more board cards are dealt for the
+// street.
+func (d *Dealer) HasBoard() bool {
+	return 0 <= d.i && d.i < len(d.Streets) && 0 < d.Streets[d.i].Board
+}
+
+// HasActive returns true when there is more than 1 active positions.
+func (d *Dealer) HasActive() bool {
+	return 0 <= d.i && 1 < len(d.Active)
+}
+
+// Pocket returns the number of pocket cards to be dealt on the street.
 func (d *Dealer) Pocket() int {
-	return d.Streets[d.i].Pocket
+	if 0 <= d.i && d.i < len(d.Streets) {
+		return d.Streets[d.i].Pocket
+	}
+	return 0
 }
 
-// Board returns the current street board.
+// PocketUp returns the number of pocket cards to be turned up on the current
+// street.
+func (d *Dealer) PocketUp() int {
+	if 0 <= d.i && d.i < len(d.Streets) {
+		return d.Streets[d.i].PocketUp
+	}
+	return 0
+}
+
+// PocketDiscard returns the number of cards to be discarded prior to dealing
+// pockets on the current street.
+func (d *Dealer) PocketDiscard() int {
+	if 0 <= d.i && d.i < len(d.Streets) {
+		return d.Streets[d.i].PocketDiscard
+	}
+	return 0
+}
+
+// PocketDraw returns the number of pocket cards that can be drawn on current
+// the street.
+func (d *Dealer) PocketDraw() int {
+	if 0 <= d.i && d.i < len(d.Streets) {
+		return d.Streets[d.i].PocketDraw
+	}
+	return 0
+}
+
+// Board returns the number of board cards to be dealt on the street.
 func (d *Dealer) Board() int {
-	return d.Streets[d.i].Board
+	if 0 <= d.i && d.i < len(d.Streets) {
+		return d.Streets[d.i].Board
+	}
+	return 0
 }
 
-// Deal deals cards for the street.
-func (d *Dealer) Deal(pockets [][]Card, board []Card, hands int) ([][]Card, []Card) {
-	return d.DealPockets(pockets, hands, true), d.DealBoard(board, true)
+// BoardDiscard returns the number of board cards to be discarded prior to dealing
+// a board on the current street.
+func (d *Dealer) BoardDiscard() int {
+	if 0 <= d.i && d.i < len(d.Streets) {
+		return d.Streets[d.i].BoardDiscard
+	}
+	return 0
 }
 
-// DealPockets deals and appends pockets, returning the appended slice.
-func (d *Dealer) DealPockets(pockets [][]Card, hands int, discard bool) [][]Card {
-	if p := d.Streets[d.i].Pocket; 0 < p {
-		if n := d.Streets[d.i].PocketDiscard; discard && 0 < n {
-			_ = d.d.Draw(n)
-		}
-		if pockets == nil {
-			pockets = make([][]Card, hands)
-		}
-		for j := 0; j < p; j++ {
-			for i := 0; i < hands; i++ {
-				pockets[i] = append(pockets[i], d.d.Draw(1)[0])
-			}
+// Discarded returns the number of pocket ard board cards discarded on the
+// current street.
+func (d *Dealer) Discarded() []Card {
+	if v := d.Discard[d.d:]; len(v) != 0 {
+		return v
+	}
+	return nil
+}
+
+// Inactive returns the inactive positions.
+func (d *Dealer) Inactive() []int {
+	var v []int
+	for i := 0; i < d.Count; i++ {
+		if !d.Active[i] {
+			v = append(v, i)
 		}
 	}
-	return pockets
+	return v
 }
 
-// DealBoard deals and appends the board, returning the appended slice.
-func (d *Dealer) DealBoard(board []Card, discard bool) []Card {
-	if p := d.Streets[d.i].Board; 0 < p {
-		if n := d.Streets[d.i].BoardDiscard; discard && 0 < n {
-			_ = d.d.Draw(n)
-		}
-		board = append(board, d.d.Draw(p)...)
+// Deactivate deactivates positions, which will not be dealt further cards and
+// will not be included during eval.
+func (d *Dealer) Deactivate(positions ...int) {
+	for _, position := range positions {
+		delete(d.Active, position)
 	}
-	return board
 }
 
 // Reset resets the iterator to i.
 func (d *Dealer) Reset() {
-	d.d.Reset()
-	d.i = -1
+	d.Deck.Reset()
+	d.init()
 }
 
-// DealAll deals all pockets, board for the hands. Resets the dealer and the
-// deck.
-func (d *Dealer) DealAll(hands int) ([][]Card, []Card) {
-	d.Reset()
-	var pockets [][]Card
-	var board []Card
-	for d.Next() {
-		pockets, board = d.Deal(pockets, board, hands)
+// Runs changes the number of runs, returns true if successful.
+func (d *Dealer) Runs(runs int) bool {
+	if d.runs != 1 || runs <= 1 || len(d.Boards) != 1 || !d.HasActive() {
+		return false
 	}
-	return pockets, board
+	d.Boards = append(d.Boards, make([]Board, runs-1)...)
+	for run := 1; run < runs; run++ {
+		d.Boards[run] = d.Boards[0].Dupe()
+	}
+	d.runs = runs
+	return true
+}
+
+// Next iterates the street, discarding cards prior to dealing additional
+// pocket and board cards for each run. Returns true when there are additional
+// streets, and when at least 2 active positions.
+func (d *Dealer) Next() bool {
+	d.i++
+	d.d = len(d.Discard)
+	if len(d.Streets) <= d.i || !d.HasActive() {
+		d.eval()
+		return false
+	}
+	d.DealPocket()
+	for run := 0; run < d.runs; run++ {
+		d.DealBoard(run)
+	}
+	return true
+}
+
+// NextResult iterates the next result.
+func (d *Dealer) NextResult() bool {
+	d.r++
+	return d.r < d.runs
+}
+
+// Result returns the current result.
+func (d *Dealer) Result() (int, *Result) {
+	if 0 <= d.r && d.r < d.runs {
+		return d.r, d.Results[d.r]
+	}
+	return -1, nil
+}
+
+// DealPocket deals pocket cards for the street.
+func (d *Dealer) DealPocket() {
+	// pockets
+	desc := d.Streets[d.i]
+	if p := desc.Pocket; 0 < p {
+		if n := desc.PocketDiscard; 0 < n {
+			d.Discard = append(d.Discard, d.Deck.Draw(n)...)
+		}
+		for j := 0; j < p; j++ {
+			for i := 0; i < d.Count; i++ {
+				d.Pockets[i] = append(d.Pockets[i], d.Deck.Draw(1)...)
+			}
+		}
+	}
+}
+
+// DealBoard deals board cards for the street and run.
+func (d *Dealer) DealBoard(run int) {
+	desc := d.Streets[d.i]
+	if b := desc.Board; 0 < b {
+		// hi
+		disc := desc.BoardDiscard
+		if 0 < disc {
+			d.Discard = append(d.Discard, d.Deck.Draw(disc)...)
+		}
+		d.Boards[run].Hi = append(d.Boards[run].Hi, d.Deck.Draw(b)...)
+		// lo
+		if d.Double {
+			if 0 < disc {
+				d.Discard = append(d.Discard, d.Deck.Draw(disc)...)
+			}
+			d.Boards[run].Lo = append(d.Boards[run].Lo, d.Deck.Draw(b)...)
+		}
+	}
+}
+
+// eval evaluates the results.
+func (d *Dealer) eval() {
+	switch n := len(d.Active); {
+	case d.Results != nil:
+	case n == 1 && d.runs == 1:
+		// only one active position
+		var i int
+		for ; i < d.Count && !d.Active[i]; i++ {
+		}
+		res := &Result{
+			Evals:   []*Eval{EvalOf(d.Type)},
+			HiOrder: []int{i},
+			HiPivot: 1,
+		}
+		if d.Low || d.Double {
+			res.LoOrder, res.LoPivot = res.HiOrder, res.HiPivot
+		}
+		d.Results = []*Result{res}
+	case n > 1:
+		d.Results = make([]*Result, d.runs)
+		for run := 0; run < d.runs; run++ {
+			d.Results[run] = d.EvalRun(run)
+		}
+	}
+}
+
+// EvalRun evals the run.
+func (d *Dealer) EvalRun(run int) *Result {
+	evs := d.EvalBoard(d.Boards[run])
+	hiOrder, hiPivot := HiOrder(evs)
+	var loOrder []int
+	var loPivot int
+	if d.Low || d.Double {
+		loOrder, loPivot = LoOrder(evs)
+	}
+	return &Result{
+		Evals:   evs,
+		HiOrder: hiOrder,
+		HiPivot: hiPivot,
+		LoOrder: loOrder,
+		LoPivot: loPivot,
+	}
+}
+
+// EvalBoard evals the board for the pockets.
+func (d *Dealer) EvalBoard(board Board) []*Eval {
+	evs := make([]*Eval, d.Count)
+	for i := 0; i < d.Count; i++ {
+		if d.Active[i] {
+			evs[i] = d.Type.New(d.Pockets[i], board.Hi)
+			if d.Double {
+				evs[i].Double(d.Pockets[i], board.Lo)
+			}
+		}
+	}
+	return evs
+}
+
+// Board holds boards.
+type Board struct {
+	Hi []Card
+	Lo []Card
+}
+
+// Dupe creates a duplicate of the hi and lo portions of the board, excluding
+// any eval info collected.
+func (board Board) Dupe() Board {
+	b := Board{}
+	if board.Hi != nil {
+		b.Hi = make([]Card, len(board.Hi))
+		copy(b.Hi, board.Hi)
+	}
+	if board.Lo != nil {
+		b.Lo = make([]Card, len(board.Lo))
+		copy(b.Lo, board.Lo)
+	}
+	return b
+}
+
+// Result contains dealer eval results.
+type Result struct {
+	Evals   []*Eval
+	HiOrder []int
+	HiPivot int
+	LoOrder []int
+	LoPivot int
+}
+
+// Win returns the hi and lo win.
+func (res *Result) Win() (*Win, *Win) {
+	low := res.Evals[res.HiOrder[0]].Type.Low()
+	var lo *Win
+	if res.LoOrder != nil && res.LoPivot != 0 {
+		lo = NewWin(res.Evals, res.LoOrder, res.LoPivot, true, false)
+	}
+	hi := NewWin(res.Evals, res.HiOrder, res.HiPivot, false, low && lo == nil)
+	return hi, lo
+}
+
+// Win formats win information.
+type Win struct {
+	Evals []*Eval
+	Order []int
+	Pivot int
+	Low   bool
+	Scoop bool
+}
+
+// NewWin creates a new win.
+func NewWin(evs []*Eval, order []int, pivot int, low, scoop bool) *Win {
+	return &Win{
+		Evals: evs,
+		Order: order,
+		Pivot: pivot,
+		Low:   low,
+		Scoop: scoop,
+	}
+}
+
+// Format satisfies the fmt.Formatter interface.
+func (win *Win) Format(f fmt.State, verb rune) {
+	switch verb {
+	case 'S':
+		var v []string
+		for i := 0; i < win.Pivot; i++ {
+			var desc *Desc
+			if !win.Low {
+				desc = win.Evals[win.Order[i]].HiDesc()
+			} else {
+				desc = win.Evals[win.Order[i]].LoDesc()
+			}
+			v = append(v, fmt.Sprintf("%v", desc.Best))
+		}
+		fmt.Fprint(f, strings.Join(v, ", "))
+	case 's':
+		var v []string
+		for i := 0; i < win.Pivot; i++ {
+			v = append(v, strconv.Itoa(win.Order[i]))
+		}
+		fmt.Fprint(f, strings.Join(v, ", ")+" "+win.Verb())
+	}
+}
+
+// Verb returns the win verb.
+func (win *Win) Verb() string {
+	switch {
+	case win.Scoop:
+		return "scoops"
+	case win.Pivot > 2:
+		return "push"
+	case win.Pivot == 2:
+		return "split"
+	case win.Pivot == 0:
+		return "none"
+	}
+	return "wins"
 }

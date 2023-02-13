@@ -27,7 +27,7 @@ func init() {
 //
 // When recombined, the lookup table has the same hash as the original table
 // generated using the C code.
-func NewTwoPlusTwo() HandRankFunc {
+func NewTwoPlusTwo() EvalRankFunc {
 	const total, chunk, last = 32487834, 2621440, 1030554
 	tbl, pos := make([]uint32, total), 0
 	for i, buf := range [][]byte{
@@ -80,7 +80,7 @@ func NewTwoPlusTwo() HandRankFunc {
 		uint32(FourOfAKind),
 		uint32(StraightFlush),
 	}
-	return func(v []Card) HandRank {
+	return func(v []Card) EvalRank {
 		i := uint32(53)
 		for _, c := range v {
 			i = tbl[i+m[c]]
@@ -88,6 +88,6 @@ func NewTwoPlusTwo() HandRankFunc {
 		if len(v) < 7 {
 			i = tbl[i]
 		}
-		return HandRank(ranks[i>>12] - i&0xfff + 1)
+		return EvalRank(ranks[i>>12] - i&0xfff + 1)
 	}
 }
