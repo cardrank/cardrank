@@ -37,8 +37,8 @@ const (
 
 // DefaultTypes returns the default type descriptions.
 func DefaultTypes() []TypeDesc {
-	var types []TypeDesc
-	for _, v := range []struct {
+	var v []TypeDesc
+	for _, d := range []struct {
 		id   string
 		typ  Type
 		name string
@@ -67,13 +67,13 @@ func DefaultTypes() []TypeDesc {
 		{"L3", LowballTriple, "LowballTriple", WithLowball(true)},
 		{"Ko", Soko, "Soko", WithSoko()},
 	} {
-		desc, err := NewTypeDesc(v.id, v.typ, v.name, v.opt)
+		desc, err := NewTypeDesc(d.id, d.typ, d.name, d.opt)
 		if err != nil {
 			panic(err)
 		}
-		types = append(types, *desc)
+		v = append(v, *desc)
 	}
-	return types
+	return v
 }
 
 // Types returns the registered types.
@@ -269,10 +269,10 @@ func (typ *Type) UnmarshalText(buf []byte) error {
 }
 
 // descs are the registered type descriptions.
-var descs map[Type]TypeDesc = make(map[Type]TypeDesc)
+var descs = make(map[Type]TypeDesc)
 
 // evals are eval funcs.
-var evals map[Type]EvalFunc = make(map[Type]EvalFunc)
+var evals = make(map[Type]EvalFunc)
 
 // RegisterType registers a type.
 func RegisterType(desc TypeDesc) error {
@@ -281,9 +281,9 @@ func RegisterType(desc TypeDesc) error {
 	}
 	// check street ids
 	m := make(map[byte]bool)
-	for i, street := range desc.Streets {
+	for _, street := range desc.Streets {
 		if m[street.Id] {
-			return fmt.Errorf("%s street %d id %c must be unique", desc.Type, i, street.Id)
+			return ErrInvalidId
 		}
 	}
 	desc.Num = len(descs)
@@ -353,6 +353,8 @@ func NewTypeDesc(id string, typ Type, name string, opts ...TypeOption) (*TypeDes
 }
 
 // Apply applies street options.
+//
+//nolint:gosec
 func (desc *TypeDesc) Apply(opts ...StreetOption) {
 	for _, o := range opts {
 		for i, street := range desc.Streets {
@@ -571,9 +573,9 @@ func WithRazz(opts ...StreetOption) TypeOption {
 
 // WithBadugi is a type description option to set Badugi definitions.
 //
-// 4 cards, low evaluation of separate suits
-// All 4 face down pre-flop
-// 3 rounds of player discards (up to 4)
+//	4 cards, low evaluation of separate suits
+//	All 4 face down pre-flop
+//	3 rounds of player discards (up to 4)
 func WithBadugi(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8
@@ -868,7 +870,7 @@ func NewOmahaEval(loMax HandRank) EvalFunc {
 					h.HiUnused[2], h.HiUnused[3] = h.Board[t5c3[j][3]], h.Board[t5c3[j][4]]   // board
 				}
 				if loMax != Invalid {
-					if r = HandRank(RankEightOrBetter(v[0], v[1], v[2], v[3], v[4])); r < h.LoRank && r < loMax {
+					if r = RankEightOrBetter(v[0], v[1], v[2], v[3], v[4]); r < h.LoRank && r < loMax {
 						copy(h.LoBest, v)
 						h.LoRank = r
 						h.LoUnused[0], h.LoUnused[1] = h.Pocket[t4c2[i][2]], h.Pocket[t4c2[i][3]] // pocket
@@ -899,7 +901,7 @@ func NewOmahaFiveEval(loMax HandRank) EvalFunc {
 					h.HiUnused[3], h.HiUnused[4] = h.Board[t5c3[j][3]], h.Board[t5c3[j][4]]   // board
 				}
 				if loMax != Invalid {
-					if r = HandRank(RankEightOrBetter(v[0], v[1], v[2], v[3], v[4])); r < h.LoRank && r < loMax {
+					if r = RankEightOrBetter(v[0], v[1], v[2], v[3], v[4]); r < h.LoRank && r < loMax {
 						copy(h.LoBest, v)
 						h.LoRank = r
 						h.LoUnused[0], h.LoUnused[1] = h.Pocket[t5c2[i][2]], h.Pocket[t5c2[i][3]] // pocket
@@ -931,7 +933,7 @@ func NewOmahaSixEval(loMax HandRank) EvalFunc {
 					h.HiUnused[4], h.HiUnused[5] = h.Board[t5c3[j][3]], h.Board[t5c3[j][4]]   // board
 				}
 				if loMax != Invalid {
-					if r = HandRank(RankEightOrBetter(v[0], v[1], v[2], v[3], v[4])); r < h.LoRank && r < loMax {
+					if r = RankEightOrBetter(v[0], v[1], v[2], v[3], v[4]); r < h.LoRank && r < loMax {
 						copy(h.LoBest, v)
 						h.LoRank = r
 						h.LoUnused[0], h.LoUnused[1] = h.Pocket[t6c2[i][2]], h.Pocket[t6c2[i][3]] // pocket
@@ -1058,13 +1060,13 @@ func NewLowEval(f RankFunc, loMax HandRank) EvalFunc {
 		best, unused := make([]Card, 5), make([]Card, 2)
 		rank, r := Invalid, HandRank(0)
 		for i := 0; i < 21; i++ {
-			if r = HandRank(f(
+			if r = f(
 				hand[t7c5[i][0]],
 				hand[t7c5[i][1]],
 				hand[t7c5[i][2]],
 				hand[t7c5[i][3]],
 				hand[t7c5[i][4]],
-			)); r < rank && r < loMax {
+			); r < rank && r < loMax {
 				rank = r
 				best[0], best[1] = hand[t7c5[i][0]], hand[t7c5[i][1]]
 				best[2], best[3] = hand[t7c5[i][2]], hand[t7c5[i][3]]
@@ -1304,8 +1306,8 @@ func bestSet(hand []Card) ([]Card, []Card) {
 			d = append(d, c)
 		}
 	}
-	b = append(a, append(b, d...)...)
-	return b[:5], b[5:]
+	a = append(a, append(b, d...)...)
+	return a[:5], a[5:]
 }
 
 // orderSuits order's a hand's card suits by count.

@@ -137,7 +137,7 @@ func primeProductBits(bits uint32) uint32 {
 	i := uint32(1)
 	for j := 0; j < 13; j++ {
 		if bits&(1<<j) != 0 {
-			i *= uint32(primes[j])
+			i *= primes[j]
 		}
 	}
 	return i

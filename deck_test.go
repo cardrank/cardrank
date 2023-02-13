@@ -190,6 +190,7 @@ func TestDealer(t *testing.T) {
 }
 
 func testDealer(t *testing.T, hands int, typ Type, seed int64) {
+	t.Helper()
 	d := typ.Dealer(rand.New(rand.NewSource(seed)), 3)
 	t.Logf("Deck (%s, %d):", typ.DeckType(), len(d.d.v))
 	for i := 0; i < len(d.d.v); i += 8 {

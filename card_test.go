@@ -45,6 +45,17 @@ func TestParse(t *testing.T) {
 }
 
 func TestCardUnmarshal(t *testing.T) {
+	v := struct {
+		Card Card
+	}{
+		Card: Must("Ah")[0],
+	}
+	switch err := json.Unmarshal([]byte(`{"card": "bz"}`), &v); {
+	case err == nil || !errors.Is(err, ErrInvalidCard):
+		t.Errorf("expected %v, got: %v", ErrInvalidCard, err)
+	case v.Card != InvalidCard:
+		t.Errorf("expected %d, got: %d", InvalidCard, v.Card)
+	}
 	var hand []Card
 	if err := json.Unmarshal([]byte(`["Ah","Kh","Qh","Jh","Th"]`), &hand); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
@@ -57,6 +68,11 @@ func TestCardUnmarshal(t *testing.T) {
 }
 
 func TestCardMarshal(t *testing.T) {
+	if _, err := json.Marshal(struct{ Card Card }{
+		Card: InvalidCard,
+	}); !errors.Is(err, ErrInvalidCard) {
+		t.Errorf("expected %v, got: %v", ErrInvalidCard, err)
+	}
 	buf, err := json.Marshal(Must("Ah Kh Qh Jh Th"))
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
@@ -172,22 +188,22 @@ func TestCardFormat(t *testing.T) {
 		if c != test.exp {
 			t.Errorf("test %d expected %c to be %d, got: %d (%s)", i, test.c, test.exp, c, c)
 		}
-		if s, exp := fmt.Sprintf("%s", c), string(test.r[0])+string(test.s[0]); s != exp {
+		if s, exp := fmt.Sprintf("%s", c), test.r[0:1]+test.s[0:1]; s != exp {
 			t.Errorf("test %d expected %%s to be %q, got: %q", i, exp, s)
 		}
-		if s, exp := fmt.Sprintf("%S", c), string(test.r[0])+string(test.s[1]); s != exp {
+		if s, exp := fmt.Sprintf("%S", c), test.r[0:1]+test.s[1:2]; s != exp {
 			t.Errorf("test %d expected %%S to be %q, got: %q", i, exp, s)
 		}
-		if s, exp := fmt.Sprintf("%q", c), `"`+string(test.r[0])+string(test.s[0])+`"`; s != exp {
+		if s, exp := fmt.Sprintf("%q", c), `"`+test.r[0:1]+test.s[0:1]+`"`; s != exp {
 			t.Errorf("test %d expected %%q to be %q, got: %q", i, exp, s)
 		}
-		if s, exp := fmt.Sprintf("%b", c), string(test.r[0])+string(test.s[2:5]); s != exp {
+		if s, exp := fmt.Sprintf("%b", c), test.r[0:1]+test.s[2:5]; s != exp {
 			t.Errorf("test %d expected %%b to be %q, got: %q", i, exp, s)
 		}
-		if s, exp := fmt.Sprintf("%h", c), string(test.r[0])+string(test.s[5:8]); s != exp {
+		if s, exp := fmt.Sprintf("%h", c), test.r[0:1]+test.s[5:8]; s != exp {
 			t.Errorf("test %d expected %%h to be %q, got: %q", i, exp, s)
 		}
-		if s, exp := fmt.Sprintf("%r %u %B", c, c, c), string(test.r[0])+" "+string(test.s[0])+" "+string(test.s[2:5]); s != exp {
+		if s, exp := fmt.Sprintf("%r %u %B", c, c, c), test.r[0:1]+" "+test.s[0:1]+" "+test.s[2:5]; s != exp {
 			t.Errorf("test %d expected %%r %%u %%B to be %q, got: %q", i, exp, s)
 		}
 		if s, exp := fmt.Sprintf("%c", c), string(test.c); s != exp {
@@ -198,7 +214,7 @@ func TestCardFormat(t *testing.T) {
 				t.Errorf("test %d expected %%C to be %q, got: %q", i, exp, s)
 			}
 		}
-		if s, exp := fmt.Sprintf("%n of %l", c, c), strings.ToLower(string(test.v)); s != exp {
+		if s, exp := fmt.Sprintf("%n of %l", c, c), strings.ToLower(test.v); s != exp {
 			t.Errorf("test %d expected %%n of %%l to be %q, got: %q", i, exp, s)
 		}
 		if s, exp := fmt.Sprintf("%N of %L", c, c), test.v; s != exp {

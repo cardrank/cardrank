@@ -41,7 +41,7 @@ func (typ DeckType) String() string {
 	return ""
 }
 
-// Unshuffled returns a set of unshuffled cards for
+// Unshuffled returns a set of unshuffled cards for the deck type.
 func (typ DeckType) Unshuffled() []Card {
 	switch typ {
 	case DeckFrench, DeckShort, DeckManila, DeckRoyal:

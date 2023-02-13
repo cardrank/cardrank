@@ -105,8 +105,7 @@ func (r HandRank) Name() string {
 type RankFunc func(c0, c1, c2, c3, c4 Card) HandRank
 
 // RankEightOrBetter is a 8-or-better low hand rank func. Aces are low,
-// straights and flushes do not count. Any card with rank 8 or higher will
-// cause
+// straights and flushes do not count.
 func RankEightOrBetter(c0, c1, c2, c3, c4 Card) HandRank {
 	return RankLowAceFive(0xff00, c0, c1, c2, c3, c4)
 }
@@ -161,7 +160,7 @@ func NewRankFunc(f RankFunc) HandRankFunc {
 	return func(hand []Card) HandRank {
 		switch n := len(hand); {
 		case n == 5:
-			return HandRank(f(hand[0], hand[1], hand[2], hand[3], hand[4]))
+			return f(hand[0], hand[1], hand[2], hand[3], hand[4])
 		case n == 6:
 			r := f(hand[0], hand[1], hand[2], hand[3], hand[4])
 			r = min(r, f(hand[0], hand[1], hand[2], hand[3], hand[5]))
@@ -169,7 +168,7 @@ func NewRankFunc(f RankFunc) HandRankFunc {
 			r = min(r, f(hand[0], hand[1], hand[3], hand[4], hand[5]))
 			r = min(r, f(hand[0], hand[2], hand[3], hand[4], hand[5]))
 			r = min(r, f(hand[1], hand[2], hand[3], hand[4], hand[5]))
-			return HandRank(r)
+			return r
 		}
 		r, rank := HandRank(0), Invalid
 		for i := 0; i < 21; i++ {
@@ -183,7 +182,7 @@ func NewRankFunc(f RankFunc) HandRankFunc {
 				rank = r
 			}
 		}
-		return HandRank(rank)
+		return rank
 	}
 }
 
@@ -193,7 +192,7 @@ func NewHybrid(f5 RankFunc, f7 HandRankFunc) HandRankFunc {
 	return func(hand []Card) HandRank {
 		switch len(hand) {
 		case 5:
-			return HandRank(f5(hand[0], hand[1], hand[2], hand[3], hand[4]))
+			return f5(hand[0], hand[1], hand[2], hand[3], hand[4])
 		case 6:
 			r := f5(hand[0], hand[1], hand[2], hand[3], hand[4])
 			r = min(r, f5(hand[0], hand[1], hand[2], hand[3], hand[5]))
@@ -201,7 +200,7 @@ func NewHybrid(f5 RankFunc, f7 HandRankFunc) HandRankFunc {
 			r = min(r, f5(hand[0], hand[1], hand[3], hand[4], hand[5]))
 			r = min(r, f5(hand[0], hand[2], hand[3], hand[4], hand[5]))
 			r = min(r, f5(hand[1], hand[2], hand[3], hand[4], hand[5]))
-			return HandRank(r)
+			return r
 		}
 		return f7(hand)
 	}

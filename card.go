@@ -160,7 +160,7 @@ const (
 	Club
 )
 
-// InvalidSuit
+// InvalidSuit is an invalid rank.
 const InvalidSuit = Suit(^uint8(0))
 
 // SuitFromRune returns the card suit for the rune.
@@ -329,7 +329,7 @@ func New(rank Rank, suit Suit) Card {
 	if Ace < rank || (suit != Spade && suit != Heart && suit != Diamond && suit != Club) {
 		return InvalidCard
 	}
-	return Card(1<<uint32(rank)<<16 | uint32(suit)<<12 | uint32(rank)<<8 | uint32(primes[rank]))
+	return 1<<Card(rank)<<16 | Card(suit)<<12 | Card(rank)<<8 | Card(primes[rank])
 }
 
 // FromRune creates a card from a unicode playing card rune.
@@ -477,14 +477,18 @@ func (c Card) AceIndex() int {
 
 // UnmarshalText satisfies the encoding.TextUnmarshaler interface.
 func (c *Card) UnmarshalText(buf []byte) error {
-	var err error
-	*c = FromString(string(buf))
-	return err
+	if *c = FromString(string(buf)); *c == InvalidCard {
+		return ErrInvalidCard
+	}
+	return nil
 }
 
 // MarshalText satisfies the encoding.TextMarshaler interface.
 func (c Card) MarshalText() ([]byte, error) {
-	return []byte{c.RankByte(), c.SuitByte()}, nil
+	if c != InvalidCard {
+		return []byte{c.RankByte(), c.SuitByte()}, nil
+	}
+	return nil, ErrInvalidCard
 }
 
 // String satisfies the fmt.Stringer interface.
@@ -647,10 +651,10 @@ func init() {
 	rangeD = newRangeTable(d...)
 	rangeC = newRangeTable(c...)
 	a := make([]rune, 14*4)
-	copy(a[0:14], s[:])
-	copy(a[14:28], h[:])
-	copy(a[28:42], d[:])
-	copy(a[42:56], c[:])
+	copy(a[0:14], s)
+	copy(a[14:28], h)
+	copy(a[28:42], d)
+	copy(a[42:56], c)
 	rangeA = newRangeTable(a...)
 }
 

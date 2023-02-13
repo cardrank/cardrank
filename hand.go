@@ -173,7 +173,10 @@ func (h *Hand) Description() string {
 	case Pair:
 		return fmt.Sprintf("Pair, %P, kickers %N, %N, %N", h.HiBest[0], h.HiBest[2], h.HiBest[3], h.HiBest[4])
 	}
-	return fmt.Sprintf("Nothing, %N-high, kickers %N, %N, %N, %N", h.HiBest[0], h.HiBest[1], h.HiBest[2], h.HiBest[3], h.HiBest[4])
+	return fmt.Sprintf(
+		"Nothing, %N-high, kickers %N, %N, %N, %N",
+		h.HiBest[0], h.HiBest[1], h.HiBest[2], h.HiBest[3], h.HiBest[4],
+	)
 }
 
 // LowDescription describes the hands best-five low cards.

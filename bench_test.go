@@ -19,6 +19,7 @@ func Benchmark(b *testing.B) {
 }
 
 func bench5(b *testing.B, f HandRankFunc, n int) {
+	b.Helper()
 	count := 0
 	for c0 := 0; c0 < 52; c0++ {
 		for c1 := c0 + 1; c1 < 52; c1++ {
@@ -41,6 +42,7 @@ func bench5(b *testing.B, f HandRankFunc, n int) {
 }
 
 func bench6(b *testing.B, f HandRankFunc, n int) {
+	b.Helper()
 	count := 0
 	for c0 := 0; c0 < 52; c0++ {
 		for c1 := c0 + 1; c1 < 52; c1++ {
@@ -65,6 +67,7 @@ func bench6(b *testing.B, f HandRankFunc, n int) {
 }
 
 func bench7(b *testing.B, f HandRankFunc, n int) {
+	b.Helper()
 	count := 0
 	for c0 := 0; c0 < 52; c0++ {
 		for c1 := c0 + 1; c1 < 52; c1++ {
