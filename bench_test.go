@@ -7,7 +7,7 @@ import (
 
 func BenchmarkRank(b *testing.B) {
 	for _, t := range cactusTests(true) {
-		for i, benchf := range []func(*testing.B, EvalRankFunc, int){
+		for i, benchf := range []func(*testing.B, CactusFunc, int){
 			bench5, bench6, bench7,
 		} {
 			test, f := t, benchf
@@ -42,7 +42,7 @@ func BenchmarkEval(b *testing.B) {
 	}
 }
 
-func bench5(b *testing.B, f EvalRankFunc, n int) {
+func bench5(b *testing.B, f CactusFunc, n int) {
 	b.Helper()
 	v, count := shuffled(DeckFrench), 0
 	for c0 := 0; c0 < 52; c0++ {
@@ -65,7 +65,7 @@ func bench5(b *testing.B, f EvalRankFunc, n int) {
 	}
 }
 
-func bench6(b *testing.B, f EvalRankFunc, n int) {
+func bench6(b *testing.B, f CactusFunc, n int) {
 	b.Helper()
 	v, count := shuffled(DeckFrench), 0
 	for c0 := 0; c0 < 52; c0++ {
@@ -90,7 +90,7 @@ func bench6(b *testing.B, f EvalRankFunc, n int) {
 	}
 }
 
-func bench7(b *testing.B, f EvalRankFunc, n int) {
+func bench7(b *testing.B, f CactusFunc, n int) {
 	b.Helper()
 	v, count := shuffled(DeckFrench), 0
 	for c0 := 0; c0 < 52; c0++ {

@@ -182,7 +182,7 @@ func TestDealerRuns(t *testing.T) {
 	for _, tt := range tests {
 		test := tt
 		t.Run(test.typ.Name(), func(t *testing.T) {
-			testDealer(t, test.typ, test.count, test.seed, func(r *rand.Rand, d *Dealer) bool {
+			testDealer(t, test.typ, test.count, test.seed, func(r *rand.Rand, d *Dealer) {
 				switch d.Id() {
 				case 'f':
 					d.Deactivate(3, 4)
@@ -190,13 +190,12 @@ func TestDealerRuns(t *testing.T) {
 						t.Fatalf("expected %t, got: %t", exp, b)
 					}
 				}
-				return false
 			})
 		})
 	}
 }
 
-type dealFunc func(r *rand.Rand, d *Dealer) bool
+type dealFunc func(r *rand.Rand, d *Dealer)
 
 func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 	t.Helper()
@@ -206,10 +205,10 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 	t.Logf("Eval: %s", desc.Eval)
 	t.Logf("HiComp: %s LoComp: %s", desc.HiComp, desc.LoComp)
 	t.Logf("HiDesc: %s LoDesc: %s", desc.HiDesc, desc.LoDesc)
-	t.Logf("Deck: %s [%d]", desc.Deck, len(d.Deck.v))
 	deck := d.Deck.All()
+	t.Logf("Deck: %s [%d]", desc.Deck, len(deck))
 	for i := 0; i < len(deck); i += 8 {
-		t.Logf("  %v", d.Deck.v[i:min(i+8, len(deck))])
+		t.Logf("  %v", deck[i:min(i+8, len(deck))])
 	}
 	for d.Next() {
 		t.Logf("%s", d)
@@ -229,12 +228,8 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 				}
 			}
 		}
-		end := false
 		if f != nil {
-			end = f(r, d)
-		}
-		if end {
-			break
+			f(r, d)
 		}
 	}
 	t.Logf("Showdown:")

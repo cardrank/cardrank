@@ -7,14 +7,14 @@ import "unicode"
 
 var (
 	// DefaultEval is the default eval rank func.
-	DefaultEval EvalRankFunc
+	DefaultEval CactusFunc
 	// DefaultCactus is the default Cactus Kev implementation.
 	DefaultCactus RankFunc
 
 	// Package rank funcs (set in z.go).
 	cactus     RankFunc
 	cactusFast RankFunc
-	twoPlusTwo EvalRankFunc
+	twoPlusTwo CactusFunc
 
 	// descs are the registered type descriptions.
 	descs = make(map[Type]TypeDesc)

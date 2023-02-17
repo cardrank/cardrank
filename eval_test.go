@@ -330,7 +330,7 @@ func sevenCardTests() []cardTest {
 
 type cactusTest struct {
 	name string
-	eval EvalRankFunc
+	eval CactusFunc
 }
 
 func cactusTests(base bool) []cactusTest {

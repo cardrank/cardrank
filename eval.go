@@ -155,11 +155,11 @@ func RankLowball(c0, c1, c2, c3, c4 Card) EvalRank {
 	return rankMax - r
 }
 
-// EvalRankFunc returns the eval rank of 5, 6, or 7 cards.
-type EvalRankFunc func([]Card) EvalRank
+// CactusFunc returns the eval rank of 5, 6, or 7 cards.
+type CactusFunc func([]Card) EvalRank
 
 // NewRankFunc creates a rank eval func for 5, 6, or 7 cards using f.
-func NewRankFunc(f RankFunc) EvalRankFunc {
+func NewRankFunc(f RankFunc) CactusFunc {
 	return func(v []Card) EvalRank {
 		switch n := len(v); {
 		case n == 5:
@@ -191,7 +191,7 @@ func NewRankFunc(f RankFunc) EvalRankFunc {
 
 // NewHybrid creates a hybrid eval rank func using f5 for 5 and 6 cards, and f7
 // for 7 cards.
-func NewHybrid(f5 RankFunc, f7 EvalRankFunc) EvalRankFunc {
+func NewHybrid(f5 RankFunc, f7 CactusFunc) CactusFunc {
 	return func(v []Card) EvalRank {
 		switch len(v) {
 		case 5:
@@ -212,8 +212,8 @@ func NewHybrid(f5 RankFunc, f7 EvalRankFunc) EvalRankFunc {
 // EvalFunc is a rank eval func.
 type EvalFunc func(*Eval, []Card, []Card)
 
-// NewHoldemEval creates a Holdem rank eval func.
-func NewHoldemEval(f EvalRankFunc, straightHigh Rank) EvalFunc {
+// NewCactusEval creates a Cactus rank eval func.
+func NewCactusEval(f CactusFunc, straightHigh Rank) EvalFunc {
 	return func(ev *Eval, pocket, board []Card) {
 		v := make([]Card, len(pocket)+len(board))
 		copy(v, pocket)
@@ -225,7 +225,7 @@ func NewHoldemEval(f EvalRankFunc, straightHigh Rank) EvalFunc {
 
 // NewShortEval creates a Short rank eval func.
 func NewShortEval() EvalFunc {
-	return NewHoldemEval(NewRankFunc(func(c0, c1, c2, c3, c4 Card) EvalRank {
+	return NewCactusEval(NewRankFunc(func(c0, c1, c2, c3, c4 Card) EvalRank {
 		r := DefaultCactus(c0, c1, c2, c3, c4)
 		switch r {
 		case 747: // Straight Flush, 9, 8, 7, 6, Ace
@@ -239,7 +239,7 @@ func NewShortEval() EvalFunc {
 
 // NewManilaEval creates a Manila rank eval func.
 func NewManilaEval() EvalFunc {
-	return NewHoldemEval(NewRankFunc(func(c0, c1, c2, c3, c4 Card) EvalRank {
+	return NewCactusEval(NewRankFunc(func(c0, c1, c2, c3, c4 Card) EvalRank {
 		r := DefaultCactus(c0, c1, c2, c3, c4)
 		switch r {
 		case 691: // Straight Flush, 10, 9, 8, 7, Ace
@@ -347,7 +347,7 @@ func NewOmahaSixEval(loMax EvalRank) EvalFunc {
 
 // NewStudEval creates a Stud rank eval func.
 func NewStudEval(loMax EvalRank) EvalFunc {
-	hi := NewHoldemEval(DefaultEval, Five)
+	hi := NewCactusEval(DefaultEval, Five)
 	lo := NewLowEval(RankEightOrBetter, loMax)
 	return func(ev *Eval, pocket, board []Card) {
 		hi(ev, pocket, board)
@@ -443,7 +443,7 @@ func NewLowballEval() EvalFunc {
 
 // NewSokoEval creates a Soko rank eval func.
 func NewSokoEval() EvalFunc {
-	f := NewHoldemEval(DefaultEval, Five)
+	f := NewCactusEval(DefaultEval, Five)
 	return func(ev *Eval, pocket, board []Card) {
 		f(ev, pocket, board)
 	}

@@ -825,7 +825,7 @@ const (
 func (typ EvalType) New(low bool) EvalFunc {
 	switch typ {
 	case EvalCactus:
-		return NewHoldemEval(DefaultEval, Five)
+		return NewCactusEval(DefaultEval, Five)
 	case EvalShort:
 		return NewShortEval()
 	case EvalManila:
@@ -1081,7 +1081,7 @@ func (typ DescType) Desc(f fmt.State, verb rune, rank EvalRank, best, unused []C
 	case 'v', 's':
 		switch typ {
 		case DescCactus:
-			HoldemDesc(f, verb, rank, best, unused, low)
+			CactusDesc(f, verb, rank, best, unused, low)
 		case DescLow:
 			LowDesc(f, verb, rank, best, unused, low)
 		case DescShort:
@@ -1182,7 +1182,7 @@ func SokoComp(a, b *Eval, _ EvalRank) int {
 	return 0
 }
 
-// HoldemDesc returns a Holdew description for the rank, best, and unused
+// CactusDesc returns a Cactus description for the rank, best, and unused
 // cards.
 //
 // Examples:
@@ -1198,7 +1198,7 @@ func SokoComp(a, b *Eval, _ EvalRank) int {
 //	Two Pair, Nines over Sixes, kicker Jack
 //	Pair, Aces, kickers King, Queen, Nine
 //	Nothing, Seven-high, kickers Six, Five, Three, Two
-func HoldemDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
+func CactusDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
 	// add additional straight flush names (at some point)
 	// A: Royal
 	// K: Platinum Oxide
@@ -1259,7 +1259,7 @@ func ShortDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low b
 	case rank.Fixed() == StraightFlush && best[0].Rank() == Nine:
 		fmt.Fprintf(f, "Straight Flush, %N-high, Iron Maiden", best[0])
 	default:
-		HoldemDesc(f, verb, rank, best, unused, low)
+		CactusDesc(f, verb, rank, best, unused, low)
 	}
 }
 
@@ -1269,7 +1269,7 @@ func ManilaDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low 
 	case rank.Fixed() == StraightFlush && best[0].Rank() == Ten:
 		fmt.Fprintf(f, "Straight Flush, %N-high, Golden Ratio", best[0])
 	default:
-		HoldemDesc(f, verb, rank, best, unused, low)
+		CactusDesc(f, verb, rank, best, unused, low)
 	}
 }
 
@@ -1279,7 +1279,7 @@ func RazzDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bo
 	case rank < rankAceFiveMax:
 		LowDesc(f, verb, rank, best, unused, true)
 	default:
-		HoldemDesc(f, verb, Invalid-rank, best, unused, false)
+		CactusDesc(f, verb, Invalid-rank, best, unused, false)
 	}
 }
 
