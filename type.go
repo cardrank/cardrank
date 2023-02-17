@@ -38,6 +38,17 @@ const (
 	Soko           Type = 'K'<<8 | 'o' // Ko
 )
 
+// IdToType converts id to its type.
+func IdToType(id string) (Type, error) {
+	switch {
+	case len(id) != 2,
+		!unicode.IsLetter(rune(id[0])) && !unicode.IsNumber(rune(id[0])),
+		!unicode.IsLetter(rune(id[1])) && !unicode.IsNumber(rune(id[1])):
+		return 0, ErrInvalidId
+	}
+	return Type(id[0])<<8 | Type(id[1]), nil
+}
+
 // DefaultTypes returns the default type descriptions.
 func DefaultTypes() []TypeDesc {
 	var v []TypeDesc
@@ -98,7 +109,7 @@ func Types() []Type {
 
 // MarshalText satisfies the encoding.TextMarshaler interface.
 func (typ Type) MarshalText() ([]byte, error) {
-	return []byte(typ.String()), nil
+	return []byte(typ.Id()), nil
 }
 
 // UnmarshalText satisfies the encoding.TextUnmarshaler interface.
@@ -119,8 +130,8 @@ func (typ *Type) UnmarshalText(buf []byte) error {
 	return ErrInvalidType
 }
 
-// String satisfies the fmt.Stringer interface.
-func (typ Type) String() string {
+// Id satisfies the fmt.Stringer interface.
+func (typ Type) Id() string {
 	return string([]byte{byte(typ >> 8 & 0xf), byte(typ & 0xf)})
 }
 
@@ -128,7 +139,7 @@ func (typ Type) String() string {
 func (typ Type) Format(f fmt.State, verb rune) {
 	switch verb {
 	case 'c':
-		fmt.Fprint(f, typ.String())
+		fmt.Fprint(f, typ.Id())
 		return
 	}
 	if desc, ok := descs[typ]; ok {
@@ -138,8 +149,8 @@ func (typ Type) Format(f fmt.State, verb rune) {
 	}
 }
 
-// Desc returns the type description.
-func (typ Type) Desc() TypeDesc {
+// TypeDesc returns the type description.
+func (typ Type) TypeDesc() TypeDesc {
 	return descs[typ]
 }
 
@@ -251,12 +262,11 @@ func (typ Type) Deck() *Deck {
 	return descs[typ].Deck.New()
 }
 
-// HiComp returns a hi compare func.
-func (typ Type) HiComp() func(*Eval, *Eval) int {
-	f, low := descs[typ].HiComp.Comp, descs[typ].Low
-	loMax := Invalid
-	if low {
-		loMax = rankEightOrBetterMax
+// NewComp returns a compare func.
+func (typ Type) NewComp(low bool) func(*Eval, *Eval) int {
+	f, loMax := descs[typ].HiComp.Comp, Invalid
+	if low && descs[typ].Low {
+		f, loMax = descs[typ].LoComp.Comp, rankEightOrBetterMax
 	}
 	return func(a, b *Eval) int {
 		switch {
@@ -271,34 +281,12 @@ func (typ Type) HiComp() func(*Eval, *Eval) int {
 	}
 }
 
-// LoComp returns a lo compare func.
-func (typ Type) LoComp() func(*Eval, *Eval) int {
-	f, low := descs[typ].LoComp.Comp, descs[typ].Low
-	loMax := Invalid
+// Desc returns the type's hi desc type.
+func (typ Type) Desc(low bool) DescType {
 	if low {
-		loMax = rankEightOrBetterMax
+		return descs[typ].LoDesc
 	}
-	return func(a, b *Eval) int {
-		switch {
-		case a == nil && b == nil:
-			return -1
-		case a == nil:
-			return +1
-		case b == nil:
-			return -1
-		}
-		return f(a, b, loMax)
-	}
-}
-
-// HiDesc returns the type's hi desc type.
-func (typ Type) HiDesc() DescType {
 	return descs[typ].HiDesc
-}
-
-// LoDesc returns the type's lo desc type.
-func (typ Type) LoDesc() DescType {
-	return descs[typ].LoDesc
 }
 
 // Dealer creates a new dealer with a deck shuffled by shuffles, for the pocket
@@ -877,7 +865,7 @@ func (typ EvalType) Format(f fmt.State, verb rune) {
 func (typ EvalType) Byte() byte {
 	switch typ {
 	case EvalCactus:
-		return 'h'
+		return 'c'
 	case EvalShort,
 		EvalManila,
 		EvalOmaha,
@@ -1038,7 +1026,7 @@ func (typ DescType) Format(f fmt.State, verb rune) {
 func (typ DescType) Byte() byte {
 	switch typ {
 	case DescCactus:
-		return 'h'
+		return 'c'
 	case DescLow,
 		DescShort,
 		DescManila,
@@ -1182,7 +1170,7 @@ func SokoComp(a, b *Eval, _ EvalRank) int {
 	return 0
 }
 
-// CactusDesc returns a Cactus description for the rank, best, and unused
+// CactusDesc writes a Cactus description to f for the rank, best, and unused
 // cards.
 //
 // Examples:
@@ -1239,7 +1227,7 @@ func CactusDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low 
 	}
 }
 
-// LowDesc returns a Low description for the rank, best, and unused cards.
+// LowDesc writes a Low description to f for the rank, best, and unused cards.
 func LowDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
 	switch {
 	case rank == 0, rank == Invalid:
@@ -1253,7 +1241,8 @@ func LowDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low boo
 	}
 }
 
-// ShortDesc returns a Short description for the rank, best, and unused cards.
+// ShortDesc writes a Short description to f for the rank, best, and unused
+// cards.
 func ShortDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
 	switch {
 	case rank.Fixed() == StraightFlush && best[0].Rank() == Nine:
@@ -1263,7 +1252,8 @@ func ShortDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low b
 	}
 }
 
-// ManilaDesc returns a Manila description for the rank, best, and unused cards.
+// ManilaDesc writes a Manila description to f for the rank, best, and unused
+// cards.
 func ManilaDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
 	switch {
 	case rank.Fixed() == StraightFlush && best[0].Rank() == Ten:
@@ -1273,7 +1263,8 @@ func ManilaDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low 
 	}
 }
 
-// RazzDesc returns a Razz description for the rank, best, and unused cards.
+// RazzDesc writes a Razz description to f for the rank, best, and unused
+// cards.
 func RazzDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
 	switch {
 	case rank < rankAceFiveMax:
@@ -1283,25 +1274,15 @@ func RazzDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bo
 	}
 }
 
-// LowballDesc returns a Lowball description for the rank, best, and unused cards.
+// LowballDesc writes a Lowball description to f for the rank, best, and unused
+// cards.
 func LowballDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
 	fmt.Fprintf(f, "(lowball desc incomplete: %d)", rank)
 }
 
-// SokoDesc returns a Soko description for the rank, best, and unused cards.
+// SokoDesc writes a Soko description to f for the rank, best, and unused cards.
 func SokoDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
 	fmt.Fprintf(f, "(soko desc incomplete: %d)", rank)
-}
-
-// IdToType converts an id to a type.
-func IdToType(id string) (Type, error) {
-	switch {
-	case len(id) != 2,
-		!unicode.IsLetter(rune(id[0])) && !unicode.IsNumber(rune(id[0])),
-		!unicode.IsLetter(rune(id[1])) && !unicode.IsNumber(rune(id[1])):
-		return 0, ErrInvalidId
-	}
-	return Type(id[0])<<8 | Type(id[1]), nil
 }
 
 // bestHoldem sets the best holdem.
@@ -1326,7 +1307,9 @@ func bestHoldem(ev *Eval, v []Card, straightHigh Rank) {
 		v = bestSet(v)
 	case Nothing:
 	default:
-		panic("bad rank")
+		// bad rank
+		ev.HiRank = Invalid
+		return
 	}
 	ev.HiBest, ev.HiUnused = v[:5], v[5:]
 }
@@ -1352,7 +1335,9 @@ func bestOmaha(ev *Eval, loMax EvalRank) {
 		ev.HiBest = bestSet(ev.HiBest)
 	case Nothing:
 	default:
-		panic("bad rank")
+		// bad rank
+		ev.HiRank = Invalid
+		return
 	}
 	if loMax != Invalid && ev.LoRank < loMax {
 		sort.Slice(ev.LoBest, func(i, j int) bool {
@@ -1386,7 +1371,8 @@ func bestLowball(ev *Eval, v []Card) {
 	case Nothing:
 		ev.HiBest = v
 	default:
-		panic("bad rank")
+		ev.HiRank = Invalid
+		return
 	}
 	bestHoldem(ev, v, Six)
 }

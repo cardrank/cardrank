@@ -58,7 +58,8 @@ func TestShort(t *testing.T) {
 		if !equals(ev.HiUnused, unused) {
 			t.Errorf("test %d %v expected unused %v, got: %v", i, pocket, unused, ev.HiUnused)
 		}
-		if s, exp := fmt.Sprintf("%s %b", ev.HiDesc(), ev.HiBest), test.s; s != exp {
+		desc := ev.Desc(false)
+		if s, exp := fmt.Sprintf("%s %b", desc, desc.Best), test.s; s != exp {
 			t.Errorf("test %d expected description %q, got: %q", i, exp, s)
 		}
 	}
@@ -218,7 +219,7 @@ func TestTypeHiComp(t *testing.T) {
 		if r, exp := b.HiRank.Fixed(), test.k; r != exp {
 			t.Errorf("test %d %s expected %d, got: %d", i, test.typ, exp, r)
 		}
-		if n := a.HiComp(b); n != test.exp {
+		if n := a.Comp(b, false); n != test.exp {
 			t.Errorf("test %d %s compare expected %d, got: %d", i, test.typ, test.exp, n)
 		}
 	}

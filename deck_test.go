@@ -201,7 +201,7 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 	t.Helper()
 	r := rand.New(rand.NewSource(seed))
 	d := typ.Dealer(r, 1, count)
-	desc := typ.Desc()
+	desc := typ.TypeDesc()
 	t.Logf("Eval: %s", desc.Eval)
 	t.Logf("HiComp: %s LoComp: %s", desc.HiComp, desc.LoComp)
 	t.Logf("HiDesc: %s LoDesc: %s", desc.HiDesc, desc.LoDesc)
@@ -238,10 +238,10 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 		t.Logf("  Run %d:", run)
 		for i := 0; i < count; i++ {
 			if d.Active[i] {
-				hi := res.Evals[i].HiDesc()
+				hi := res.Evals[i].Desc(false)
 				t.Logf("    %d: %v %v %s", i, hi.Best, hi.Unused, hi)
 				if d.Low || d.Double {
-					lo := res.Evals[i].LoDesc()
+					lo := res.Evals[i].Desc(true)
 					t.Logf("       %v %v %s", lo.Best, lo.Unused, lo)
 				}
 			} else {

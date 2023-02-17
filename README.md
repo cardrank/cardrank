@@ -18,12 +18,13 @@ Supports [Texas Holdem][holdem-example], [Texas Holdem Short (6+)][short-example
 
 ## Overview
 
-The `github.com/cardrank/cardrank` package contains types for [cards][card], [card
-suits][suit], [card ranks][rank], [card decks][deck], and [hands of
-cards][hand].
+The `github.com/cardrank/cardrank` package contains types for [cards][card],
+[card suits][suit], [card ranks][rank], [card decks][deck], and [evaluating
+cards][eval].
 
 A single [package level type][type] provides a standard interface for dealing
-cards for, and evaluating [poker hands][hand] of the following:
+cards for, and [evaluating ranks of 5, 6, and 7 poker hands][eval] of the
+following:
 
 <!-- START overview -->
 * [Texas Holdem][holdem-example]
@@ -37,14 +38,14 @@ cards for, and evaluating [poker hands][hand] of the following:
 * [Badugi][badugi-example]
 <!-- END -->
 
-[Hand evaluation and ranking][hand-ranking] of the different [poker hand
+[Evaluation and ranking][eval-ranking] of the supported [poker hand
 types][type] is accomplished through pure Go implementations of [well-known
-poker rank evaluation algorithms](#cactus-kev). [Poker hands][hand] can be
-compared and [ordered to determine the hand's winner(s)][winners].
+poker rank evaluation algorithms](#cactus-kev). [Poker hands][eval] can be
+compared and [ordered to determine winner(s)][winners].
 
 ## Using
 
-To use within a Go package or module:
+To use within a Go package:
 
 ```sh
 go get github.com/cardrank/cardrank
@@ -58,171 +59,73 @@ Complete [examples for all `Type`'s][examples] are available, including
 additional examples showing use of various types, utilities, and interfaces is
 available in the [Go package documentation][pkg].
 
-Below are quick examples for `Holdem` and `OmahaHiLo` included in the
-[example](/_example) directory:
+Below are quick examples for [`Dealer`][dealer] [`Holdem`][type] and
+[`OmahaHiLo`][type] included in the [example](/_example) directory:
+
+##### Dealer
+
+The following showcases a [`Dealer`][dealer]:
+
+<!-- START dealer -->
+<!-- END -->
 
 ##### Texas Holdem
 
-The following showcases a simple game of Texas Holdem:
+The following showcases a simple game of [Texas Holdem][type]:
 
 <!-- START holdem -->
-```go
-package main
-
-import (
-	"fmt"
-	"math/rand"
-	"strconv"
-	"strings"
-	"time"
-
-	"github.com/cardrank/cardrank"
-)
-
-func main() {
-	const players = 6
-	seed := time.Now().UnixNano()
-	// note: use a better pseudo-random number generator
-	rnd := rand.New(rand.NewSource(seed))
-	pockets, board := cardrank.Holdem.Deal(rnd, players)
-	hands := cardrank.Holdem.RankHands(pockets, board)
-	fmt.Printf("------ Holdem %d ------\n", seed)
-	fmt.Printf("Board:    %b\n", board)
-	for i := 0; i < players; i++ {
-		fmt.Printf("Player %d: %b %s %b %b\n", i+1, hands[i].Pocket, hands[i].Description(), hands[i].HiBest, hands[i].HiUnused)
-	}
-	h, pivot := cardrank.Order(hands)
-	if pivot == 1 {
-		fmt.Printf("Result:   Player %d wins with %s %b\n", h[0]+1, hands[h[0]].Description(), hands[h[0]].HiBest)
-	} else {
-		var s, b []string
-		for j := 0; j < pivot; j++ {
-			s = append(s, strconv.Itoa(h[j]+1))
-			b = append(b, fmt.Sprintf("%b", hands[h[j]].HiBest))
-		}
-		fmt.Printf("Result:   Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
-	}
-}
-```
-
-Output:
-
-```txt
------- Holdem 1676110749917132920 ------
-Board:    [8♦ 9♠ 2♦ 2♣ J♦]
-Player 1: [J♣ 4♠] Two Pair, Jacks over Twos, kicker Nine [J♣ J♦ 2♣ 2♦ 9♠] [8♦ 4♠]
-Player 2: [3♣ T♣] Pair, Twos, kickers Jack, Ten, Nine [2♣ 2♦ J♦ T♣ 9♠] [8♦ 3♣]
-Player 3: [6♦ 5♣] Pair, Twos, kickers Jack, Nine, Eight [2♣ 2♦ J♦ 9♠ 8♦] [6♦ 5♣]
-Player 4: [9♣ 4♣] Two Pair, Nines over Twos, kicker Jack [9♣ 9♠ 2♣ 2♦ J♦] [8♦ 4♣]
-Player 5: [7♠ 2♥] Three of a Kind, Twos, kickers Jack, Nine [2♣ 2♦ 2♥ J♦ 9♠] [8♦ 7♠]
-Player 6: [T♠ 3♠] Pair, Twos, kickers Jack, Ten, Nine [2♣ 2♦ J♦ T♠ 9♠] [8♦ 3♠]
-Result:   Player 5 wins with Three of a Kind, Twos, kickers Jack, Nine [2♣ 2♦ 2♥ J♦ 9♠]
-```
 <!-- END -->
 
 ##### Omaha Hi/Lo
 
-The following showcases a simple game of Omaha Hi/Lo, highlighting Hi/Lo winner
-determination:
+The following showcases a simple game of [Omaha Hi/Lo][type]:
 
-<!-- START omahaHiLo -->
-```go
-package main
-
-import (
-	"fmt"
-	"math/rand"
-	"strconv"
-	"strings"
-	"time"
-
-	"github.com/cardrank/cardrank"
-)
-
-func main() {
-	const players = 6
-	seed := time.Now().UnixNano()
-	// note: use a better pseudo-random number generator
-	rnd := rand.New(rand.NewSource(seed))
-	pockets, board := cardrank.OmahaHiLo.Deal(rnd, players)
-	hands := cardrank.OmahaHiLo.RankHands(pockets, board)
-	fmt.Printf("------ OmahaHiLo %d ------\n", seed)
-	fmt.Printf("Board: %b\n", board)
-	for i := 0; i < players; i++ {
-		fmt.Printf("Player %d: %b\n", i+1, pockets[i])
-		fmt.Printf("  Hi: %s %b %b\n", hands[i].Description(), hands[i].HiBest, hands[i].HiUnused)
-		fmt.Printf("  Lo: %s %b %b\n", hands[i].LowDescription(), hands[i].LoBest, hands[i].LoUnused)
-	}
-	h, hPivot := cardrank.Order(hands)
-	l, lPivot := cardrank.LoOrder(hands)
-	typ := "wins"
-	if lPivot == 0 {
-		typ = "scoops"
-	}
-	if hPivot == 1 {
-		fmt.Printf("Result (Hi): Player %d %s with %s %b\n", h[0]+1, typ, hands[h[0]].Description(), hands[h[0]].HiBest)
-	} else {
-		var s, b []string
-		for i := 0; i < hPivot; i++ {
-			s = append(s, strconv.Itoa(h[i]+1))
-			b = append(b, fmt.Sprintf("%b", hands[h[i]].HiBest))
-		}
-		fmt.Printf("Result (Hi): Players %s push with %s %s\n", strings.Join(s, ", "), hands[h[0]].Description(), strings.Join(b, ", "))
-	}
-	if lPivot == 1 {
-		fmt.Printf("Result (Lo): Player %d wins with %s %b\n", l[0]+1, hands[l[0]].LowDescription(), hands[l[0]].LoBest)
-	} else if lPivot > 1 {
-		var s, b []string
-		for j := 0; j < lPivot; j++ {
-			s = append(s, strconv.Itoa(l[j]+1))
-			b = append(b, fmt.Sprintf("%b", hands[l[j]].LoBest))
-		}
-		fmt.Printf("Result (Lo): Players %s push with %s %s\n", strings.Join(s, ", "), hands[l[0]].LowDescription(), strings.Join(b, ", "))
-	} else {
-		fmt.Printf("Result (Lo): no player made a low hand\n")
-	}
-}
-```
-
-Output:
-
-```txt
------- OmahaHiLo 1676110711435292197 ------
-Board: [9♥ 4♦ A♣ 9♦ 2♣]
-Player 1: [J♦ Q♠ J♠ 7♦]
-  Hi: Two Pair, Jacks over Nines, kicker Ace [J♦ J♠ 9♦ 9♥ A♣] [Q♠ 7♦ 4♦ 2♣]
-  Lo: None [] []
-Player 2: [K♥ 2♠ T♥ 3♦]
-  Hi: Two Pair, Nines over Twos, kicker King [9♦ 9♥ 2♣ 2♠ K♥] [T♥ 3♦ 4♦ A♣]
-  Lo: None [] []
-Player 3: [2♦ T♦ K♣ 6♥]
-  Hi: Two Pair, Nines over Twos, kicker King [9♦ 9♥ 2♣ 2♦ K♣] [T♦ 6♥ 4♦ A♣]
-  Lo: None [] []
-Player 4: [9♣ 5♥ J♥ 8♦]
-  Hi: Three of a Kind, Nines, kickers Ace, Jack [9♣ 9♦ 9♥ A♣ J♥] [5♥ 8♦ 4♦ 2♣]
-  Lo: Eight, Five, Four, Two, Ace-low [8♦ 5♥ 4♦ 2♣ A♣] [9♣ J♥ 9♥ 9♦]
-Player 5: [8♠ 6♣ 4♣ Q♥]
-  Hi: Two Pair, Nines over Fours, kicker Queen [9♦ 9♥ 4♣ 4♦ Q♥] [8♠ 6♣ A♣ 2♣]
-  Lo: Eight, Six, Four, Two, Ace-low [8♠ 6♣ 4♦ 2♣ A♣] [4♣ Q♥ 9♥ 9♦]
-Player 6: [T♠ 6♠ 5♠ 5♦]
-  Hi: Two Pair, Nines over Fives, kicker Ace [9♦ 9♥ 5♦ 5♠ A♣] [T♠ 6♠ 4♦ 2♣]
-  Lo: Six, Five, Four, Two, Ace-low [6♠ 5♠ 4♦ 2♣ A♣] [T♠ 5♦ 9♥ 9♦]
-Result (Hi): Player 4 wins with Three of a Kind, Nines, kickers Ace, Jack [9♣ 9♦ 9♥ A♣ J♥]
-Result (Lo): Player 6 wins with Six, Five, Four, Two, Ace-low [6♠ 5♠ 4♦ 2♣ A♣]
-```
+<!-- START omahahilo -->
 <!-- END -->
 
-### Hand Ranking
+### Eval Ranking
 
-Poker [`Hand`][hand]'s make use of a [`HandRank`][hand-rank] to determine the
+A pocket and optional board of [`Card`'s][card] can be passed to a
+[`Type`'s][type] `New` method, which in turn uses the `Type`'s registered
+[`EvalFunc`][eval-func] and creating a new [`Eval`][eval]:
+
+```go
+v := cardrank.Must("Ah Kh Qh Jh Th")
+ev := cardrank.Holdem.New(v, nil)
+fmt.Printf("%s\n", ev)
+
+// Output:
+// Straight Flush, Ace-high, Royal [Ah Kh Qh Jh Th]
+```
+
+When evaluating cards, one usually passes 5, 6, or 7 cards, but some `Type`'s
+are capable of evaluating fewer `Card`'s:
+
+```go
+v := cardrank.Must("2h 3s 4c")
+ev := cardrank.Badugi.New(v, nil)
+fmt.Printf("%s\n", ev)
+
+// Output:
+// Four, Three, Two-low [4c 3s 2h]
+```
+
+A returned [`Eval`][eval] of a [`HandRank`][hand-rank] to determine the
 relative rank of a `Hand`, on a low-to-high basis. Higher poker hands
 have a lower value `HandRank` than lower poker hands. For example, a
 [`StraightFlush`][hand-rank] will have a lower `HandRank` than a
 [`FullHouse`][hand-rank].
 
-When a [`Hand`][hand] is created, a Hi and Lo (if applicable) `HandRank` is
-evaluated, and made available via [`Hand.HiRank`][hand.hi-rank] and
-[`Hand.LoRank`][hand.lo-rank] methods, respectively. The Hi and Lo
+If an invalid number of cards is passed to a `Type`'s `EvalFunc`, the `Eval`'s
+[`HiRank`][eval.hi-rank] and [`LoRank`][eval.lo-rank] values will be set to
+[`Invalid`][invalid].
+
+Currently, no `Type`'s supports evaluating hands containing more than 7
+`Card`'s.
+
+When a [`Eval`][hand] is created, a Hi and Lo (if applicable) `HandRank` is
+evaluated, and made available via [`Eval.HiRank`][eval.hi-rank] and
+[`Eval.LoRank`][eval.lo-rank] methods, respectively. The Hi and Lo
 `HandRank`'s are evaluated by a `EvalRankFunc`, dependent on the `Hand`'s
 [`Type`][type]:
 
@@ -265,7 +168,7 @@ can be enabled using the [`forcefat` build tag][build-tags].
 ### Winner Determination
 
 Winner(s) are determined by the lowest possible [`HandRank`][hand-rank] when
-comparing a [`Hand`'s][hand] [`HiRank`][hand.hi-rank] or [`LoRank`][hand.lo-rank]
+comparing a [`Hand`'s][hand] [`HiRank`][eval.hi-rank] or [`LoRank`][eval.lo-rank]
 against another hand's. Two or more hands having a `HandRank` of equal value
 indicate that the hands have equivalent ranks, and thus have both won.
 
@@ -276,7 +179,7 @@ equivalent `HiRank`'s or `LoRank`'s.
 #### Comparing Hands
 
 A [`Hand`][hand] can be compared to another `Hand` using
-[`HiComp`][hand.hi-comp] and [`LoComp`][hand.lo-comp].
+[`HiComp`][eval.hi-comp] and [`LoComp`][eval.lo-comp].
 
 `HiComp` and `LowComp` return `-1`, `0`, or `+1`, making it easy to compare
 or sort hands:
@@ -313,7 +216,7 @@ ordered hands as a `[]int` and an `int` pivot indicating the position within
 the returned list demarcating winning and losing hands.
 
 A `Hand` whose index is in position `i < pivot` is considered to be the
-winner(s) of the hand. Hi hands are guaranteed to have 1 or more winner(s),
+winner(s) of the eval. Hi hands are guaranteed to have 1 or more winner(s),
 while Lo hands have 0 or more winner(s):
 
 ```go
@@ -418,7 +321,7 @@ GOOS=js GOARCH=wasm go build -tags 'forcefat' -o cardrank.wasm
 
 [pkg]: https://pkg.go.dev/github.com/cardrank/cardrank
 [examples]: https://pkg.go.dev/github.com/cardrank/cardrank#pkg-examples
-[hand-ranking]: #hand-ranking
+[eval-ranking]: #eval-ranking
 [build-tags]: #build-tags
 [winners]: #winner-determination
 
@@ -432,10 +335,10 @@ GOOS=js GOARCH=wasm go build -tags 'forcefat' -o cardrank.wasm
 [init]: https://pkg.go.dev/github.com/cardrank/cardrank#Init
 [hi-order]: https://pkg.go.dev/github.com/cardrank/cardrank#HiOrder
 [lo-order]: https://pkg.go.dev/github.com/cardrank/cardrank#LoOrder
-[hand.hi-comp]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.HiComp
-[hand.lo-comp]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.LoComp
-[hand.hi-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.HiRank
-[hand.lo-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.LoRank
+[eval.hi-comp]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.HiComp
+[eval.lo-comp]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.LoComp
+[eval.hi-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.HiRank
+[eval.lo-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.LoRank
 [default-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#DefaultRank
 [cactus]: https://pkg.go.dev/github.com/cardrank/cardrank#Cactus
 [cactus-fast]: https://pkg.go.dev/github.com/cardrank/cardrank#CactusFast

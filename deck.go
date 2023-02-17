@@ -508,11 +508,11 @@ func (d *Dealer) eval() {
 // EvalRun evals the run.
 func (d *Dealer) EvalRun(run int) *Result {
 	evs := d.EvalBoard(d.Boards[run])
-	hiOrder, hiPivot := HiOrder(evs)
+	hiOrder, hiPivot := Order(evs, false)
 	var loOrder []int
 	var loPivot int
 	if d.Low || d.Double {
-		loOrder, loPivot = LoOrder(evs)
+		loOrder, loPivot = Order(evs, true)
 	}
 	return &Result{
 		Evals:   evs,
@@ -604,12 +604,7 @@ func (win *Win) Format(f fmt.State, verb rune) {
 	case 'S':
 		var v []string
 		for i := 0; i < win.Pivot; i++ {
-			var desc *Desc
-			if !win.Low {
-				desc = win.Evals[win.Order[i]].HiDesc()
-			} else {
-				desc = win.Evals[win.Order[i]].LoDesc()
-			}
+			desc := win.Evals[win.Order[i]].Desc(win.Low)
 			v = append(v, fmt.Sprintf("%v", desc.Best))
 		}
 		fmt.Fprint(f, strings.Join(v, ", "))

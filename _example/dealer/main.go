@@ -17,7 +17,7 @@ func main() {
 		fmt.Printf("------ %s %d ------\n", typ, seed)
 		// setup dealer and display
 		d := typ.Dealer(r, 3, players)
-		desc := typ.Desc()
+		desc := typ.TypeDesc()
 		fmt.Printf("Eval: %s\n", desc.Eval)
 		fmt.Printf("HiComp: %s LoComp: %s\n", desc.HiComp, desc.LoComp)
 		fmt.Printf("HiDesc: %s LoDesc: %s\n", desc.HiDesc, desc.LoDesc)
@@ -61,10 +61,10 @@ func main() {
 			fmt.Printf("  Run %d:\n", run)
 			for i := 0; i < players; i++ {
 				if d.Active[i] {
-					hi := res.Evals[i].HiDesc()
+					hi := res.Evals[i].Desc(false)
 					fmt.Printf("    %d: %v %v %s\n", i, hi.Best, hi.Unused, hi)
 					if d.Low || d.Double {
-						lo := res.Evals[i].LoDesc()
+						lo := res.Evals[i].Desc(true)
 						fmt.Printf("       %v %v %s\n", lo.Best, lo.Unused, lo)
 					}
 				} else {

@@ -371,7 +371,8 @@ func NewRazzEval() EvalFunc {
 			case FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, Pair:
 				ev.HiBest = bestSet(ev.HiBest)
 			default:
-				panic("bad rank")
+				// bad rank
+				ev.HiRank, ev.HiBest, ev.HiUnused = Invalid, nil, nil
 			}
 		}
 	}
@@ -431,7 +432,8 @@ func NewLowballEval() EvalFunc {
 	f := NewRankFunc(RankLowball)
 	return func(ev *Eval, pocket, board []Card) {
 		if len(pocket) != 5 {
-			panic("bad pocket")
+			// pad pocket
+			return
 		}
 		v := make([]Card, len(pocket)+len(board))
 		copy(v, pocket)
@@ -457,7 +459,8 @@ func NewLowEval(f RankFunc, loMax EvalRank) EvalFunc {
 		copy(v, pocket)
 		copy(v[len(pocket):], board)
 		if len(v) != 7 {
-			panic("bad pocket or board")
+			// bad pocket/board
+			return
 		}
 		best, unused := make([]Card, 5), make([]Card, 2)
 		rank, r := Invalid, EvalRank(0)
@@ -539,57 +542,39 @@ func (ev *Eval) Init(n, m int, loMax EvalRank) {
 	}
 }
 
-// HiComp compares the hi eval.
-func (ev *Eval) HiComp(b *Eval) int {
-	return ev.Type.HiComp()(ev, b)
+// Comp compares hi or lo eval against b.
+func (ev *Eval) Comp(b *Eval, low bool) int {
+	return ev.Type.NewComp(low)(ev, b)
 }
 
-// LoComp compares the lo eval.
-func (ev *Eval) LoComp(b *Eval) int {
-	return ev.Type.LoComp()(ev, b)
-}
-
-// HiDesc returns the desc for the hi eval.
-func (ev *Eval) HiDesc() *Desc {
+// Desc returns the hi or low desc for the eval.
+func (ev *Eval) Desc(low bool) *Desc {
 	return &Desc{
-		Type:   ev.Type.HiDesc(),
+		Type:   ev.Type.Desc(low),
 		Rank:   ev.HiRank,
 		Best:   ev.HiBest,
 		Unused: ev.HiUnused,
+		Low:    low,
 	}
-}
-
-// LoDesc returns the desc for the lo eval.
-func (ev *Eval) LoDesc() *Desc {
-	if low := ev.Type.Low(); low || ev.Type.Double() {
-		return &Desc{
-			Type:   ev.Type.LoDesc(),
-			Rank:   ev.LoRank,
-			Best:   ev.LoBest,
-			Unused: ev.LoUnused,
-			Low:    low,
-		}
-	}
-	return nil
 }
 
 // Format satisfies the fmt.Formatter interface.
 func (ev *Eval) Format(f fmt.State, verb rune) {
 	switch verb {
 	case 's', 'v':
-		fmt.Fprintf(f, "%s %s", ev.HiDesc(), ev.HiBest)
+		fmt.Fprintf(f, "%s %s", ev.Desc(false), ev.HiBest)
 	case 'q':
-		fmt.Fprintf(f, "\"%s %s\"", ev.HiDesc(), ev.HiBest)
+		fmt.Fprintf(f, "\"%s %s\"", ev.Desc(false), ev.HiBest)
 	case 'S':
-		fmt.Fprintf(f, "%s %S", ev.HiDesc(), CardFormatter(ev.HiBest))
+		fmt.Fprintf(f, "%s %S", ev.Desc(false), CardFormatter(ev.HiBest))
 	case 'b':
-		fmt.Fprintf(f, "%s %b", ev.HiDesc(), ev.HiBest)
+		fmt.Fprintf(f, "%s %b", ev.Desc(false), ev.HiBest)
 	case 'h':
-		fmt.Fprintf(f, "%s %h", ev.HiDesc(), CardFormatter(ev.HiBest))
+		fmt.Fprintf(f, "%s %h", ev.Desc(false), CardFormatter(ev.HiBest))
 	case 'c':
-		fmt.Fprintf(f, "%s %c", ev.HiDesc(), ev.HiBest)
+		fmt.Fprintf(f, "%s %c", ev.Desc(false), ev.HiBest)
 	case 'C':
-		fmt.Fprintf(f, "%s %C", ev.HiDesc(), CardFormatter(ev.HiBest))
+		fmt.Fprintf(f, "%s %C", ev.Desc(false), CardFormatter(ev.HiBest))
 	case 'f':
 		for _, c := range ev.HiBest {
 			c.Format(f, 's')
@@ -613,9 +598,11 @@ func (desc *Desc) Format(f fmt.State, verb rune) {
 	desc.Type.Desc(f, verb, desc.Rank, desc.Best, desc.Unused, desc.Low)
 }
 
-// HiOrder determines the order for v, low to high, using HiComp. Returns
-// indices and pivot of winning vs losing. Pivot will always be 1 or higher.
-func HiOrder(evs []*Eval) ([]int, int) {
+// Order determines the hi or lo order for evs, using the the first eval type's
+// Comp. Returns indices and pivot of winning vs losing. Pivot will always be 1
+// or higher for hi evals. When ordering low evals, if there are no valid (ie,
+// qualified) evals, the returned pivot will be 0.
+func Order(evs []*Eval, low bool) ([]int, int) {
 	if len(evs) == 0 {
 		return nil, 0
 	}
@@ -624,35 +611,22 @@ func HiOrder(evs []*Eval) ([]int, int) {
 	for ; i < n; i++ {
 		m[i], v[i] = evs[i], i
 	}
-	f := evs[0].Type.HiComp()
+	f := evs[0].Type.NewComp(low)
 	sort.SliceStable(v, func(j, k int) bool {
 		return f(m[v[j]], m[v[k]]) < 0
 	})
+	if low {
+		// determine if any qualified low evals
+		if m[v[0]] == nil || m[v[0]].LoRank == Invalid {
+			return nil, 0
+		}
+		// determine lo pivot
+		for i = 1; i < n && m[v[i-1]] != nil && m[v[i]] != nil && m[v[i-1]].LoRank == m[v[i]].LoRank; i++ {
+		}
+		return v, i
+	}
+	// determine hi pivot
 	for i = 1; i < n && m[v[i-1]] != nil && m[v[i]] != nil && m[v[i-1]].HiRank == m[v[i]].HiRank; i++ {
-	}
-	return v, i
-}
-
-// LoOrder determines the order for v, low to high, using LoComp. Returns
-// indices and pivot of winning vs losing. If there are no low evals the pivot
-// will be 0.
-func LoOrder(evs []*Eval) ([]int, int) {
-	if len(evs) == 0 {
-		return nil, 0
-	}
-	i, n := 0, len(evs)
-	m, v := make(map[int]*Eval, n), make([]int, n)
-	for ; i < n; i++ {
-		m[i], v[i] = evs[i], i
-	}
-	f := evs[0].Type.LoComp()
-	sort.SliceStable(v, func(j, k int) bool {
-		return f(m[v[j]], m[v[k]]) < 0
-	})
-	if m[v[0]] == nil || m[v[0]].LoRank == Invalid {
-		return nil, 0
-	}
-	for i = 1; i < n && m[v[i-1]] != nil && m[v[i]] != nil && m[v[i-1]].LoRank == m[v[i]].LoRank; i++ {
 	}
 	return v, i
 }

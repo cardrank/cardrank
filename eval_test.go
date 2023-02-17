@@ -43,13 +43,14 @@ func TestHiOrder(t *testing.T) {
 			for i := 0; i < test.n; i++ {
 				pocket := d.Draw(2)
 				ev := Holdem.New(pocket, board)
+				desc := ev.Desc(false)
 				t.Logf("player %d: %b", i, pocket)
-				t.Logf("  best: %b", ev.HiBest)
-				t.Logf("  unused: %b", ev.HiUnused)
-				t.Logf("  desc: %s", ev.HiDesc())
+				t.Logf("  best: %b", desc.Best)
+				t.Logf("  unused: %b", desc.Unused)
+				t.Logf("  desc: %s", desc)
 				evals = append(evals, ev)
 			}
-			v, pivot := HiOrder(evals)
+			v, pivot := Order(evals, false)
 			if pivot != test.p {
 				t.Errorf("test %d expected pivot %d, got: %d", i, test.p, pivot)
 			}
@@ -62,7 +63,7 @@ func TestHiOrder(t *testing.T) {
 					typ = "wins  "
 				}
 				ev := evals[v[j-1]]
-				t.Logf("player %d %s %b %b %s", v[j-1], typ, ev.HiBest, ev.HiUnused, ev.HiDesc())
+				t.Logf("player %d %s %b %b %s", v[j-1], typ, ev.HiBest, ev.HiUnused, ev.Desc(false))
 			}
 			if !equals(v, test.exp) {
 				t.Errorf("test %d expected %v, got: %v", i, test.exp, v)
@@ -92,7 +93,7 @@ func TestEvalHiComp(t *testing.T) {
 	for i, test := range tests {
 		h1 := Holdem.New(Must(test.a), nil)
 		h2 := Holdem.New(Must(test.b), nil)
-		switch r := h1.HiComp(h2); {
+		switch r := h1.Comp(h2, false); {
 		case r != test.exp:
 			t.Errorf("test %d expected r == %d, got: %d", i, test.exp, r)
 		case r == +0:

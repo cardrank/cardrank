@@ -22,7 +22,7 @@ func BenchmarkEval(b *testing.B) {
 	e, l := make(map[EvalType]bool), make(map[EvalType]bool)
 	for _, t := range Types() {
 		typ := t
-		low, etyp := typ.Low(), typ.Desc().Eval
+		low, etyp := typ.Low(), typ.TypeDesc().Eval
 		switch {
 		case typ.Double(), low && l[etyp], !low && e[etyp]:
 			// skip already evaluated types

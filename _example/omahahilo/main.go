@@ -20,13 +20,13 @@ func main() {
 	fmt.Printf("------ OmahaHiLo %d ------\n", seed)
 	fmt.Printf("Board: %b\n", board)
 	for i := 0; i < players; i++ {
-		hi, lo := evs[i].HiDesc(), evs[i].LoDesc()
+		hi, lo := evs[i].Desc(false), evs[i].Desc(true)
 		fmt.Printf("  %d: %b %b %s\n", i+1, hi.Best, hi.Unused, hi)
 		fmt.Printf("     %b %b %s\n", lo.Best, lo.Unused, lo)
 	}
-	hiOrder, hiPivot := cardrank.HiOrder(evs)
-	loOrder, loPivot := cardrank.LoOrder(evs)
-	hi := evs[hiOrder[0]].HiDesc()
+	hiOrder, hiPivot := cardrank.Order(evs, false)
+	loOrder, loPivot := cardrank.Order(evs, true)
+	hi := evs[hiOrder[0]].Desc(false)
 	if hiPivot == 1 {
 		fmt.Printf("Result: %d wins with %s, %b\n", hiOrder[0]+1, hi, hi.Best)
 	} else {
@@ -39,14 +39,14 @@ func main() {
 	if loPivot == 0 {
 		fmt.Printf("        None\n")
 	} else if loPivot == 1 {
-		lo := evs[loOrder[0]].LoDesc()
+		lo := evs[loOrder[0]].Desc(true)
 		fmt.Printf("        %d wins with %s %b\n", loOrder[0]+1, lo, lo.Best)
 	} else {
 		var s []string
 		for j := 0; j < loPivot; j++ {
 			s = append(s, strconv.Itoa(loOrder[j]+1))
 		}
-		lo := evs[loOrder[0]].LoDesc()
+		lo := evs[loOrder[0]].Desc(true)
 		fmt.Printf("        %s push with %s\n", strings.Join(s, ", "), lo)
 	}
 }
