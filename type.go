@@ -1242,7 +1242,7 @@ func CactusDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low 
 // LowDesc returns a Low description for the rank, best, and unused cards.
 func LowDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
 	switch {
-	case rank == 0, rank == Invalid, !low:
+	case rank == 0, rank == Invalid:
 		fmt.Fprint(f, "None")
 	default:
 		v := make([]string, len(best))
