@@ -549,6 +549,15 @@ func (ev *Eval) Comp(b *Eval, low bool) int {
 
 // Desc returns the hi or low desc for the eval.
 func (ev *Eval) Desc(low bool) *Desc {
+	if low {
+		return &Desc{
+			Type:   ev.Type.Desc(low),
+			Rank:   ev.LoRank,
+			Best:   ev.LoBest,
+			Unused: ev.LoUnused,
+			Low:    low,
+		}
+	}
 	return &Desc{
 		Type:   ev.Type.Desc(low),
 		Rank:   ev.HiRank,

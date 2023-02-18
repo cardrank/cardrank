@@ -476,7 +476,7 @@ func Example_omahaHiLo() {
 		if loPivot == 0 {
 			typ = "scoops"
 		}
-		desc := evs[hiOrder[0]].Desc(true)
+		desc := evs[hiOrder[0]].Desc(false)
 		if hiPivot == 1 {
 			fmt.Printf("Result (Hi): Player %d %s with %s\n", hiOrder[0]+1, typ, desc)
 		} else {
@@ -504,20 +504,20 @@ func Example_omahaHiLo() {
 	// ------ OmahaHiLo 1 ------
 	// Board: [3♥ 5♥ 4♥ 7♥ K♣]
 	// Player 1: [K♥ J♣ A♥ Q♠]
-	//   Hi: Flush, Ace-high [A♥ K♥ 7♥ 5♥ 4♥] [J♣ Q♠ 3♥ K♣]
+	//   Hi: Flush, Ace-high, kickers King, Seven, Five, Four [A♥ K♥ 7♥ 5♥ 4♥] [J♣ Q♠ 3♥ K♣]
 	//   Lo: None [] []
 	// Player 2: [7♣ 4♣ 5♠ 2♠]
 	//   Hi: Two Pair, Sevens over Fives, kicker King [7♣ 7♥ 5♥ 5♠ K♣] [4♣ 2♠ 3♥ 4♥]
 	//   Lo: Seven, Five, Four, Three, Two-low [7♣ 5♥ 4♥ 3♥ 2♠] [4♣ 5♠ 7♥ K♣]
-	// Result (Hi): Player 1 wins with Flush, Ace-high [A♥ K♥ 7♥ 5♥ 4♥]
-	// Result (Lo): Player 2 wins with Seven, Five, Four, Three, Two-low [7♣ 5♥ 4♥ 3♥ 2♠]
+	// Result (Hi): Player 1 wins with Flush, Ace-high, kickers King, Seven, Five, Four
+	// Result (Lo): Player 2 wins with Seven, Five, Four, Three, Two-low
 	// ------ OmahaHiLo 2 ------
 	// Board: [3♥ 7♣ 3♣ 9♠ 9♣]
 	// Player 1: [3♠ 3♦ T♠ Q♠]
 	//   Hi: Four of a Kind, Threes, kicker Nine [3♣ 3♦ 3♥ 3♠ 9♠] [T♠ Q♠ 7♣ 9♣]
 	//   Lo: None [] []
 	// Player 2: [6♦ Q♣ 8♥ 6♣]
-	//   Hi: Flush, Queen-high [Q♣ 9♣ 7♣ 6♣ 3♣] [6♦ 8♥ 3♥ 9♠]
+	//   Hi: Flush, Queen-high, kickers Nine, Seven, Six, Three [Q♣ 9♣ 7♣ 6♣ 3♣] [6♦ 8♥ 3♥ 9♠]
 	//   Lo: None [] []
 	// Player 3: [Q♦ K♠ 8♣ A♥]
 	//   Hi: Pair, Nines, kickers Ace, King, Seven [9♣ 9♠ A♥ K♠ 7♣] [Q♦ 8♣ 3♥ 3♣]
@@ -528,7 +528,7 @@ func Example_omahaHiLo() {
 	// Player 5: [J♦ 2♥ Q♥ 6♠]
 	//   Hi: Pair, Nines, kickers Queen, Jack, Seven [9♣ 9♠ Q♥ J♦ 7♣] [2♥ 6♠ 3♥ 3♣]
 	//   Lo: None [] []
-	// Result (Hi): Player 1 scoops with Four of a Kind, Threes, kicker Nine [3♣ 3♦ 3♥ 3♠ 9♠]
+	// Result (Hi): Player 1 scoops with Four of a Kind, Threes, kicker Nine
 	// Result (Lo): no player made a low hand
 	// ------ OmahaHiLo 3 ------
 	// Board: [J♣ T♥ 4♥ K♣ Q♣]
@@ -550,12 +550,12 @@ func Example_omahaHiLo() {
 	// Player 6: [4♠ 8♦ K♦ T♣]
 	//   Hi: Two Pair, Kings over Tens, kicker Queen [K♣ K♦ T♣ T♥ Q♣] [4♠ 8♦ J♣ 4♥]
 	//   Lo: None [] []
-	// Result (Hi): Player 1 scoops with Two Pair, Kings over Queens, kicker Jack [K♣ K♠ Q♣ Q♠ J♣]
+	// Result (Hi): Player 1 scoops with Two Pair, Kings over Queens, kicker Jack
 	// Result (Lo): no player made a low hand
 	// ------ OmahaHiLo 4 ------
 	// Board: [2♦ 6♦ 6♣ Q♣ 7♣]
 	// Player 1: [6♠ K♥ A♣ 8♣]
-	//   Hi: Flush, Ace-high [A♣ Q♣ 8♣ 7♣ 6♣] [6♠ K♥ 2♦ 6♦]
+	//   Hi: Flush, Ace-high, kickers Queen, Eight, Seven, Six [A♣ Q♣ 8♣ 7♣ 6♣] [6♠ K♥ 2♦ 6♦]
 	//   Lo: Eight, Seven, Six, Two, Ace-low [8♣ 7♣ 6♦ 2♦ A♣] [6♠ K♥ 6♣ Q♣]
 	// Player 2: [Q♥ 4♥ J♣ 5♥]
 	//   Hi: Two Pair, Queens over Sixes, kicker Jack [Q♣ Q♥ 6♣ 6♦ J♣] [4♥ 5♥ 2♦ 7♣]
@@ -572,8 +572,8 @@ func Example_omahaHiLo() {
 	// Player 6: [T♣ Q♦ A♠ 7♥]
 	//   Hi: Two Pair, Queens over Sevens, kicker Six [Q♣ Q♦ 7♣ 7♥ 6♦] [T♣ A♠ 2♦ 6♣]
 	//   Lo: None [] []
-	// Result (Hi): Player 3 wins with Full House, Sixes full of Queens [6♣ 6♦ 6♥ Q♣ Q♠]
-	// Result (Lo): Player 5 wins with Seven, Six, Four, Three, Two-low [7♣ 6♦ 4♦ 3♦ 2♦]
+	// Result (Hi): Player 3 wins with Full House, Sixes full of Queens
+	// Result (Lo): Player 5 wins with Seven, Six, Four, Three, Two-low
 	// ------ OmahaHiLo 5 ------
 	// Board: [4♣ K♣ 6♦ 9♦ 5♠]
 	// Player 1: [3♦ 4♦ 5♦ J♣]
@@ -594,8 +594,8 @@ func Example_omahaHiLo() {
 	// Player 6: [6♠ 7♠ 7♥ 2♥]
 	//   Hi: Pair, Sevens, kickers King, Nine, Six [7♥ 7♠ K♣ 9♦ 6♦] [6♠ 2♥ 4♣ 5♠]
 	//   Lo: Seven, Six, Five, Four, Two-low [7♠ 6♦ 5♠ 4♣ 2♥] [6♠ 7♥ K♣ 9♦]
-	// Result (Hi): Player 4 wins with Straight, Nine-high [9♦ 8♠ 7♦ 6♦ 5♠]
-	// Result (Lo): Player 3 wins with Six, Five, Four, Three, Ace-low [6♦ 5♠ 4♣ 3♠ A♣]
+	// Result (Hi): Player 4 wins with Straight, Nine-high
+	// Result (Lo): Player 3 wins with Six, Five, Four, Three, Ace-low
 }
 
 func Example_stud() {
@@ -728,8 +728,8 @@ func Example_studHiLo() {
 	// Player 2: [7♣ 4♣ 5♠ 2♠ 3♥ 4♥ 7♥]
 	//   Hi: Two Pair, Sevens over Fours, kicker Five [7♣ 7♥ 4♣ 4♥ 5♠] [3♥ 2♠]
 	//   Lo: Seven, Five, Four, Three, Two-low [7♣ 5♠ 4♣ 3♥ 2♠] [4♥ 7♥]
-	// Result (Hi): Player 2 wins with Two Pair, Sevens over Fours, kicker Five [7♣ 7♥ 4♣ 4♥ 5♠]
-	// Result (Lo): Player 2 wins with Seven, Five, Four, Three, Two-low [7♣ 5♠ 4♣ 3♥ 2♠]
+	// Result (Hi): Player 2 wins with Two Pair, Sevens over Fours, kicker Five
+	// Result (Lo): Player 2 wins with Seven, Five, Four, Three, Two-low
 	// ------ StudHiLo 2 ------
 	// Player 1: [3♠ 3♦ T♠ Q♠ T♥ 9♠ K♥]
 	//   Hi: Two Pair, Tens over Threes, kicker King [T♥ T♠ 3♦ 3♠ K♥] [Q♠ 9♠]
@@ -746,8 +746,8 @@ func Example_studHiLo() {
 	// Player 5: [J♦ 2♥ Q♥ 6♠ 5♦ 7♠ A♦]
 	//   Hi: Nothing, Ace-high, kickers Queen, Jack, Seven, Six [A♦ Q♥ J♦ 7♠ 6♠] [5♦ 2♥]
 	//   Lo: Seven, Six, Five, Two, Ace-low [7♠ 6♠ 5♦ 2♥ A♦] [J♦ Q♥]
-	// Result (Hi): Player 1 wins with Two Pair, Tens over Threes, kicker King [T♥ T♠ 3♦ 3♠ K♥]
-	// Result (Lo): Player 5 wins with Seven, Six, Five, Two, Ace-low [7♠ 6♠ 5♦ 2♥ A♦]
+	// Result (Hi): Player 1 wins with Two Pair, Tens over Threes, kicker King
+	// Result (Lo): Player 5 wins with Seven, Six, Five, Two, Ace-low
 	// ------ StudHiLo 3 ------
 	// Player 1: [K♠ Q♠ 4♣ J♦ 7♥ 7♣ J♥]
 	//   Hi: Two Pair, Jacks over Sevens, kicker King [J♦ J♥ 7♣ 7♥ K♠] [Q♠ 4♣]
@@ -767,8 +767,8 @@ func Example_studHiLo() {
 	// Player 6: [4♠ 8♦ K♦ T♣ K♣ 5♠ 9♣]
 	//   Hi: Pair, Kings, kickers Ten, Nine, Eight [K♣ K♦ T♣ 9♣ 8♦] [5♠ 4♠]
 	//   Lo: None [] []
-	// Result (Hi): Player 5 wins with Two Pair, Aces over Sixes, kicker Eight [A♣ A♦ 6♦ 6♠ 8♠]
-	// Result (Lo): Player 5 wins with Eight, Seven, Six, Three, Ace-low [8♠ 7♠ 6♠ 3♥ A♣]
+	// Result (Hi): Player 5 wins with Two Pair, Aces over Sixes, kicker Eight
+	// Result (Lo): Player 5 wins with Eight, Seven, Six, Three, Ace-low
 	// ------ StudHiLo 4 ------
 	// Player 1: [6♠ K♥ A♣ 8♣ 2♠ 5♦ A♥]
 	//   Hi: Pair, Aces, kickers King, Eight, Six [A♣ A♥ K♥ 8♣ 6♠] [5♦ 2♠]
@@ -788,8 +788,8 @@ func Example_studHiLo() {
 	// Player 6: [T♣ Q♦ A♠ 7♥ Q♣ 7♦ 2♥]
 	//   Hi: Two Pair, Queens over Sevens, kicker Ace [Q♣ Q♦ 7♦ 7♥ A♠] [T♣ 2♥]
 	//   Lo: None [] []
-	// Result (Hi): Player 4 wins with Two Pair, Kings over Jacks, kicker Ten [K♦ K♠ J♥ J♠ T♠]
-	// Result (Lo): Player 2 wins with Seven, Five, Four, Three, Two-low [7♣ 5♥ 4♥ 3♠ 2♦]
+	// Result (Hi): Player 4 wins with Two Pair, Kings over Jacks, kicker Ten
+	// Result (Lo): Player 2 wins with Seven, Five, Four, Three, Two-low
 	// ------ StudHiLo 5 ------
 	// Player 1: [3♦ 4♦ 5♦ J♣ 4♥ K♥ 8♣]
 	//   Hi: Pair, Fours, kickers King, Jack, Eight [4♦ 4♥ K♥ J♣ 8♣] [5♦ 3♦]
@@ -809,8 +809,8 @@ func Example_studHiLo() {
 	// Player 6: [6♠ 7♠ 7♥ 2♥ 9♦ K♦ T♦]
 	//   Hi: Pair, Sevens, kickers King, Ten, Nine [7♥ 7♠ K♦ T♦ 9♦] [6♠ 2♥]
 	//   Lo: None [] []
-	// Result (Hi): Player 4 wins with Full House, Sixes full of Sevens [6♣ 6♦ 6♥ 7♣ 7♦]
-	// Result (Lo): Player 5 wins with Eight, Five, Four, Two, Ace-low [8♥ 5♣ 4♠ 2♠ A♠]
+	// Result (Hi): Player 4 wins with Full House, Sixes full of Sevens
+	// Result (Lo): Player 5 wins with Eight, Five, Four, Two, Ace-low
 }
 
 func Example_razz() {
