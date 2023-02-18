@@ -19,11 +19,11 @@ Supports [Texas Holdem][holdem-example], [Texas Holdem Short (6+)][short-example
 ## Overview
 
 The `github.com/cardrank/cardrank` package contains types for [cards][card],
-[card suits][suit], [card ranks][rank], [card decks][deck], and [evaluating
-cards][eval].
+[card suits][suit], [card ranks][rank], [card decks][deck], [evaluating poker
+hands][eval], and [managing deals and run outs][dealer].
 
 A single [package level type][type] provides a standard interface for dealing
-cards for, and [evaluating ranks of 5, 6, and 7 poker hands][eval] of the
+cards for, and [evaluating ranks of 5, 6, or 7 card poker hands][eval] of the
 following:
 
 <!-- START overview -->
@@ -51,7 +51,7 @@ To use within a Go package:
 go get github.com/cardrank/cardrank
 ```
 
-See package level [Go documentation][pkg].
+See package level [Go documentation][pkg] for in-depth overviews of APIs.
 
 ### Quickstart
 
@@ -59,43 +59,37 @@ Complete [examples for all `Type`'s][examples] are available, including
 additional examples showing use of various types, utilities, and interfaces is
 available in the [Go package documentation][pkg].
 
-Below are quick examples for [`Dealer`][dealer] [`Holdem`][type] and
+Below are quick examples for [`Dealer`][dealer], [`Holdem`][type] and
 [`OmahaHiLo`][type] included in the [example](/_example) directory:
 
-##### Dealer
-
-The following showcases a [`Dealer`][dealer]:
-
-<!-- START dealer -->
-<!-- END -->
-
-##### Texas Holdem
-
-The following showcases a simple game of [Texas Holdem][type]:
-
-<!-- START holdem -->
-<!-- END -->
-
-##### Omaha Hi/Lo
-
-The following showcases a simple game of [Omaha Hi/Lo][type]:
-
-<!-- START omahahilo -->
-<!-- END -->
+* [dealer](/_example/dealer) - shows use of the [`Dealer`][dealer], to handle dealing cards, handling multiple run outs, and determining winners using for all [`Type`'s][type]
+* [holdem](/_example/holdem) - shows using types and utilities to deal a hand of [`Holdem`][holdem-example]
+* [holdem](/_example/omahahilo) - shows using types and utilities to deal a hand of [`OmahaHiLo`][holdem-example], showcasing "lo" winners
 
 ### Eval Ranking
 
-A pocket and optional board of [`Card`'s][card] can be passed to a
-[`Type`'s][type] `New` method, which in turn uses the `Type`'s registered
-[`EvalFunc`][eval-func] and creating a new [`Eval`][eval]:
+Poker ranks are determined on a low-to-high basis by evaluating the ranking
+using a number of different registered [poker types][type].
+[`EvalRank`'s][eval-rank] are relative/comparable:
+
+```go
+fmt.Printf("%t\n", cardrank.StraightFlush < cardrank.FullHouse)
+
+// Output:
+true
+```
+
+Pocket and board [`Card`'s][card] can be passed to a [`Type`'s][type] `New`
+method, which in turn uses the `Type`'s registered [`EvalFunc`][eval-func] and
+returns the [`Eval`uated][eval] value:
 
 ```go
 v := cardrank.Must("Ah Kh Qh Jh Th")
 ev := cardrank.Holdem.New(v, nil)
-fmt.Printf("%s\n", ev)
+fmt.Printf("%s - %d\n", ev, ev.HiRank)
 
 // Output:
-// Straight Flush, Ace-high, Royal [Ah Kh Qh Jh Th]
+// Straight Flush, Ace-high, Royal [Ah Kh Qh Jh Th] - 1
 ```
 
 When evaluating cards, one usually passes 5, 6, or 7 cards, but some `Type`'s
@@ -110,24 +104,25 @@ fmt.Printf("%s\n", ev)
 // Four, Three, Two-low [4c 3s 2h]
 ```
 
-A returned [`Eval`][eval] of a [`HandRank`][hand-rank] to determine the
-relative rank of a `Hand`, on a low-to-high basis. Higher poker hands
-have a lower value `HandRank` than lower poker hands. For example, a
-[`StraightFlush`][hand-rank] will have a lower `HandRank` than a
-[`FullHouse`][hand-rank].
-
 If an invalid number of cards is passed to a `Type`'s `EvalFunc`, the `Eval`'s
 [`HiRank`][eval.hi-rank] and [`LoRank`][eval.lo-rank] values will be set to
 [`Invalid`][invalid].
 
+[`Eval`][eval]'s can be used to compare different hands of `Card`'s in order to
+determine a winner, by comparing the [`Eval.HiRank`][eval.hi-rank] or
+[`Eval.LoRank`][eval.lo-rank] values.
+
 Currently, no `Type`'s supports evaluating hands containing more than 7
 `Card`'s.
 
-When a [`Eval`][hand] is created, a Hi and Lo (if applicable) `HandRank` is
-evaluated, and made available via [`Eval.HiRank`][eval.hi-rank] and
-[`Eval.LoRank`][eval.lo-rank] methods, respectively. The Hi and Lo
-`HandRank`'s are evaluated by a `EvalRankFunc`, dependent on the `Hand`'s
-[`Type`][type]:
+#### Hi/Lo
+
+Different [poker types][type] may have both a "hi" and "lo" values, such as
+[double board Holdem][double-example], or as in [Omaha Hi/Lo][omaha-hi-lo-example].
+
+When a [`Eval`][eval] is created, both the "hi" and "lo" (if applicable) values
+are evaluated, and stored in `Eval` as the [`HiRank`][eval.hi-rank] and and
+[`LoRank`][eval.lo-rank] values, respectively.
 
 #### Cactus Kev
 
@@ -152,7 +147,7 @@ tags][build-tags] have been specified.
 #### Hybrid
 
 The [`Hybrid`][hybrid] rank func uses either the [`CactusFast`][cactus-fast] or
-an instance of the [`TwoPlusTwo`][two-plus-two] depending on the [`Hand`][hand]
+an instance of the [`TwoPlusTwo`][two-plus-two] depending on the [`Eval`][eval]
 having 5, 6, or 7 cards.
 
 #### Two-Plus-Two
@@ -167,75 +162,85 @@ can be enabled using the [`forcefat` build tag][build-tags].
 
 ### Winner Determination
 
-Winner(s) are determined by the lowest possible [`HandRank`][hand-rank] when
-comparing a [`Hand`'s][hand] [`HiRank`][eval.hi-rank] or [`LoRank`][eval.lo-rank]
-against another hand's. Two or more hands having a `HandRank` of equal value
-indicate that the hands have equivalent ranks, and thus have both won.
+Winner(s) are determined by the [lowest possible `EvalRank`][eval-rank] for
+either the "hi" or "lo" value for the [`Type`][type]. Two or more hands having
+a `EvalRank` of equal value indicate that the hands have equivalent ranks, and
+have both won.
 
-Thus, when `Hand`'s are sorted (low-to-high) by `HiRank` or `LoRank`, the
+`Eval`'s can thus be sorted (low-to-high) by `HiRank` or `LoRank`, the
 winner(s) of a hand will be the hands in the lowest position and having
 equivalent `HiRank`'s or `LoRank`'s.
 
-#### Comparing Hands
+#### Comparing Eval Ranks
 
-A [`Hand`][hand] can be compared to another `Hand` using
+A [`Eval`][eval] can be compared to another `Eval` using
 [`HiComp`][eval.hi-comp] and [`LoComp`][eval.lo-comp].
 
 `HiComp` and `LowComp` return `-1`, `0`, or `+1`, making it easy to compare
 or sort hands:
 
 ```go
-// Compare hi hands:
-if hand1.HiComp()(hand1, hand2) < 0 {
-	fmt.Printf("%s is a winner!", hand1)
+// Compare hi evals:
+if ev1.Comp(ev2, false) < 0 {
+	fmt.Printf("%s is a winner!", ev1)
 }
 
-// Compare lo hands:
-if hand1.LoComp()(hand1, hand2) == 0 {
-	fmt.Printf("%s and %s are equal!", hand1, hand2)
+// Compare lo evals:
+if ev1.Comp(ev2, true) == 0 {
+	fmt.Printf("%s and %s are equal!", ev1, ev2)
 }
 
-// Sort hi hands:
-hi := hands[0].HiComp()
-sort.Slice(hands, func(i, j int) bool {
-	return hi(hands[i], hands[j]) < 0
+// Sort hi evals:
+hi := evs[0].NewComp(false)
+sort.Slice(evs, func(i, j int) bool {
+	return hi(evs[i], evs[j]) < 0
 })
 
-// Sort lo hands:
-lo := hands[0].LoComp()
-sort.Slice(hands, func(i, j int) bool {
-	return lo(hands[i], hands[j]) < 0
+// Sort lo evals:
+lo := evs[0].NewComp(true)
+sort.Slice(evs, func(i, j int) bool {
+	return lo(evs[i], evs[j]) < 0
 })
 ```
 
-#### Ordering Hands
+#### Ordering Evals
 
-[`HiOrder`][hi-order] and [`LoOrder`][lo-order] determine the winner(s) of a
-hand by ordering the indexes of a [`[]*Hand`][hand] and returning the list of
-ordered hands as a `[]int` and an `int` pivot indicating the position within
-the returned list demarcating winning and losing hands.
-
-A `Hand` whose index is in position `i < pivot` is considered to be the
-winner(s) of the eval. Hi hands are guaranteed to have 1 or more winner(s),
-while Lo hands have 0 or more winner(s):
+[`Order`][order] can determine the winner(s) of a hand by ordering the indexes
+of a [`[]*Eval`][eval] and returning the list of ordered evals as a `[]int` and
+an `int` pivot indicating the position within the returned `[]int` as a cutoff
+for a win:
 
 ```go
-// Order hi hands by lowest hand rank, low to high:
-h, pivot := cardrank.Order(hands)
-for i := 0; i < pivot; i++ {
-	fmt.Printf("%s is a Hi winner!", hands[h[i]])
-}
+// Order hi evals, low to high:
+hiOrder, hiPivot := cardrank.Order(evs, false)
+```
 
-// Order lo hands by lowest hand rank, low to high:
-// (applicable only for a hand types that supports lo hands)
-l, pivot := cardrank.LowOrder(hands)
-for i := 0; i < pivot; i++ {
-	fmt.Printf("%s is a Lo winner!", hands[h[i]])
+For a [Type][type] with a lo value:
+
+```go
+// Order lo evals, low to high (applicable only for types with lo values):
+loOrder, loPivot := cardrank.Order(evs, true)
+```
+
+A `Eval` whose index is in position `i < pivot` is considered to be the
+winner(s) of the eval. Hi hands are guaranteed to have 1 or more winner(s),
+while lo hands have 0 or more winner(s):
+
+```go
+for i := 0; i < hiPivot; i++ {
+	fmt.Printf("%s is a Hi winner!", evs[hiOrder[i]])
 }
 ```
 
-See [the examples][examples] for an overview of using the package APIs for
-winner determination for the different [`Type`][type] of poker hands.
+Similarly, for lo winners:
+
+```go
+for i := 0; i < loPivot; i++ {
+	fmt.Printf("%s is a Lo winner!", evs[loOrder[i]])
+}
+```
+
+See [the examples][examples] for more in-depth use of `Order`.
 
 ### Build Tags
 
@@ -290,7 +295,7 @@ register built in types:
 ```go
 // Set manually (such as when using a third-party implementation):
 cardrank.DefaultCactus = cardrank.Cactus
-cardrank.DefaultRank = cardrank.NewHandRank(cardrank.Cactus)
+cardrank.DefaultRank = cardrank.NewEvalRank(cardrank.Cactus)
 
 // Then call RegisterDefaultTypes to register default types
 if err := cardrank.RegisterDefaultTypes(); err != nil {
@@ -329,16 +334,18 @@ GOOS=js GOARCH=wasm go build -tags 'forcefat' -o cardrank.wasm
 [suit]: https://pkg.go.dev/github.com/cardrank/cardrank#Suit
 [rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Rank
 [deck]: https://pkg.go.dev/github.com/cardrank/cardrank#Deck
-[hand]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand
-[hand-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#HandRank
+[dealer]: https://pkg.go.dev/github.com/cardrank/cardrank#Dealer
+[eval]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval
+[invalid]: https://pkg.go.dev/github.com/cardrank/cardrank#Invalid
 [type]: https://pkg.go.dev/github.com/cardrank/cardrank#Type
 [init]: https://pkg.go.dev/github.com/cardrank/cardrank#Init
-[hi-order]: https://pkg.go.dev/github.com/cardrank/cardrank#HiOrder
-[lo-order]: https://pkg.go.dev/github.com/cardrank/cardrank#LoOrder
-[eval.hi-comp]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.HiComp
-[eval.lo-comp]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.LoComp
+[order]: https://pkg.go.dev/github.com/cardrank/cardrank#Order
+[eval-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#EvalRank
+[eval-func]: https://pkg.go.dev/github.com/cardrank/cardrank#EvalFunc
 [eval.hi-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.HiRank
 [eval.lo-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.LoRank
+[eval.hi-comp]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.HiComp
+[eval.lo-comp]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.LoComp
 [default-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#DefaultRank
 [cactus]: https://pkg.go.dev/github.com/cardrank/cardrank#Cactus
 [cactus-fast]: https://pkg.go.dev/github.com/cardrank/cardrank#CactusFast
@@ -347,6 +354,7 @@ GOOS=js GOARCH=wasm go build -tags 'forcefat' -o cardrank.wasm
 
 <!-- START links -->
 [holdem-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Holdem
+[double-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Double
 [short-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Short
 [royal-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Royal
 [omaha-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-Omaha
