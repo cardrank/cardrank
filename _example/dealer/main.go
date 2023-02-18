@@ -19,8 +19,8 @@ func main() {
 		d := typ.Dealer(r, 3, players)
 		desc := typ.TypeDesc()
 		fmt.Printf("Eval: %s\n", desc.Eval)
-		fmt.Printf("HiComp: %s LoComp: %s\n", desc.HiComp, desc.LoComp)
-		fmt.Printf("HiDesc: %s LoDesc: %s\n", desc.HiDesc, desc.LoDesc)
+		fmt.Printf("Comp: %s/%s\n", desc.HiComp, desc.LoComp)
+		fmt.Printf("Desc: %s/%s\n", desc.HiDesc, desc.LoDesc)
 		// display deck
 		deck := d.Deck.All()
 		fmt.Printf("Deck: %s [%d]\n", desc.Deck, len(deck))

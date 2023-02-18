@@ -173,7 +173,7 @@ func TestLowball(t *testing.T) {
 	}
 }
 
-func TestTypeHiComp(t *testing.T) {
+func TestTypeComp(t *testing.T) {
 	tests := []struct {
 		typ   Type
 		board string

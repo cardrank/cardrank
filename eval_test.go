@@ -72,7 +72,7 @@ func TestHiOrder(t *testing.T) {
 	}
 }
 
-func TestEvalHiComp(t *testing.T) {
+func TestEvalComp(t *testing.T) {
 	tests := []struct {
 		a   string
 		b   string

@@ -203,8 +203,8 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 	d := typ.Dealer(r, 1, count)
 	desc := typ.TypeDesc()
 	t.Logf("Eval: %s", desc.Eval)
-	t.Logf("HiComp: %s LoComp: %s", desc.HiComp, desc.LoComp)
-	t.Logf("HiDesc: %s LoDesc: %s", desc.HiDesc, desc.LoDesc)
+	t.Logf("Comp: %s/%s", desc.HiComp, desc.LoComp)
+	t.Logf("Desc: %s/%s", desc.HiDesc, desc.LoDesc)
 	deck := d.Deck.All()
 	t.Logf("Deck: %s [%d]", desc.Deck, len(deck))
 	for i := 0; i < len(deck); i += 8 {
