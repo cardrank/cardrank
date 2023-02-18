@@ -105,7 +105,7 @@ func min[T ordered](a, b T) T {
 }
 
 // equals returns true when a equals b.
-func equals[T ordered](a, b []T) bool {
+func equals[T comparable](a, b []T) bool {
 	n := len(a)
 	if n != len(b) {
 		return false
@@ -119,7 +119,7 @@ func equals[T ordered](a, b []T) bool {
 }
 
 // contains returns true when v contains a.
-func contains[T ordered](v []T, a T) bool {
+func contains[T comparable](v []T, a T) bool {
 	for i := 0; i < len(v); i++ {
 		if v[i] == a {
 			return true
