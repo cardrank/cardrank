@@ -11,7 +11,15 @@ import (
 func main() {
 	const players = 4
 	seed := time.Now().UnixNano()
-	for _, typ := range []cardrank.Type{cardrank.Royal, cardrank.Double, cardrank.OmahaDouble, cardrank.CourchevelHiLo, cardrank.Razz, cardrank.Badugi} {
+	for _, typ := range []cardrank.Type{
+		cardrank.Royal,
+		cardrank.Double,
+		cardrank.OmahaDouble,
+		cardrank.CourchevelHiLo,
+		cardrank.FusionHiLo,
+		cardrank.Razz,
+		cardrank.Badugi,
+	} {
 		// note: use a better pseudo-random number generator
 		r := rand.New(rand.NewSource(seed))
 		fmt.Printf("------ %s %d ------\n", typ, seed)
@@ -30,28 +38,28 @@ func main() {
 		// iterate deal streets
 		for d.Next() {
 			fmt.Printf("%s\n", d)
+			rn, run := d.Run()
+			fmt.Printf("  Run %d:\n", rn)
 			// display pockets
 			if d.HasPocket() {
 				for i := 0; i < players; i++ {
-					fmt.Printf("  %d: %v\n", i, d.Pockets[i])
+					fmt.Printf("    %d: %v\n", i, run.Pockets[i])
 				}
 			}
 			// display discarded cards
 			if v := d.Discarded(); len(v) != 0 {
-				fmt.Printf("  Discard: %v\n", v)
+				fmt.Printf("    Discard: %v\n", v)
 			}
 			// display board
 			if d.HasBoard() {
-				for i := 0; i < len(d.Boards); i++ {
-					fmt.Printf("  Run %d: %v\n", i, d.Boards[i].Hi)
-					if d.Double {
-						fmt.Printf("         %v\n", d.Boards[i].Lo)
-					}
+				fmt.Printf("    Board: %v\n", run.Hi)
+				if d.Double {
+					fmt.Printf("           %v\n", run.Lo)
 				}
 			}
-			// change runs to 2, after the flop
+			// change runs to 3, after the flop
 			if d.Id() == 'f' {
-				d.Runs(2)
+				d.ChangeRuns(3)
 			}
 		}
 		// iterate eval results
@@ -72,9 +80,9 @@ func main() {
 				}
 			}
 			hi, lo := res.Win()
-			fmt.Printf("    Result: %s with %S\n", hi, hi)
+			fmt.Printf("    Result: %d with %s\n", hi, hi)
 			if lo != nil {
-				fmt.Printf("            %s with %S\n", lo, lo)
+				fmt.Printf("            %d with %s\n", lo, lo)
 			}
 		}
 	}

@@ -952,3 +952,286 @@ func Example_badugi() {
 	// Player 6: [6♠ 7♠ 7♥ 2♥] Six, Two-low [6♠ 2♥] [7♠ 7♥]
 	// Result:   Player 4 wins with Eight, Seven, Three-low
 }
+
+func ExampleDealer_fusionHiLo() {
+	for i, game := range []struct {
+		seed     int64
+		players  int
+		change   byte
+		runs     int
+		inactive []int
+	}{
+		{566, 2, 't', 3, nil},
+		{1039, 5, 'f', 2, []int{0, 3, 4}},
+		{2087, 6, 't', 2, []int{0, 5}},
+	} {
+		// note: use a real random source
+		r := rand.New(rand.NewSource(game.seed))
+		fmt.Printf("------ FusionHiLo %d ------\n", i+1)
+		// setup dealer and display
+		d := cardrank.FusionHiLo.Dealer(r, 1, game.players)
+		// display deck
+		deck := d.Deck.All()
+		fmt.Printf("Deck:\n")
+		for i := 0; i < len(deck); i += 8 {
+			n := i + 8
+			if n > len(deck) {
+				n = len(deck)
+			}
+			fmt.Printf("  %v\n", deck[i:n])
+		}
+		for d.Next() {
+			fmt.Printf("%s\n", d)
+			rn, run := d.Run()
+			fmt.Printf("  Run %d:\n", rn)
+			// display pockets
+			if d.HasPocket() {
+				for i := 0; i < game.players; i++ {
+					fmt.Printf("    %d: %v\n", i, run.Pockets[i])
+				}
+			}
+			// display discarded cards
+			if v := d.Discarded(); len(v) != 0 {
+				fmt.Printf("    Discard: %v\n", v)
+			}
+			// display board
+			if d.HasBoard() {
+				fmt.Printf("    Board: %v\n", run.Hi)
+				if d.Double {
+					fmt.Printf("           %v\n", run.Lo)
+				}
+			}
+			// change runs, deactivate positions
+			if d.Id() == game.change {
+				if valid := d.ChangeRuns(game.runs); !valid {
+					panic("unable to change runs")
+				}
+				// deactivate
+				d.Deactivate(game.inactive...)
+			}
+		}
+		fmt.Printf("Showdown:\n")
+		for d.NextResult() {
+			n, res := d.Result()
+			fmt.Printf("  Run %d:\n", n)
+			for i := 0; i < game.players; i++ {
+				if d.Active[i] {
+					hi := res.Evals[i].Desc(false)
+					fmt.Printf("    %d: %v %v %s\n", i, hi.Best, hi.Unused, hi)
+					if d.Low || d.Double {
+						lo := res.Evals[i].Desc(true)
+						fmt.Printf("       %v %v %s\n", lo.Best, lo.Unused, lo)
+					}
+				} else {
+					fmt.Printf("    %d: inactive\n", i)
+				}
+			}
+			hi, lo := res.Win()
+			fmt.Printf("    Result: %d with %s\n", hi, hi)
+			if lo != nil {
+				fmt.Printf("            %d with %s\n", lo, lo)
+			}
+		}
+	}
+	// Output:
+	// ------ FusionHiLo 1 ------
+	// Deck:
+	//   [4h Qs 5c 4c 5d 8d 8c As]
+	//   [Ks 6h 7s 9s 3h Ac Js 9h]
+	//   [4s 7d 2h 8s 2s Ad Ts Qh]
+	//   [Qc 5h 6s 9d 9c 6c Kd 2d]
+	//   [3s Ah Kh 5s Jd Jc 2c Td]
+	//   [3c Jh 8h 4d Th 7c 7h 3d]
+	//   [6d Tc Kc Qd]
+	// p: Pre-Flop (p: 2)
+	//   Run 0:
+	//     0: [4h 5c]
+	//     1: [Qs 4c]
+	// f: Flop (p: 1, d: 1, b: 3)
+	//   Run 0:
+	//     0: [4h 5c 5d]
+	//     1: [Qs 4c 8d]
+	//     Discard: [8c]
+	//     Board: [As Ks 6h]
+	// t: Turn (p: 1, d: 1, b: 1)
+	//   Run 0:
+	//     0: [4h 5c 5d 7s]
+	//     1: [Qs 4c 8d 9s]
+	//     Discard: [3h]
+	//     Board: [As Ks 6h Ac]
+	// r: River (d: 1, b: 1)
+	//   Run 0:
+	//     Discard: [Js]
+	//     Board: [As Ks 6h Ac 9h]
+	// r: River (d: 1, b: 1)
+	//   Run 1:
+	//     Discard: [4s]
+	//     Board: [As Ks 6h Ac 7d]
+	// r: River (d: 1, b: 1)
+	//   Run 2:
+	//     Discard: [2h]
+	//     Board: [As Ks 6h Ac 8s]
+	// Showdown:
+	//   Run 0:
+	//     0: [Ac As 5c 5d Ks] [4h 7s 6h 9h] Two Pair, Aces over Fives, kicker King
+	//        [] [] None
+	//     1: [Ac As 9h 9s Qs] [4c 8d Ks 6h] Two Pair, Aces over Nines, kicker Queen
+	//        [] [] None
+	//     Result: 1 scoops with Two Pair, Aces over Nines, kicker Queen
+	//   Run 1:
+	//     0: [Ac As 7d 7s 5c] [4h 5d Ks 6h] Two Pair, Aces over Sevens, kicker Five
+	//        [7d 6h 5c 4h As] [5d 7s Ks Ac] Seven, Six, Five, Four, Ace-low
+	//     1: [Ac As Ks Qs 9s] [4c 8d 6h 7d] Pair, Aces, kickers King, Queen, Nine
+	//        [8d 7d 6h 4c As] [Qs 9s Ks Ac] Eight, Seven, Six, Four, Ace-low
+	//     Result: 0 wins with Two Pair, Aces over Sevens, kicker Five
+	//             0 wins with Seven, Six, Five, Four, Ace-low
+	//   Run 2:
+	//     0: [Ac As 5c 5d Ks] [4h 7s 6h 8s] Two Pair, Aces over Fives, kicker King
+	//        [8s 6h 5c 4h As] [5d 7s Ks Ac] Eight, Six, Five, Four, Ace-low
+	//     1: [As Ks Qs 9s 8s] [4c 8d 6h Ac] Flush, Ace-high, kickers King, Queen, Nine, Eight
+	//        [] [] None
+	//     Result: 1 wins with Flush, Ace-high, kickers King, Queen, Nine, Eight
+	//             0 wins with Eight, Six, Five, Four, Ace-low
+	// ------ FusionHiLo 2 ------
+	// Deck:
+	//   [2h 5s Ac Ts Kd 5h 6d Th]
+	//   [2s 6s 7c 4h 8c 9h Ah 8s]
+	//   [Kc 9d 5c 5d As 4d 3h 2c]
+	//   [7s 8h 4c 7d 8d Qs 3c 7h]
+	//   [Jc Jh 6c 3s Qd 9c 4s 3d]
+	//   [Ks Ad Qc Td Tc Qh Js 6h]
+	//   [2d 9s Jd Kh]
+	// p: Pre-Flop (p: 2)
+	//   Run 0:
+	//     0: [2h 5h]
+	//     1: [5s 6d]
+	//     2: [Ac Th]
+	//     3: [Ts 2s]
+	//     4: [Kd 6s]
+	// f: Flop (p: 1, d: 1, b: 3)
+	//   Run 0:
+	//     0: [2h 5h 7c]
+	//     1: [5s 6d 4h]
+	//     2: [Ac Th 8c]
+	//     3: [Ts 2s 9h]
+	//     4: [Kd 6s Ah]
+	//     Discard: [8s]
+	//     Board: [Kc 9d 5c]
+	// t: Turn (p: 1, d: 1, b: 1)
+	//   Run 0:
+	//     0: [2h 5h 7c 5d]
+	//     1: [5s 6d 4h As]
+	//     2: [Ac Th 8c 4d]
+	//     3: [Ts 2s 9h 3h]
+	//     4: [Kd 6s Ah 2c]
+	//     Discard: [7s]
+	//     Board: [Kc 9d 5c 8h]
+	// t: Turn (p: 1, d: 1, b: 1)
+	//   Run 1:
+	//     0: [2h 5h 7c 4c]
+	//     1: [5s 6d 4h 7d]
+	//     2: [Ac Th 8c 8d]
+	//     3: [Ts 2s 9h Qs]
+	//     4: [Kd 6s Ah 3c]
+	//     Discard: [7h]
+	//     Board: [Kc 9d 5c Jc]
+	// r: River (d: 1, b: 1)
+	//   Run 0:
+	//     Discard: [Jh]
+	//     Board: [Kc 9d 5c 8h 6c]
+	// r: River (d: 1, b: 1)
+	//   Run 1:
+	//     Discard: [3s]
+	//     Board: [Kc 9d 5c Jc Qd]
+	// Showdown:
+	//   Run 0:
+	//     0: inactive
+	//     1: [6c 6d 5c 5s Kc] [4h As 9d 8h] Two Pair, Sixes over Fives, kicker King
+	//        [8h 6c 5c 4h As] [5s 6d Kc 9d] Eight, Six, Five, Four, Ace-low
+	//     2: [Ac Kc 8c 6c 5c] [Th 4d 9d 8h] Flush, Ace-high, kickers King, Eight, Six, Five
+	//        [8h 6c 5c 4d Ac] [Th 8c Kc 9d] Eight, Six, Five, Four, Ace-low
+	//     3: inactive
+	//     4: inactive
+	//     Result: 2 wins with Flush, Ace-high, kickers King, Eight, Six, Five
+	//             1, 2 split with Eight, Six, Five, Four, Ace-low
+	//   Run 1:
+	//     0: inactive
+	//     1: [5c 5s Kc Qd 7d] [6d 4h 9d Jc] Pair, Fives, kickers King, Queen, Seven
+	//        [] [] None
+	//     2: [Ac Kc Jc 8c 5c] [Th 8d 9d Qd] Flush, Ace-high, kickers King, Jack, Eight, Five
+	//        [] [] None
+	//     3: inactive
+	//     4: inactive
+	//     Result: 2 scoops with Flush, Ace-high, kickers King, Jack, Eight, Five
+	// ------ FusionHiLo 3 ------
+	// Deck:
+	//   [8h 5d 5c 3h Jc 6h Kd Td]
+	//   [6s As 7c 6c 2c Jd 9h 8c]
+	//   [7s 5s 8d Tc 3s Kc Qh Qd]
+	//   [7d Ks Jh 4s 9s 4h Th Qc]
+	//   [Ah 2d Ts 7h 4c Qs Kh 6d]
+	//   [9d 2s Js 3d 5h 2h Ac Ad]
+	//   [3c 8s 4d 9c]
+	// p: Pre-Flop (p: 2)
+	//   Run 0:
+	//     0: [8h Kd]
+	//     1: [5d Td]
+	//     2: [5c 6s]
+	//     3: [3h As]
+	//     4: [Jc 7c]
+	//     5: [6h 6c]
+	// f: Flop (p: 1, d: 1, b: 3)
+	//   Run 0:
+	//     0: [8h Kd 2c]
+	//     1: [5d Td Jd]
+	//     2: [5c 6s 9h]
+	//     3: [3h As 8c]
+	//     4: [Jc 7c 7s]
+	//     5: [6h 6c 5s]
+	//     Discard: [8d]
+	//     Board: [Tc 3s Kc]
+	// t: Turn (p: 1, d: 1, b: 1)
+	//   Run 0:
+	//     0: [8h Kd 2c Qh]
+	//     1: [5d Td Jd Qd]
+	//     2: [5c 6s 9h 7d]
+	//     3: [3h As 8c Ks]
+	//     4: [Jc 7c 7s Jh]
+	//     5: [6h 6c 5s 4s]
+	//     Discard: [9s]
+	//     Board: [Tc 3s Kc 4h]
+	// r: River (d: 1, b: 1)
+	//   Run 0:
+	//     Discard: [Th]
+	//     Board: [Tc 3s Kc 4h Qc]
+	// r: River (d: 1, b: 1)
+	//   Run 1:
+	//     Discard: [Ah]
+	//     Board: [Tc 3s Kc 4h 2d]
+	// Showdown:
+	//   Run 0:
+	//     0: inactive
+	//     1: [Qc Qd Tc Td Kc] [5d Jd 3s 4h] Two Pair, Queens over Tens, kicker King
+	//        [] [] None
+	//     2: [Kc Qc Tc 9h 7d] [5c 6s 3s 4h] Nothing, King-high, kickers Queen, Ten, Nine, Seven
+	//        [] [] None
+	//     3: [Kc Ks 3h 3s Qc] [As 8c Tc 4h] Two Pair, Kings over Threes, kicker Queen
+	//        [] [] None
+	//     4: [Kc Qc Jc Tc 7c] [7s Jh 3s 4h] Flush, King-high, kickers Queen, Jack, Ten, Seven
+	//        [] [] None
+	//     5: inactive
+	//     Result: 4 scoops with Flush, King-high, kickers Queen, Jack, Ten, Seven
+	//   Run 1:
+	//     0: inactive
+	//     1: [Tc Td Kc Qd 4h] [5d Jd 3s 2d] Pair, Tens, kickers King, Queen, Four
+	//        [] [] None
+	//     2: [6s 5c 4h 3s 2d] [9h 7d Tc Kc] Straight, Six-high
+	//        [6s 5c 4h 3s 2d] [9h 7d Tc Kc] Six, Five, Four, Three, Two-low
+	//     3: [Kc Ks 3h 3s Tc] [As 8c 4h 2d] Two Pair, Kings over Threes, kicker Ten
+	//        [8c 4h 3s 2d As] [3h Ks Tc Kc] Eight, Four, Three, Two, Ace-low
+	//     4: [Jc Jh Kc Tc 4h] [7c 7s 3s 2d] Pair, Jacks, kickers King, Ten, Four
+	//        [] [] None
+	//     5: inactive
+	//     Result: 2 wins with Straight, Six-high
+	//             2 wins with Six, Five, Four, Three, Two-low
+}

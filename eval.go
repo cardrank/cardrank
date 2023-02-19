@@ -617,25 +617,30 @@ func Order(evs []*Eval, low bool) ([]int, int) {
 	}
 	i, n := 0, len(evs)
 	m, v := make(map[int]*Eval, n), make([]int, n)
+	var f func(*Eval, *Eval) int
+	// set up
 	for ; i < n; i++ {
 		m[i], v[i] = evs[i], i
+		if f == nil && evs[i] != nil {
+			f = evs[i].Type.NewComp(low)
+		}
 	}
-	f := evs[0].Type.NewComp(low)
+	// sort v based on mapped evals
 	sort.SliceStable(v, func(j, k int) bool {
 		return f(m[v[j]], m[v[k]]) < 0
 	})
+	// determine hi pivot
+	for i = 1; i < n && m[v[i-1]] != nil && m[v[i]] != nil && m[v[i-1]].HiRank == m[v[i]].HiRank; i++ {
+	}
+	// determine lo pivot
 	if low {
 		// determine if any qualified low evals
-		if m[v[0]] == nil || m[v[0]].LoRank == Invalid {
+		if m[v[0]] == nil || m[v[0]].LoRank == 0 || m[v[0]].LoRank == Invalid {
 			return nil, 0
 		}
-		// determine lo pivot
 		for i = 1; i < n && m[v[i-1]] != nil && m[v[i]] != nil && m[v[i-1]].LoRank == m[v[i]].LoRank; i++ {
 		}
 		return v, i
-	}
-	// determine hi pivot
-	for i = 1; i < n && m[v[i-1]] != nil && m[v[i]] != nil && m[v[i-1]].HiRank == m[v[i]].HiRank; i++ {
 	}
 	return v, i
 }

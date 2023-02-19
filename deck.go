@@ -636,7 +636,7 @@ func (win *Win) Format(f fmt.State, verb rune) {
 		}
 		fmt.Fprint(f, strings.Join(v, ", ")+" "+win.Verb())
 	case 's':
-		win.Evals[0].Desc(win.Low).Format(f, 's')
+		win.Evals[win.Order[0]].Desc(win.Low).Format(f, 's')
 	case 'S':
 		var v []string
 		for i := 0; i < win.Pivot; i++ {

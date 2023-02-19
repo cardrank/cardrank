@@ -226,7 +226,7 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 		if d.HasBoard() {
 			t.Logf("    Board: %v", run.Hi)
 			if d.Double {
-				t.Logf("         %v", run.Lo)
+				t.Logf("           %v", run.Lo)
 			}
 		}
 		if f != nil {
