@@ -178,15 +178,16 @@ func TestDealerRuns(t *testing.T) {
 		{Omaha, 4, 100},
 		{OmahaDouble, 4, 182},
 		{OmahaHiLo, 4, 72},
+		{FusionHiLo, 5, 256},
 	}
 	for _, tt := range tests {
 		test := tt
 		t.Run(test.typ.Name(), func(t *testing.T) {
 			testDealer(t, test.typ, test.count, test.seed, func(r *rand.Rand, d *Dealer) {
-				switch d.Id() {
-				case 'f':
+				switch rn, _ := d.Run(); {
+				case d.Id() == 'f' && rn == 0:
 					d.Deactivate(3, 4)
-					if b, exp := d.Runs(3), true; b != exp {
+					if b, exp := d.ChangeRuns(3), true; b != exp {
 						t.Fatalf("expected %t, got: %t", exp, b)
 					}
 				}
@@ -212,20 +213,20 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 	}
 	for d.Next() {
 		t.Logf("%s", d)
+		rn, run := d.Run()
+		t.Logf("  Run %d:", rn)
 		if d.HasPocket() {
 			for i := 0; i < count; i++ {
-				t.Logf("  %d: %v", i, d.Pockets[i])
+				t.Logf("    %d: %v", i, run.Pockets[i])
 			}
 		}
 		if v := d.Discarded(); len(v) != 0 {
-			t.Logf("  Discard: %v", v)
+			t.Logf("    Discard: %v", v)
 		}
 		if d.HasBoard() {
-			for i := 0; i < len(d.Boards); i++ {
-				t.Logf("  Run %d: %v", i, d.Boards[i].Hi)
-				if d.Double {
-					t.Logf("         %v", d.Boards[i].Lo)
-				}
+			t.Logf("    Board: %v", run.Hi)
+			if d.Double {
+				t.Logf("         %v", run.Lo)
 			}
 		}
 		if f != nil {
@@ -234,8 +235,8 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 	}
 	t.Logf("Showdown:")
 	for d.NextResult() {
-		run, res := d.Result()
-		t.Logf("  Run %d:", run)
+		n, res := d.Result()
+		t.Logf("  Run %d:", n)
 		for i := 0; i < count; i++ {
 			if d.Active[i] {
 				hi := res.Evals[i].Desc(false)
@@ -249,9 +250,9 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 			}
 		}
 		hi, lo := res.Win()
-		t.Logf("    Result: %s with %S", hi, hi)
+		t.Logf("    Result: %d with %s", hi, hi)
 		if lo != nil {
-			t.Logf("            %s with %S", lo, lo)
+			t.Logf("            %d with %s", lo, lo)
 		}
 	}
 }

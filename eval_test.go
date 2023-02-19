@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func TestHiOrder(t *testing.T) {
+func TestOrder(t *testing.T) {
 	tests := []struct {
 		r   int64
 		n   int

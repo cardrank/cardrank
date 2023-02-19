@@ -217,16 +217,15 @@ func (d *Deck) Shuffle(shuffler Shuffler, shuffles int) {
 	}
 }
 
-// Dealer maintains deal state for a type, deck, streets, positions, runs, and
-// wins.
+// Dealer maintains deal state for a type, streets, deck, positions, runs,
+// results, and wins.
 type Dealer struct {
 	TypeDesc
 	Count   int
 	Deck    *Deck
 	Active  map[int]bool
 	Discard []Card
-	Pockets [][]Card
-	Boards  []Board
+	Runs    []*Run
 	Results []*Result
 	runs    int
 	d       int
@@ -255,9 +254,8 @@ func NewShuffledDealer(desc TypeDesc, shuffler Shuffler, shuffles, count int) *D
 
 // init inits the street position and active positions.
 func (d *Dealer) init() {
-	d.Pockets = make([][]Card, d.Count)
 	d.Active = make(map[int]bool)
-	d.Boards = make([]Board, 1)
+	d.Runs = []*Run{NewRun(d.Count)}
 	d.Results = nil
 	d.runs = 1
 	d.d = 0
@@ -399,38 +397,56 @@ func (d *Dealer) Reset() {
 	d.init()
 }
 
-// Runs changes the number of runs, returns true if successful.
-func (d *Dealer) Runs(runs int) bool {
-	if d.runs != 1 || runs <= 1 || len(d.Boards) != 1 || !d.HasActive() {
+// ChangeRuns changes the number of runs, returning true if successful.
+func (d *Dealer) ChangeRuns(runs int) bool {
+	if d.runs != 1 || len(d.Runs) != 1 || !d.HasActive() {
 		return false
 	}
-	d.Boards = append(d.Boards, make([]Board, runs-1)...)
+	d.Runs = append(d.Runs, make([]*Run, runs-1)...)
 	for run := 1; run < runs; run++ {
-		d.Boards[run] = d.Boards[0].Dupe()
+		d.Runs[run] = d.Runs[0].Dupe()
 	}
-	d.runs = runs
+	if d.i != -1 {
+		d.i++
+	}
+	d.r, d.runs = -1, runs
 	return true
 }
 
-// Next iterates the street, discarding cards prior to dealing additional
-// pocket and board cards for each run. Returns true when there are additional
-// streets, and when at least 2 active positions.
+// Next iterates the run and the street, discarding cards prior to dealing
+// additional pocket and board cards for each run. Returns true when there are
+// additional runs or streets, and having at least 2 active positions.
 func (d *Dealer) Next() bool {
-	d.i++
+	switch {
+	case d.i == -1 && d.r == -1:
+		d.i, d.r = 0, 0
+	case d.i < len(d.Streets) && d.r == d.runs-1:
+		d.i, d.r = d.i+1, 0
+	default:
+		d.r++
+	}
 	d.d = len(d.Discard)
 	if len(d.Streets) <= d.i || !d.HasActive() {
-		d.eval()
+		d.r = -1
 		return false
 	}
-	d.DealPocket()
-	for run := 0; run < d.runs; run++ {
-		d.DealBoard(run)
+	d.Deal(d.r)
+	return d.i < len(d.Streets)
+}
+
+// Run returns the current street and run.
+func (d *Dealer) Run() (int, *Run) {
+	if 0 <= d.r && d.r < d.runs {
+		return d.r, d.Runs[d.r]
 	}
-	return true
+	return -1, nil
 }
 
 // NextResult iterates the next result.
 func (d *Dealer) NextResult() bool {
+	if d.Results == nil {
+		d.eval()
+	}
 	d.r++
 	return d.r < d.runs
 }
@@ -443,38 +459,34 @@ func (d *Dealer) Result() (int, *Result) {
 	return -1, nil
 }
 
-// DealPocket deals pocket cards for the street.
-func (d *Dealer) DealPocket() {
-	// pockets
+// Deal deals pocket and board cards for the run.
+func (d *Dealer) Deal(run int) {
 	desc := d.Streets[d.i]
+	// pockets
 	if p := desc.Pocket; 0 < p {
 		if n := desc.PocketDiscard; 0 < n {
 			d.Discard = append(d.Discard, d.Deck.Draw(n)...)
 		}
 		for j := 0; j < p; j++ {
 			for i := 0; i < d.Count; i++ {
-				d.Pockets[i] = append(d.Pockets[i], d.Deck.Draw(1)...)
+				d.Runs[run].Pockets[i] = append(d.Runs[run].Pockets[i], d.Deck.Draw(1)...)
 			}
 		}
 	}
-}
-
-// DealBoard deals board cards for the street and run.
-func (d *Dealer) DealBoard(run int) {
-	desc := d.Streets[d.i]
+	// board
 	if b := desc.Board; 0 < b {
 		// hi
 		disc := desc.BoardDiscard
 		if 0 < disc {
 			d.Discard = append(d.Discard, d.Deck.Draw(disc)...)
 		}
-		d.Boards[run].Hi = append(d.Boards[run].Hi, d.Deck.Draw(b)...)
+		d.Runs[run].Hi = append(d.Runs[run].Hi, d.Deck.Draw(b)...)
 		// lo
 		if d.Double {
 			if 0 < disc {
 				d.Discard = append(d.Discard, d.Deck.Draw(disc)...)
 			}
-			d.Boards[run].Lo = append(d.Boards[run].Lo, d.Deck.Draw(b)...)
+			d.Runs[run].Lo = append(d.Runs[run].Lo, d.Deck.Draw(b)...)
 		}
 	}
 }
@@ -500,14 +512,14 @@ func (d *Dealer) eval() {
 	case n > 1:
 		d.Results = make([]*Result, d.runs)
 		for run := 0; run < d.runs; run++ {
-			d.Results[run] = d.EvalRun(run)
+			d.Results[run] = d.Eval(run)
 		}
 	}
 }
 
-// EvalRun evals the run.
-func (d *Dealer) EvalRun(run int) *Result {
-	evs := d.EvalBoard(d.Boards[run])
+// Eval evals the run, returning the result.
+func (d *Dealer) Eval(run int) *Result {
+	evs := d.Runs[run].Eval(d.Type, d.Active, d.Double)
 	hiOrder, hiPivot := Order(evs, false)
 	var loOrder []int
 	var loPivot int
@@ -523,39 +535,55 @@ func (d *Dealer) EvalRun(run int) *Result {
 	}
 }
 
-// EvalBoard evals the board for the pockets.
-func (d *Dealer) EvalBoard(board Board) []*Eval {
-	evs := make([]*Eval, d.Count)
-	for i := 0; i < d.Count; i++ {
-		if d.Active[i] {
-			evs[i] = d.Type.New(d.Pockets[i], board.Hi)
-			if d.Double {
-				evs[i].Double(d.Pockets[i], board.Lo)
+// Run holds pockets, and a hi/lo board for a deal.
+type Run struct {
+	Pockets [][]Card
+	Hi      []Card
+	Lo      []Card
+}
+
+// Eval returns the evals for the run.
+func (run *Run) Eval(typ Type, active map[int]bool, double bool) []*Eval {
+	n := len(run.Pockets)
+	evs := make([]*Eval, n)
+	for i := 0; i < n; i++ {
+		if active[i] {
+			evs[i] = typ.New(run.Pockets[i], run.Hi)
+			if double {
+				evs[i].Double(run.Pockets[i], run.Lo)
 			}
 		}
 	}
 	return evs
 }
 
-// Board holds boards.
-type Board struct {
-	Hi []Card
-	Lo []Card
+// NewRun creates a new run for the pocket count.
+func NewRun(count int) *Run {
+	return &Run{
+		Pockets: make([][]Card, count),
+	}
 }
 
 // Dupe creates a duplicate of the hi and lo portions of the board, excluding
 // any eval info collected.
-func (board Board) Dupe() Board {
-	b := Board{}
-	if board.Hi != nil {
-		b.Hi = make([]Card, len(board.Hi))
-		copy(b.Hi, board.Hi)
+func (run *Run) Dupe() *Run {
+	r := new(Run)
+	if run.Pockets != nil {
+		r.Pockets = make([][]Card, len(run.Pockets))
+		for i := 0; i < len(run.Pockets); i++ {
+			r.Pockets[i] = make([]Card, len(run.Pockets[i]))
+			copy(r.Pockets[i], run.Pockets[i])
+		}
 	}
-	if board.Lo != nil {
-		b.Lo = make([]Card, len(board.Lo))
-		copy(b.Lo, board.Lo)
+	if run.Hi != nil {
+		r.Hi = make([]Card, len(run.Hi))
+		copy(r.Hi, run.Hi)
 	}
-	return b
+	if run.Lo != nil {
+		r.Lo = make([]Card, len(run.Lo))
+		copy(r.Lo, run.Lo)
+	}
+	return r
 }
 
 // Result contains dealer eval results.
@@ -601,6 +629,14 @@ func NewWin(evs []*Eval, order []int, pivot int, low, scoop bool) *Win {
 // Format satisfies the fmt.Formatter interface.
 func (win *Win) Format(f fmt.State, verb rune) {
 	switch verb {
+	case 'd':
+		var v []string
+		for i := 0; i < win.Pivot; i++ {
+			v = append(v, strconv.Itoa(win.Order[i]))
+		}
+		fmt.Fprint(f, strings.Join(v, ", ")+" "+win.Verb())
+	case 's':
+		win.Evals[0].Desc(win.Low).Format(f, 's')
 	case 'S':
 		var v []string
 		for i := 0; i < win.Pivot; i++ {
@@ -608,12 +644,6 @@ func (win *Win) Format(f fmt.State, verb rune) {
 			v = append(v, fmt.Sprintf("%v", desc.Best))
 		}
 		fmt.Fprint(f, strings.Join(v, ", "))
-	case 's':
-		var v []string
-		for i := 0; i < win.Pivot; i++ {
-			v = append(v, strconv.Itoa(win.Order[i]))
-		}
-		fmt.Fprint(f, strings.Join(v, ", ")+" "+win.Verb())
 	}
 }
 

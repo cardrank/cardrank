@@ -304,7 +304,7 @@ func (typ Type) Deal(shuffler Shuffler, shuffles, count int) ([][]Card, []Card) 
 	if d := typ.Dealer(shuffler, shuffles, count); d != nil {
 		for d.Next() {
 		}
-		return d.Pockets, d.Boards[0].Hi
+		return d.Runs[0].Pockets, d.Runs[0].Hi
 	}
 	return nil, nil
 }
