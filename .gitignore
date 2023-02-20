@@ -2,4 +2,5 @@
 *.exe
 *.wasm
 *.log
+*.out
 magic*

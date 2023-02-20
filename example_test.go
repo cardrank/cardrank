@@ -58,7 +58,7 @@ func ExampleHoldem_New() {
 	// note: use a real random source
 	r := rand.New(rand.NewSource(26076))
 	d.Shuffle(r, 1)
-	ev := cardrank.Holdem.New(d.Draw(2), d.Draw(5))
+	ev := cardrank.Holdem.Eval(d.Draw(2), d.Draw(5))
 	fmt.Printf("%b\n", ev)
 	// Output:
 	// Straight Flush, Five-high, Steel Wheel [5♣ 4♣ 3♣ 2♣ A♣]
@@ -84,7 +84,7 @@ func Example_holdem() {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
 		pockets, board := cardrank.Holdem.Deal(r, 1, game.players)
-		evs := cardrank.Holdem.Eval(pockets, board)
+		evs := cardrank.Holdem.EvalPockets(pockets, board)
 		fmt.Printf("------ Holdem %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
 		for j := 0; j < game.players; j++ {
@@ -111,9 +111,9 @@ func Example_holdem() {
 	// Result:   Players 1, 2 push with Pair, Twos, kickers Queen, Jack, Ten
 	// ------ Holdem 2 ------
 	// Board:    [8♠ 9♠ J♠ 9♣ T♠]
-	// Player 1: [7♠ 6♦] Straight Flush, Jack-high [J♠ T♠ 9♠ 8♠ 7♠] [9♣ 6♦]
-	// Player 2: [T♣ Q♠] Straight Flush, Queen-high [Q♠ J♠ T♠ 9♠ 8♠] [T♣ 9♣]
-	// Result:   Player 2 wins with Straight Flush, Queen-high
+	// Player 1: [7♠ 6♦] Straight Flush, Jack-high, Bronze Fist [J♠ T♠ 9♠ 8♠ 7♠] [9♣ 6♦]
+	// Player 2: [T♣ Q♠] Straight Flush, Queen-high, Silver Tongue [Q♠ J♠ T♠ 9♠ 8♠] [T♣ 9♣]
+	// Result:   Player 2 wins with Straight Flush, Queen-high, Silver Tongue
 	// ------ Holdem 3 ------
 	// Board:    [A♠ T♣ K♠ J♣ 6♥]
 	// Player 1: [T♥ 5♦] Pair, Tens, kickers Ace, King, Jack [T♣ T♥ A♠ K♠ J♣] [6♥ 5♦]
@@ -134,12 +134,12 @@ func Example_holdem() {
 	// Result:   Player 6 wins with Full House, Jacks full of Nines
 	// ------ Holdem 5 ------
 	// Board:    [3♠ 9♥ A♦ 6♥ Q♦]
-	// Player 1: [T♦ 4♥] Nothing, Ace-high, kickers Queen, Ten, Nine, Six [A♦ Q♦ T♦ 9♥ 6♥] [4♥ 3♠]
-	// Player 2: [8♦ 7♦] Nothing, Ace-high, kickers Queen, Nine, Eight, Seven [A♦ Q♦ 9♥ 8♦ 7♦] [6♥ 3♠]
+	// Player 1: [T♦ 4♥] Ace-high, kickers Queen, Ten, Nine, Six [A♦ Q♦ T♦ 9♥ 6♥] [4♥ 3♠]
+	// Player 2: [8♦ 7♦] Ace-high, kickers Queen, Nine, Eight, Seven [A♦ Q♦ 9♥ 8♦ 7♦] [6♥ 3♠]
 	// Player 3: [K♠ K♥] Pair, Kings, kickers Ace, Queen, Nine [K♥ K♠ A♦ Q♦ 9♥] [6♥ 3♠]
-	// Player 4: [T♣ 5♦] Nothing, Ace-high, kickers Queen, Ten, Nine, Six [A♦ Q♦ T♣ 9♥ 6♥] [5♦ 3♠]
-	// Player 5: [7♥ T♥] Nothing, Ace-high, kickers Queen, Ten, Nine, Seven [A♦ Q♦ T♥ 9♥ 7♥] [6♥ 3♠]
-	// Player 6: [8♣ 5♣] Nothing, Ace-high, kickers Queen, Nine, Eight, Six [A♦ Q♦ 9♥ 8♣ 6♥] [5♣ 3♠]
+	// Player 4: [T♣ 5♦] Ace-high, kickers Queen, Ten, Nine, Six [A♦ Q♦ T♣ 9♥ 6♥] [5♦ 3♠]
+	// Player 5: [7♥ T♥] Ace-high, kickers Queen, Ten, Nine, Seven [A♦ Q♦ T♥ 9♥ 7♥] [6♥ 3♠]
+	// Player 6: [8♣ 5♣] Ace-high, kickers Queen, Nine, Eight, Six [A♦ Q♦ 9♥ 8♣ 6♥] [5♣ 3♠]
 	// Result:   Player 3 wins with Pair, Kings, kickers Ace, Queen, Nine
 	// ------ Holdem 6 ------
 	// Board:    [T♥ 6♥ 7♥ 2♥ 7♣]
@@ -149,8 +149,8 @@ func Example_holdem() {
 	// ------ Holdem 7 ------
 	// Board:    [4♦ A♥ A♣ 4♠ A♦]
 	// Player 1: [T♥ 9♣] Full House, Aces full of Fours [A♣ A♦ A♥ 4♦ 4♠] [T♥ 9♣]
-	// Player 2: [T♠ A♠] Four of a Kind, Aces, kicker Four [A♣ A♦ A♥ A♠ 4♦] [4♠ T♠]
-	// Result:   Player 2 wins with Four of a Kind, Aces, kicker Four
+	// Player 2: [T♠ A♠] Four of a Kind, Aces, kicker Ten [A♣ A♦ A♥ A♠ T♠] [4♦ 4♠]
+	// Result:   Player 2 wins with Four of a Kind, Aces, kicker Ten
 	// ------ Holdem 8 ------
 	// Board:    [Q♥ T♥ T♠ J♥ K♥]
 	// Player 1: [A♥ 8♥] Straight Flush, Ace-high, Royal [A♥ K♥ Q♥ J♥ T♥] [8♥ T♠]
@@ -204,7 +204,7 @@ func Example_short() {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
 		pockets, board := cardrank.Short.Deal(r, 1, game.players)
-		evs := cardrank.Short.Eval(pockets, board)
+		evs := cardrank.Short.EvalPockets(pockets, board)
 		fmt.Printf("------ Short %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
 		for j := 0; j < game.players; j++ {
@@ -226,9 +226,9 @@ func Example_short() {
 	// Output:
 	// ------ Short 1 ------
 	// Board:    [9♥ A♦ A♥ 8♣ A♣]
-	// Player 1: [8♥ A♠] Four of a Kind, Aces, kicker Eight [A♣ A♦ A♥ A♠ 8♣] [8♥ 9♥]
+	// Player 1: [8♥ A♠] Four of a Kind, Aces, kicker Nine [A♣ A♦ A♥ A♠ 9♥] [8♣ 8♥]
 	// Player 2: [7♥ J♦] Three of a Kind, Aces, kickers Jack, Nine [A♣ A♦ A♥ J♦ 9♥] [8♣ 7♥]
-	// Result:   Player 1 wins with Four of a Kind, Aces, kicker Eight
+	// Result:   Player 1 wins with Four of a Kind, Aces, kicker Nine
 	// ------ Short 2 ------
 	// Board:    [9♣ 6♦ A♠ J♠ 6♠]
 	// Player 1: [T♥ A♣] Two Pair, Aces over Sixes, kicker Jack [A♣ A♠ 6♦ 6♠ J♠] [T♥ 9♣]
@@ -239,21 +239,21 @@ func Example_short() {
 	// ------ Short 3 ------
 	// Board:    [T♥ J♣ 7♥ 9♥ K♣]
 	// Player 1: [8♥ T♣] Straight, Jack-high [J♣ T♣ 9♥ 8♥ 7♥] [K♣ T♥]
-	// Player 2: [T♠ Q♠] Straight, King-high [K♣ Q♠ J♣ T♥ 9♥] [T♠ 7♥]
+	// Player 2: [T♠ Q♠] Straight, King-high [K♣ Q♠ J♣ T♠ 9♥] [T♥ 7♥]
 	// Player 3: [J♠ 7♣] Two Pair, Jacks over Sevens, kicker King [J♣ J♠ 7♣ 7♥ K♣] [T♥ 9♥]
 	// Player 4: [6♣ Q♦] Straight, King-high [K♣ Q♦ J♣ T♥ 9♥] [7♥ 6♣]
 	// Player 5: [7♦ 6♠] Pair, Sevens, kickers King, Jack, Ten [7♦ 7♥ K♣ J♣ T♥] [9♥ 6♠]
-	// Player 6: [8♠ 8♦] Straight, Jack-high [J♣ T♥ 9♥ 8♦ 7♥] [K♣ 8♠]
+	// Player 6: [8♠ 8♦] Straight, Jack-high [J♣ T♥ 9♥ 8♠ 7♥] [K♣ 8♦]
 	// Player 7: [9♣ K♥] Two Pair, Kings over Nines, kicker Jack [K♣ K♥ 9♣ 9♥ J♣] [T♥ 7♥]
 	// Player 8: [A♥ K♦] Pair, Kings, kickers Ace, Jack, Ten [K♣ K♦ A♥ J♣ T♥] [9♥ 7♥]
 	// Result:   Players 2, 4 push with Straight, King-high
 	// ------ Short 4 ------
 	// Board:    [T♦ 9♣ 9♦ Q♦ 8♦]
-	// Player 1: [J♠ 9♥] Straight, Queen-high [Q♦ J♠ T♦ 9♣ 8♦] [9♦ 9♥]
+	// Player 1: [J♠ 9♥] Straight, Queen-high [Q♦ J♠ T♦ 9♥ 8♦] [9♣ 9♦]
 	// Player 2: [T♥ 8♠] Two Pair, Tens over Nines, kicker Queen [T♦ T♥ 9♣ 9♦ Q♦] [8♦ 8♠]
-	// Player 3: [6♣ J♦] Straight Flush, Queen-high [Q♦ J♦ T♦ 9♦ 8♦] [9♣ 6♣]
+	// Player 3: [6♣ J♦] Straight Flush, Queen-high, Silver Tongue [Q♦ J♦ T♦ 9♦ 8♦] [9♣ 6♣]
 	// Player 4: [A♣ A♦] Flush, Ace-high, kickers Queen, Ten, Nine, Eight [A♦ Q♦ T♦ 9♦ 8♦] [A♣ 9♣]
-	// Result:   Player 3 wins with Straight Flush, Queen-high
+	// Result:   Player 3 wins with Straight Flush, Queen-high, Silver Tongue
 	// ------ Short 5 ------
 	// Board:    [6♠ A♣ 7♦ A♠ 6♦]
 	// Player 1: [9♣ T♦] Two Pair, Aces over Sixes, kicker Ten [A♣ A♠ 6♦ 6♠ T♦] [9♣ 7♦]
@@ -297,7 +297,7 @@ func Example_royal() {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
 		pockets, board := cardrank.Royal.Deal(r, 1, game.players)
-		evs := cardrank.Royal.Eval(pockets, board)
+		evs := cardrank.Royal.EvalPockets(pockets, board)
 		fmt.Printf("------ Royal %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
 		for j := 0; j < game.players; j++ {
@@ -385,7 +385,7 @@ func Example_omaha() {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
 		pockets, board := cardrank.Omaha.Deal(r, 1, game.players)
-		evs := cardrank.Omaha.Eval(pockets, board)
+		evs := cardrank.Omaha.EvalPockets(pockets, board)
 		fmt.Printf("------ Omaha %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
 		for j := 0; j < game.players; j++ {
@@ -407,43 +407,43 @@ func Example_omaha() {
 	// Output:
 	// ------ Omaha 1 ------
 	// Board:    [3♥ 5♥ 4♥ 7♥ K♣]
-	// Player 1: [K♥ J♣ A♥ Q♠] Flush, Ace-high, kickers King, Seven, Five, Four [A♥ K♥ 7♥ 5♥ 4♥] [J♣ Q♠ 3♥ K♣]
-	// Player 2: [7♣ 4♣ 5♠ 2♠] Two Pair, Sevens over Fives, kicker King [7♣ 7♥ 5♥ 5♠ K♣] [4♣ 2♠ 3♥ 4♥]
+	// Player 1: [K♥ J♣ A♥ Q♠] Flush, Ace-high, kickers King, Seven, Five, Four [A♥ K♥ 7♥ 5♥ 4♥] [K♣ Q♠ J♣ 3♥]
+	// Player 2: [7♣ 4♣ 5♠ 2♠] Two Pair, Sevens over Fives, kicker King [7♣ 7♥ 5♥ 5♠ K♣] [4♣ 4♥ 3♥ 2♠]
 	// Result:   Player 1 wins with Flush, Ace-high, kickers King, Seven, Five, Four
 	// ------ Omaha 2 ------
 	// Board:    [3♥ 7♣ 3♣ 9♠ 9♣]
-	// Player 1: [3♠ 3♦ T♠ Q♠] Four of a Kind, Threes, kicker Nine [3♣ 3♦ 3♥ 3♠ 9♠] [T♠ Q♠ 7♣ 9♣]
-	// Player 2: [6♦ Q♣ 8♥ 6♣] Flush, Queen-high, kickers Nine, Seven, Six, Three [Q♣ 9♣ 7♣ 6♣ 3♣] [6♦ 8♥ 3♥ 9♠]
-	// Player 3: [Q♦ K♠ 8♣ A♥] Pair, Nines, kickers Ace, King, Seven [9♣ 9♠ A♥ K♠ 7♣] [Q♦ 8♣ 3♥ 3♣]
-	// Player 4: [K♦ T♦ 8♦ 4♥] Pair, Nines, kickers King, Ten, Seven [9♣ 9♠ K♦ T♦ 7♣] [8♦ 4♥ 3♥ 3♣]
-	// Player 5: [J♦ 2♥ Q♥ 6♠] Pair, Nines, kickers Queen, Jack, Seven [9♣ 9♠ Q♥ J♦ 7♣] [2♥ 6♠ 3♥ 3♣]
+	// Player 1: [3♠ 3♦ T♠ Q♠] Four of a Kind, Threes, kicker Nine [3♣ 3♦ 3♥ 3♠ 9♠] [Q♠ T♠ 9♣ 7♣]
+	// Player 2: [6♦ Q♣ 8♥ 6♣] Flush, Queen-high, kickers Nine, Seven, Six, Three [Q♣ 9♣ 7♣ 6♣ 3♣] [9♠ 8♥ 6♦ 3♥]
+	// Player 3: [Q♦ K♠ 8♣ A♥] Pair, Nines, kickers Ace, King, Seven [9♣ 9♠ A♥ K♠ 7♣] [Q♦ 8♣ 3♣ 3♥]
+	// Player 4: [K♦ T♦ 8♦ 4♥] Pair, Nines, kickers King, Ten, Seven [9♣ 9♠ K♦ T♦ 7♣] [8♦ 4♥ 3♣ 3♥]
+	// Player 5: [J♦ 2♥ Q♥ 6♠] Pair, Nines, kickers Queen, Jack, Seven [9♣ 9♠ Q♥ J♦ 7♣] [6♠ 3♣ 3♥ 2♥]
 	// Result:   Player 1 wins with Four of a Kind, Threes, kicker Nine
 	// ------ Omaha 3 ------
 	// Board:    [J♣ T♥ 4♥ K♣ Q♣]
-	// Player 1: [K♠ Q♠ 4♣ J♦] Two Pair, Kings over Queens, kicker Jack [K♣ K♠ Q♣ Q♠ J♣] [4♣ J♦ T♥ 4♥]
-	// Player 2: [J♠ 3♣ 8♥ 2♠] Pair, Jacks, kickers King, Queen, Eight [J♣ J♠ K♣ Q♣ 8♥] [3♣ 2♠ T♥ 4♥]
-	// Player 3: [3♠ T♠ 2♣ Q♦] Two Pair, Queens over Tens, kicker King [Q♣ Q♦ T♥ T♠ K♣] [3♠ 2♣ J♣ 4♥]
-	// Player 4: [5♣ 5♥ T♦ 2♦] Pair, Tens, kickers King, Queen, Five [T♦ T♥ K♣ Q♣ 5♣] [5♥ 2♦ J♣ 4♥]
-	// Player 5: [7♠ 3♥ 6♠ A♣] Nothing, Ace-high, kickers King, Queen, Jack, Seven [A♣ K♣ Q♣ J♣ 7♠] [3♥ 6♠ T♥ 4♥]
-	// Player 6: [4♠ 8♦ K♦ T♣] Two Pair, Kings over Tens, kicker Queen [K♣ K♦ T♣ T♥ Q♣] [4♠ 8♦ J♣ 4♥]
+	// Player 1: [K♠ Q♠ 4♣ J♦] Two Pair, Kings over Queens, kicker Jack [K♣ K♠ Q♣ Q♠ J♣] [J♦ T♥ 4♣ 4♥]
+	// Player 2: [J♠ 3♣ 8♥ 2♠] Pair, Jacks, kickers King, Queen, Eight [J♣ J♠ K♣ Q♣ 8♥] [T♥ 4♥ 3♣ 2♠]
+	// Player 3: [3♠ T♠ 2♣ Q♦] Two Pair, Queens over Tens, kicker King [Q♣ Q♦ T♥ T♠ K♣] [J♣ 4♥ 3♠ 2♣]
+	// Player 4: [5♣ 5♥ T♦ 2♦] Pair, Tens, kickers King, Queen, Five [T♦ T♥ K♣ Q♣ 5♣] [J♣ 5♥ 4♥ 2♦]
+	// Player 5: [7♠ 3♥ 6♠ A♣] Ace-high, kickers King, Queen, Jack, Seven [A♣ K♣ Q♣ J♣ 7♠] [T♥ 6♠ 4♥ 3♥]
+	// Player 6: [4♠ 8♦ K♦ T♣] Two Pair, Kings over Tens, kicker Queen [K♣ K♦ T♣ T♥ Q♣] [J♣ 8♦ 4♥ 4♠]
 	// Result:   Player 1 wins with Two Pair, Kings over Queens, kicker Jack
 	// ------ Omaha 4 ------
 	// Board:    [2♦ 6♦ 6♣ Q♣ 7♣]
-	// Player 1: [6♠ K♥ A♣ 8♣] Flush, Ace-high, kickers Queen, Eight, Seven, Six [A♣ Q♣ 8♣ 7♣ 6♣] [6♠ K♥ 2♦ 6♦]
-	// Player 2: [Q♥ 4♥ J♣ 5♥] Two Pair, Queens over Sixes, kicker Jack [Q♣ Q♥ 6♣ 6♦ J♣] [4♥ 5♥ 2♦ 7♣]
-	// Player 3: [2♣ 6♥ 5♣ Q♠] Full House, Sixes full of Queens [6♣ 6♦ 6♥ Q♣ Q♠] [2♣ 5♣ 2♦ 7♣]
-	// Player 4: [9♠ J♥ K♠ J♠] Two Pair, Jacks over Sixes, kicker Queen [J♥ J♠ 6♣ 6♦ Q♣] [9♠ K♠ 2♦ 7♣]
-	// Player 5: [3♦ 4♦ K♣ 8♦] Pair, Sixes, kickers King, Queen, Eight [6♣ 6♦ K♣ Q♣ 8♦] [3♦ 4♦ 2♦ 7♣]
-	// Player 6: [T♣ Q♦ A♠ 7♥] Two Pair, Queens over Sevens, kicker Six [Q♣ Q♦ 7♣ 7♥ 6♦] [T♣ A♠ 2♦ 6♣]
+	// Player 1: [6♠ K♥ A♣ 8♣] Flush, Ace-high, kickers Queen, Eight, Seven, Six [A♣ Q♣ 8♣ 7♣ 6♣] [K♥ 6♦ 6♠ 2♦]
+	// Player 2: [Q♥ 4♥ J♣ 5♥] Two Pair, Queens over Sixes, kicker Jack [Q♣ Q♥ 6♣ 6♦ J♣] [7♣ 5♥ 4♥ 2♦]
+	// Player 3: [2♣ 6♥ 5♣ Q♠] Full House, Sixes full of Queens [6♣ 6♦ 6♥ Q♣ Q♠] [7♣ 5♣ 2♣ 2♦]
+	// Player 4: [9♠ J♥ K♠ J♠] Two Pair, Jacks over Sixes, kicker Queen [J♥ J♠ 6♣ 6♦ Q♣] [K♠ 9♠ 7♣ 2♦]
+	// Player 5: [3♦ 4♦ K♣ 8♦] Pair, Sixes, kickers King, Queen, Eight [6♣ 6♦ K♣ Q♣ 8♦] [7♣ 4♦ 3♦ 2♦]
+	// Player 6: [T♣ Q♦ A♠ 7♥] Two Pair, Queens over Sevens, kicker Six [Q♣ Q♦ 7♣ 7♥ 6♦] [A♠ T♣ 6♣ 2♦]
 	// Result:   Player 3 wins with Full House, Sixes full of Queens
 	// ------ Omaha 5 ------
 	// Board:    [4♣ K♣ 6♦ 9♦ 5♠]
-	// Player 1: [3♦ 4♦ 5♦ J♣] Two Pair, Fives over Fours, kicker King [5♦ 5♠ 4♣ 4♦ K♣] [3♦ J♣ 6♦ 9♦]
-	// Player 2: [T♥ J♠ K♠ 2♣] Pair, Kings, kickers Jack, Nine, Six [K♣ K♠ J♠ 9♦ 6♦] [T♥ 2♣ 4♣ 5♠]
-	// Player 3: [A♣ 9♠ T♠ 3♠] Pair, Nines, kickers Ace, King, Six [9♦ 9♠ A♣ K♣ 6♦] [T♠ 3♠ 4♣ 5♠]
-	// Player 4: [7♦ 3♣ 8♠ 7♣] Straight, Nine-high [9♦ 8♠ 7♦ 6♦ 5♠] [3♣ 7♣ 4♣ K♣]
-	// Player 5: [5♣ Q♠ J♥ 2♠] Pair, Fives, kickers King, Queen, Nine [5♣ 5♠ K♣ Q♠ 9♦] [J♥ 2♠ 4♣ 6♦]
-	// Player 6: [6♠ 7♠ 7♥ 2♥] Pair, Sevens, kickers King, Nine, Six [7♥ 7♠ K♣ 9♦ 6♦] [6♠ 2♥ 4♣ 5♠]
+	// Player 1: [3♦ 4♦ 5♦ J♣] Two Pair, Fives over Fours, kicker King [5♦ 5♠ 4♣ 4♦ K♣] [J♣ 9♦ 6♦ 3♦]
+	// Player 2: [T♥ J♠ K♠ 2♣] Pair, Kings, kickers Jack, Nine, Six [K♣ K♠ J♠ 9♦ 6♦] [T♥ 5♠ 4♣ 2♣]
+	// Player 3: [A♣ 9♠ T♠ 3♠] Pair, Nines, kickers Ace, King, Six [9♦ 9♠ A♣ K♣ 6♦] [T♠ 5♠ 4♣ 3♠]
+	// Player 4: [7♦ 3♣ 8♠ 7♣] Straight, Nine-high [9♦ 8♠ 7♦ 6♦ 5♠] [K♣ 7♣ 4♣ 3♣]
+	// Player 5: [5♣ Q♠ J♥ 2♠] Pair, Fives, kickers King, Queen, Nine [5♣ 5♠ K♣ Q♠ 9♦] [J♥ 6♦ 4♣ 2♠]
+	// Player 6: [6♠ 7♠ 7♥ 2♥] Pair, Sevens, kickers King, Nine, Six [7♥ 7♠ K♣ 9♦ 6♦] [6♠ 5♠ 4♣ 2♥]
 	// Result:   Player 4 wins with Straight, Nine-high
 }
 
@@ -461,7 +461,7 @@ func Example_omahaHiLo() {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
 		pockets, board := cardrank.OmahaHiLo.Deal(r, 1, game.players)
-		evs := cardrank.OmahaHiLo.Eval(pockets, board)
+		evs := cardrank.OmahaHiLo.EvalPockets(pockets, board)
 		fmt.Printf("------ OmahaHiLo %d ------\n", i+1)
 		fmt.Printf("Board: %b\n", board)
 		for j := 0; j < game.players; j++ {
@@ -504,96 +504,96 @@ func Example_omahaHiLo() {
 	// ------ OmahaHiLo 1 ------
 	// Board: [3♥ 5♥ 4♥ 7♥ K♣]
 	// Player 1: [K♥ J♣ A♥ Q♠]
-	//   Hi: Flush, Ace-high, kickers King, Seven, Five, Four [A♥ K♥ 7♥ 5♥ 4♥] [J♣ Q♠ 3♥ K♣]
+	//   Hi: Flush, Ace-high, kickers King, Seven, Five, Four [A♥ K♥ 7♥ 5♥ 4♥] [K♣ Q♠ J♣ 3♥]
 	//   Lo: None [] []
 	// Player 2: [7♣ 4♣ 5♠ 2♠]
-	//   Hi: Two Pair, Sevens over Fives, kicker King [7♣ 7♥ 5♥ 5♠ K♣] [4♣ 2♠ 3♥ 4♥]
-	//   Lo: Seven, Five, Four, Three, Two-low [7♣ 5♥ 4♥ 3♥ 2♠] [4♣ 5♠ 7♥ K♣]
+	//   Hi: Two Pair, Sevens over Fives, kicker King [7♣ 7♥ 5♥ 5♠ K♣] [4♣ 4♥ 3♥ 2♠]
+	//   Lo: Seven, Five, Four, Three, Two-low [7♣ 5♥ 4♥ 3♥ 2♠] [K♣ 7♥ 5♠ 4♣]
 	// Result (Hi): Player 1 wins with Flush, Ace-high, kickers King, Seven, Five, Four
 	// Result (Lo): Player 2 wins with Seven, Five, Four, Three, Two-low
 	// ------ OmahaHiLo 2 ------
 	// Board: [3♥ 7♣ 3♣ 9♠ 9♣]
 	// Player 1: [3♠ 3♦ T♠ Q♠]
-	//   Hi: Four of a Kind, Threes, kicker Nine [3♣ 3♦ 3♥ 3♠ 9♠] [T♠ Q♠ 7♣ 9♣]
+	//   Hi: Four of a Kind, Threes, kicker Nine [3♣ 3♦ 3♥ 3♠ 9♠] [Q♠ T♠ 9♣ 7♣]
 	//   Lo: None [] []
 	// Player 2: [6♦ Q♣ 8♥ 6♣]
-	//   Hi: Flush, Queen-high, kickers Nine, Seven, Six, Three [Q♣ 9♣ 7♣ 6♣ 3♣] [6♦ 8♥ 3♥ 9♠]
+	//   Hi: Flush, Queen-high, kickers Nine, Seven, Six, Three [Q♣ 9♣ 7♣ 6♣ 3♣] [9♠ 8♥ 6♦ 3♥]
 	//   Lo: None [] []
 	// Player 3: [Q♦ K♠ 8♣ A♥]
-	//   Hi: Pair, Nines, kickers Ace, King, Seven [9♣ 9♠ A♥ K♠ 7♣] [Q♦ 8♣ 3♥ 3♣]
+	//   Hi: Pair, Nines, kickers Ace, King, Seven [9♣ 9♠ A♥ K♠ 7♣] [Q♦ 8♣ 3♣ 3♥]
 	//   Lo: None [] []
 	// Player 4: [K♦ T♦ 8♦ 4♥]
-	//   Hi: Pair, Nines, kickers King, Ten, Seven [9♣ 9♠ K♦ T♦ 7♣] [8♦ 4♥ 3♥ 3♣]
+	//   Hi: Pair, Nines, kickers King, Ten, Seven [9♣ 9♠ K♦ T♦ 7♣] [8♦ 4♥ 3♣ 3♥]
 	//   Lo: None [] []
 	// Player 5: [J♦ 2♥ Q♥ 6♠]
-	//   Hi: Pair, Nines, kickers Queen, Jack, Seven [9♣ 9♠ Q♥ J♦ 7♣] [2♥ 6♠ 3♥ 3♣]
+	//   Hi: Pair, Nines, kickers Queen, Jack, Seven [9♣ 9♠ Q♥ J♦ 7♣] [6♠ 3♣ 3♥ 2♥]
 	//   Lo: None [] []
 	// Result (Hi): Player 1 scoops with Four of a Kind, Threes, kicker Nine
 	// Result (Lo): no player made a low hand
 	// ------ OmahaHiLo 3 ------
 	// Board: [J♣ T♥ 4♥ K♣ Q♣]
 	// Player 1: [K♠ Q♠ 4♣ J♦]
-	//   Hi: Two Pair, Kings over Queens, kicker Jack [K♣ K♠ Q♣ Q♠ J♣] [4♣ J♦ T♥ 4♥]
+	//   Hi: Two Pair, Kings over Queens, kicker Jack [K♣ K♠ Q♣ Q♠ J♣] [J♦ T♥ 4♣ 4♥]
 	//   Lo: None [] []
 	// Player 2: [J♠ 3♣ 8♥ 2♠]
-	//   Hi: Pair, Jacks, kickers King, Queen, Eight [J♣ J♠ K♣ Q♣ 8♥] [3♣ 2♠ T♥ 4♥]
+	//   Hi: Pair, Jacks, kickers King, Queen, Eight [J♣ J♠ K♣ Q♣ 8♥] [T♥ 4♥ 3♣ 2♠]
 	//   Lo: None [] []
 	// Player 3: [3♠ T♠ 2♣ Q♦]
-	//   Hi: Two Pair, Queens over Tens, kicker King [Q♣ Q♦ T♥ T♠ K♣] [3♠ 2♣ J♣ 4♥]
+	//   Hi: Two Pair, Queens over Tens, kicker King [Q♣ Q♦ T♥ T♠ K♣] [J♣ 4♥ 3♠ 2♣]
 	//   Lo: None [] []
 	// Player 4: [5♣ 5♥ T♦ 2♦]
-	//   Hi: Pair, Tens, kickers King, Queen, Five [T♦ T♥ K♣ Q♣ 5♣] [5♥ 2♦ J♣ 4♥]
+	//   Hi: Pair, Tens, kickers King, Queen, Five [T♦ T♥ K♣ Q♣ 5♣] [J♣ 5♥ 4♥ 2♦]
 	//   Lo: None [] []
 	// Player 5: [7♠ 3♥ 6♠ A♣]
-	//   Hi: Nothing, Ace-high, kickers King, Queen, Jack, Seven [A♣ K♣ Q♣ J♣ 7♠] [3♥ 6♠ T♥ 4♥]
+	//   Hi: Ace-high, kickers King, Queen, Jack, Seven [A♣ K♣ Q♣ J♣ 7♠] [T♥ 6♠ 4♥ 3♥]
 	//   Lo: None [] []
 	// Player 6: [4♠ 8♦ K♦ T♣]
-	//   Hi: Two Pair, Kings over Tens, kicker Queen [K♣ K♦ T♣ T♥ Q♣] [4♠ 8♦ J♣ 4♥]
+	//   Hi: Two Pair, Kings over Tens, kicker Queen [K♣ K♦ T♣ T♥ Q♣] [J♣ 8♦ 4♥ 4♠]
 	//   Lo: None [] []
 	// Result (Hi): Player 1 scoops with Two Pair, Kings over Queens, kicker Jack
 	// Result (Lo): no player made a low hand
 	// ------ OmahaHiLo 4 ------
 	// Board: [2♦ 6♦ 6♣ Q♣ 7♣]
 	// Player 1: [6♠ K♥ A♣ 8♣]
-	//   Hi: Flush, Ace-high, kickers Queen, Eight, Seven, Six [A♣ Q♣ 8♣ 7♣ 6♣] [6♠ K♥ 2♦ 6♦]
-	//   Lo: Eight, Seven, Six, Two, Ace-low [8♣ 7♣ 6♦ 2♦ A♣] [6♠ K♥ 6♣ Q♣]
+	//   Hi: Flush, Ace-high, kickers Queen, Eight, Seven, Six [A♣ Q♣ 8♣ 7♣ 6♣] [K♥ 6♦ 6♠ 2♦]
+	//   Lo: Eight, Seven, Six, Two, Ace-low [8♣ 7♣ 6♦ 2♦ A♣] [K♥ Q♣ 6♣ 6♠]
 	// Player 2: [Q♥ 4♥ J♣ 5♥]
-	//   Hi: Two Pair, Queens over Sixes, kicker Jack [Q♣ Q♥ 6♣ 6♦ J♣] [4♥ 5♥ 2♦ 7♣]
-	//   Lo: Seven, Six, Five, Four, Two-low [7♣ 6♦ 5♥ 4♥ 2♦] [Q♥ J♣ 6♣ Q♣]
+	//   Hi: Two Pair, Queens over Sixes, kicker Jack [Q♣ Q♥ 6♣ 6♦ J♣] [7♣ 5♥ 4♥ 2♦]
+	//   Lo: Seven, Six, Five, Four, Two-low [7♣ 6♦ 5♥ 4♥ 2♦] [Q♣ Q♥ J♣ 6♣]
 	// Player 3: [2♣ 6♥ 5♣ Q♠]
-	//   Hi: Full House, Sixes full of Queens [6♣ 6♦ 6♥ Q♣ Q♠] [2♣ 5♣ 2♦ 7♣]
+	//   Hi: Full House, Sixes full of Queens [6♣ 6♦ 6♥ Q♣ Q♠] [7♣ 5♣ 2♣ 2♦]
 	//   Lo: None [] []
 	// Player 4: [9♠ J♥ K♠ J♠]
-	//   Hi: Two Pair, Jacks over Sixes, kicker Queen [J♥ J♠ 6♣ 6♦ Q♣] [9♠ K♠ 2♦ 7♣]
+	//   Hi: Two Pair, Jacks over Sixes, kicker Queen [J♥ J♠ 6♣ 6♦ Q♣] [K♠ 9♠ 7♣ 2♦]
 	//   Lo: None [] []
 	// Player 5: [3♦ 4♦ K♣ 8♦]
-	//   Hi: Pair, Sixes, kickers King, Queen, Eight [6♣ 6♦ K♣ Q♣ 8♦] [3♦ 4♦ 2♦ 7♣]
-	//   Lo: Seven, Six, Four, Three, Two-low [7♣ 6♦ 4♦ 3♦ 2♦] [K♣ 8♦ 6♣ Q♣]
+	//   Hi: Pair, Sixes, kickers King, Queen, Eight [6♣ 6♦ K♣ Q♣ 8♦] [7♣ 4♦ 3♦ 2♦]
+	//   Lo: Seven, Six, Four, Three, Two-low [7♣ 6♦ 4♦ 3♦ 2♦] [K♣ Q♣ 8♦ 6♣]
 	// Player 6: [T♣ Q♦ A♠ 7♥]
-	//   Hi: Two Pair, Queens over Sevens, kicker Six [Q♣ Q♦ 7♣ 7♥ 6♦] [T♣ A♠ 2♦ 6♣]
+	//   Hi: Two Pair, Queens over Sevens, kicker Six [Q♣ Q♦ 7♣ 7♥ 6♦] [A♠ T♣ 6♣ 2♦]
 	//   Lo: None [] []
 	// Result (Hi): Player 3 wins with Full House, Sixes full of Queens
 	// Result (Lo): Player 5 wins with Seven, Six, Four, Three, Two-low
 	// ------ OmahaHiLo 5 ------
 	// Board: [4♣ K♣ 6♦ 9♦ 5♠]
 	// Player 1: [3♦ 4♦ 5♦ J♣]
-	//   Hi: Two Pair, Fives over Fours, kicker King [5♦ 5♠ 4♣ 4♦ K♣] [3♦ J♣ 6♦ 9♦]
+	//   Hi: Two Pair, Fives over Fours, kicker King [5♦ 5♠ 4♣ 4♦ K♣] [J♣ 9♦ 6♦ 3♦]
 	//   Lo: None [] []
 	// Player 2: [T♥ J♠ K♠ 2♣]
-	//   Hi: Pair, Kings, kickers Jack, Nine, Six [K♣ K♠ J♠ 9♦ 6♦] [T♥ 2♣ 4♣ 5♠]
+	//   Hi: Pair, Kings, kickers Jack, Nine, Six [K♣ K♠ J♠ 9♦ 6♦] [T♥ 5♠ 4♣ 2♣]
 	//   Lo: None [] []
 	// Player 3: [A♣ 9♠ T♠ 3♠]
-	//   Hi: Pair, Nines, kickers Ace, King, Six [9♦ 9♠ A♣ K♣ 6♦] [T♠ 3♠ 4♣ 5♠]
-	//   Lo: Six, Five, Four, Three, Ace-low [6♦ 5♠ 4♣ 3♠ A♣] [9♠ T♠ K♣ 9♦]
+	//   Hi: Pair, Nines, kickers Ace, King, Six [9♦ 9♠ A♣ K♣ 6♦] [T♠ 5♠ 4♣ 3♠]
+	//   Lo: Six, Five, Four, Three, Ace-low [6♦ 5♠ 4♣ 3♠ A♣] [K♣ T♠ 9♦ 9♠]
 	// Player 4: [7♦ 3♣ 8♠ 7♣]
-	//   Hi: Straight, Nine-high [9♦ 8♠ 7♦ 6♦ 5♠] [3♣ 7♣ 4♣ K♣]
-	//   Lo: Seven, Six, Five, Four, Three-low [7♦ 6♦ 5♠ 4♣ 3♣] [8♠ 7♣ K♣ 9♦]
+	//   Hi: Straight, Nine-high [9♦ 8♠ 7♦ 6♦ 5♠] [K♣ 7♣ 4♣ 3♣]
+	//   Lo: Seven, Six, Five, Four, Three-low [7♦ 6♦ 5♠ 4♣ 3♣] [K♣ 9♦ 8♠ 7♣]
 	// Player 5: [5♣ Q♠ J♥ 2♠]
-	//   Hi: Pair, Fives, kickers King, Queen, Nine [5♣ 5♠ K♣ Q♠ 9♦] [J♥ 2♠ 4♣ 6♦]
+	//   Hi: Pair, Fives, kickers King, Queen, Nine [5♣ 5♠ K♣ Q♠ 9♦] [J♥ 6♦ 4♣ 2♠]
 	//   Lo: None [] []
 	// Player 6: [6♠ 7♠ 7♥ 2♥]
-	//   Hi: Pair, Sevens, kickers King, Nine, Six [7♥ 7♠ K♣ 9♦ 6♦] [6♠ 2♥ 4♣ 5♠]
-	//   Lo: Seven, Six, Five, Four, Two-low [7♠ 6♦ 5♠ 4♣ 2♥] [6♠ 7♥ K♣ 9♦]
+	//   Hi: Pair, Sevens, kickers King, Nine, Six [7♥ 7♠ K♣ 9♦ 6♦] [6♠ 5♠ 4♣ 2♥]
+	//   Lo: Seven, Six, Five, Four, Two-low [7♠ 6♦ 5♠ 4♣ 2♥] [K♣ 9♦ 7♥ 6♠]
 	// Result (Hi): Player 4 wins with Straight, Nine-high
 	// Result (Lo): Player 3 wins with Six, Five, Four, Three, Ace-low
 }
@@ -612,7 +612,7 @@ func Example_stud() {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
 		pockets, _ := cardrank.Stud.Deal(r, 1, game.players)
-		evs := cardrank.Stud.Eval(pockets, nil)
+		evs := cardrank.Stud.EvalPockets(pockets, nil)
 		fmt.Printf("------ Stud %d ------\n", i+1)
 		for j := 0; j < game.players; j++ {
 			desc := evs[j].Desc(false)
@@ -638,9 +638,9 @@ func Example_stud() {
 	// ------ Stud 2 ------
 	// Player 1: [3♠ 3♦ T♠ Q♠ T♥ 9♠ K♥] Two Pair, Tens over Threes, kicker King [T♥ T♠ 3♦ 3♠ K♥] [Q♠ 9♠]
 	// Player 2: [6♦ Q♣ 8♥ 6♣ 3♥ T♣ 7♥] Pair, Sixes, kickers Queen, Ten, Eight [6♣ 6♦ Q♣ T♣ 8♥] [7♥ 3♥]
-	// Player 3: [Q♦ K♠ 8♣ A♥ 7♣ 9♣ 2♣] Nothing, Ace-high, kickers King, Queen, Nine, Eight [A♥ K♠ Q♦ 9♣ 8♣] [7♣ 2♣]
-	// Player 4: [K♦ T♦ 8♦ 4♥ 3♣ J♠ 2♦] Nothing, King-high, kickers Jack, Ten, Eight, Four [K♦ J♠ T♦ 8♦ 4♥] [3♣ 2♦]
-	// Player 5: [J♦ 2♥ Q♥ 6♠ 5♦ 7♠ A♦] Nothing, Ace-high, kickers Queen, Jack, Seven, Six [A♦ Q♥ J♦ 7♠ 6♠] [5♦ 2♥]
+	// Player 3: [Q♦ K♠ 8♣ A♥ 7♣ 9♣ 2♣] Ace-high, kickers King, Queen, Nine, Eight [A♥ K♠ Q♦ 9♣ 8♣] [7♣ 2♣]
+	// Player 4: [K♦ T♦ 8♦ 4♥ 3♣ J♠ 2♦] King-high, kickers Jack, Ten, Eight, Four [K♦ J♠ T♦ 8♦ 4♥] [3♣ 2♦]
+	// Player 5: [J♦ 2♥ Q♥ 6♠ 5♦ 7♠ A♦] Ace-high, kickers Queen, Jack, Seven, Six [A♦ Q♥ J♦ 7♠ 6♠] [5♦ 2♥]
 	// Result:   Player 1 wins with Two Pair, Tens over Threes, kicker King
 	// ------ Stud 3 ------
 	// Player 1: [K♠ Q♠ 4♣ J♦ 7♥ 7♣ J♥] Two Pair, Jacks over Sevens, kicker King [J♦ J♥ 7♣ 7♥ K♠] [Q♠ 4♣]
@@ -652,7 +652,7 @@ func Example_stud() {
 	// Result:   Player 5 wins with Two Pair, Aces over Sixes, kicker Eight
 	// ------ Stud 4 ------
 	// Player 1: [6♠ K♥ A♣ 8♣ 2♠ 5♦ A♥] Pair, Aces, kickers King, Eight, Six [A♣ A♥ K♥ 8♣ 6♠] [5♦ 2♠]
-	// Player 2: [Q♥ 4♥ J♣ 5♥ 2♦ 7♣ 3♠] Nothing, Queen-high, kickers Jack, Seven, Five, Four [Q♥ J♣ 7♣ 5♥ 4♥] [3♠ 2♦]
+	// Player 2: [Q♥ 4♥ J♣ 5♥ 2♦ 7♣ 3♠] Queen-high, kickers Jack, Seven, Five, Four [Q♥ J♣ 7♣ 5♥ 4♥] [3♠ 2♦]
 	// Player 3: [2♣ 6♥ 5♣ Q♠ 6♦ 9♥ 3♣] Pair, Sixes, kickers Queen, Nine, Five [6♦ 6♥ Q♠ 9♥ 5♣] [3♣ 2♣]
 	// Player 4: [9♠ J♥ K♠ J♠ 6♣ K♦ T♠] Two Pair, Kings over Jacks, kicker Ten [K♦ K♠ J♥ J♠ T♠] [9♠ 6♣]
 	// Player 5: [3♦ 4♦ K♣ 8♦ 8♥ 9♣ T♥] Pair, Eights, kickers King, Ten, Nine [8♦ 8♥ K♣ T♥ 9♣] [4♦ 3♦]
@@ -663,7 +663,7 @@ func Example_stud() {
 	// Player 2: [T♥ J♠ K♠ 2♣ 4♣ 5♠ 2♦] Pair, Twos, kickers King, Jack, Ten [2♣ 2♦ K♠ J♠ T♥] [5♠ 4♣]
 	// Player 3: [A♣ 9♠ T♠ 3♠ K♣ 8♦ A♥] Pair, Aces, kickers King, Ten, Nine [A♣ A♥ K♣ T♠ 9♠] [8♦ 3♠]
 	// Player 4: [7♦ 3♣ 8♠ 7♣ 6♦ 6♥ 6♣] Full House, Sixes full of Sevens [6♣ 6♦ 6♥ 7♣ 7♦] [8♠ 3♣]
-	// Player 5: [5♣ Q♠ J♥ 2♠ A♠ 8♥ 4♠] Nothing, Ace-high, kickers Queen, Jack, Eight, Five [A♠ Q♠ J♥ 8♥ 5♣] [4♠ 2♠]
+	// Player 5: [5♣ Q♠ J♥ 2♠ A♠ 8♥ 4♠] Ace-high, kickers Queen, Jack, Eight, Five [A♠ Q♠ J♥ 8♥ 5♣] [4♠ 2♠]
 	// Player 6: [6♠ 7♠ 7♥ 2♥ 9♦ K♦ T♦] Pair, Sevens, kickers King, Ten, Nine [7♥ 7♠ K♦ T♦ 9♦] [6♠ 2♥]
 	// Result:   Player 4 wins with Full House, Sixes full of Sevens
 }
@@ -682,7 +682,7 @@ func Example_studHiLo() {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
 		pockets, _ := cardrank.StudHiLo.Deal(r, 1, game.players)
-		evs := cardrank.StudHiLo.Eval(pockets, nil)
+		evs := cardrank.StudHiLo.EvalPockets(pockets, nil)
 		fmt.Printf("------ StudHiLo %d ------\n", i+1)
 		for j := 0; j < game.players; j++ {
 			hi, lo := evs[j].Desc(false), evs[j].Desc(true)
@@ -727,7 +727,7 @@ func Example_studHiLo() {
 	//   Lo: None [] []
 	// Player 2: [7♣ 4♣ 5♠ 2♠ 3♥ 4♥ 7♥]
 	//   Hi: Two Pair, Sevens over Fours, kicker Five [7♣ 7♥ 4♣ 4♥ 5♠] [3♥ 2♠]
-	//   Lo: Seven, Five, Four, Three, Two-low [7♣ 5♠ 4♣ 3♥ 2♠] [4♥ 7♥]
+	//   Lo: Seven, Five, Four, Three, Two-low [7♣ 5♠ 4♣ 3♥ 2♠] [7♥ 4♥]
 	// Result (Hi): Player 2 wins with Two Pair, Sevens over Fours, kicker Five
 	// Result (Lo): Player 2 wins with Seven, Five, Four, Three, Two-low
 	// ------ StudHiLo 2 ------
@@ -738,14 +738,14 @@ func Example_studHiLo() {
 	//   Hi: Pair, Sixes, kickers Queen, Ten, Eight [6♣ 6♦ Q♣ T♣ 8♥] [7♥ 3♥]
 	//   Lo: None [] []
 	// Player 3: [Q♦ K♠ 8♣ A♥ 7♣ 9♣ 2♣]
-	//   Hi: Nothing, Ace-high, kickers King, Queen, Nine, Eight [A♥ K♠ Q♦ 9♣ 8♣] [7♣ 2♣]
+	//   Hi: Ace-high, kickers King, Queen, Nine, Eight [A♥ K♠ Q♦ 9♣ 8♣] [7♣ 2♣]
 	//   Lo: None [] []
 	// Player 4: [K♦ T♦ 8♦ 4♥ 3♣ J♠ 2♦]
-	//   Hi: Nothing, King-high, kickers Jack, Ten, Eight, Four [K♦ J♠ T♦ 8♦ 4♥] [3♣ 2♦]
+	//   Hi: King-high, kickers Jack, Ten, Eight, Four [K♦ J♠ T♦ 8♦ 4♥] [3♣ 2♦]
 	//   Lo: None [] []
 	// Player 5: [J♦ 2♥ Q♥ 6♠ 5♦ 7♠ A♦]
-	//   Hi: Nothing, Ace-high, kickers Queen, Jack, Seven, Six [A♦ Q♥ J♦ 7♠ 6♠] [5♦ 2♥]
-	//   Lo: Seven, Six, Five, Two, Ace-low [7♠ 6♠ 5♦ 2♥ A♦] [J♦ Q♥]
+	//   Hi: Ace-high, kickers Queen, Jack, Seven, Six [A♦ Q♥ J♦ 7♠ 6♠] [5♦ 2♥]
+	//   Lo: Seven, Six, Five, Two, Ace-low [7♠ 6♠ 5♦ 2♥ A♦] [Q♥ J♦]
 	// Result (Hi): Player 1 wins with Two Pair, Tens over Threes, kicker King
 	// Result (Lo): Player 5 wins with Seven, Six, Five, Two, Ace-low
 	// ------ StudHiLo 3 ------
@@ -763,7 +763,7 @@ func Example_studHiLo() {
 	//   Lo: None [] []
 	// Player 5: [7♠ 3♥ 6♠ A♣ 8♠ 6♦ A♦]
 	//   Hi: Two Pair, Aces over Sixes, kicker Eight [A♣ A♦ 6♦ 6♠ 8♠] [7♠ 3♥]
-	//   Lo: Eight, Seven, Six, Three, Ace-low [8♠ 7♠ 6♠ 3♥ A♣] [6♦ A♦]
+	//   Lo: Eight, Seven, Six, Three, Ace-low [8♠ 7♠ 6♠ 3♥ A♣] [A♦ 6♦]
 	// Player 6: [4♠ 8♦ K♦ T♣ K♣ 5♠ 9♣]
 	//   Hi: Pair, Kings, kickers Ten, Nine, Eight [K♣ K♦ T♣ 9♣ 8♦] [5♠ 4♠]
 	//   Lo: None [] []
@@ -772,9 +772,9 @@ func Example_studHiLo() {
 	// ------ StudHiLo 4 ------
 	// Player 1: [6♠ K♥ A♣ 8♣ 2♠ 5♦ A♥]
 	//   Hi: Pair, Aces, kickers King, Eight, Six [A♣ A♥ K♥ 8♣ 6♠] [5♦ 2♠]
-	//   Lo: Eight, Six, Five, Two, Ace-low [8♣ 6♠ 5♦ 2♠ A♣] [K♥ A♥]
+	//   Lo: Eight, Six, Five, Two, Ace-low [8♣ 6♠ 5♦ 2♠ A♣] [A♥ K♥]
 	// Player 2: [Q♥ 4♥ J♣ 5♥ 2♦ 7♣ 3♠]
-	//   Hi: Nothing, Queen-high, kickers Jack, Seven, Five, Four [Q♥ J♣ 7♣ 5♥ 4♥] [3♠ 2♦]
+	//   Hi: Queen-high, kickers Jack, Seven, Five, Four [Q♥ J♣ 7♣ 5♥ 4♥] [3♠ 2♦]
 	//   Lo: Seven, Five, Four, Three, Two-low [7♣ 5♥ 4♥ 3♠ 2♦] [Q♥ J♣]
 	// Player 3: [2♣ 6♥ 5♣ Q♠ 6♦ 9♥ 3♣]
 	//   Hi: Pair, Sixes, kickers Queen, Nine, Five [6♦ 6♥ Q♠ 9♥ 5♣] [3♣ 2♣]
@@ -804,7 +804,7 @@ func Example_studHiLo() {
 	//   Hi: Full House, Sixes full of Sevens [6♣ 6♦ 6♥ 7♣ 7♦] [8♠ 3♣]
 	//   Lo: None [] []
 	// Player 5: [5♣ Q♠ J♥ 2♠ A♠ 8♥ 4♠]
-	//   Hi: Nothing, Ace-high, kickers Queen, Jack, Eight, Five [A♠ Q♠ J♥ 8♥ 5♣] [4♠ 2♠]
+	//   Hi: Ace-high, kickers Queen, Jack, Eight, Five [A♠ Q♠ J♥ 8♥ 5♣] [4♠ 2♠]
 	//   Lo: Eight, Five, Four, Two, Ace-low [8♥ 5♣ 4♠ 2♠ A♠] [Q♠ J♥]
 	// Player 6: [6♠ 7♠ 7♥ 2♥ 9♦ K♦ T♦]
 	//   Hi: Pair, Sevens, kickers King, Ten, Nine [7♥ 7♠ K♦ T♦ 9♦] [6♠ 2♥]
@@ -827,7 +827,7 @@ func Example_razz() {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
 		pockets, _ := cardrank.Razz.Deal(r, 1, game.players)
-		evs := cardrank.Razz.Eval(pockets, nil)
+		evs := cardrank.Razz.EvalPockets(pockets, nil)
 		fmt.Printf("------ Razz %d ------\n", i+1)
 		for j := 0; j < game.players; j++ {
 			desc := evs[j].Desc(false)
@@ -848,38 +848,38 @@ func Example_razz() {
 	// Output:
 	// ------ Razz 1 ------
 	// Player 1: [K♥ J♣ A♥ Q♠ 6♣ 5♥ Q♦] Queen, Jack, Six, Five, Ace-low [Q♠ J♣ 6♣ 5♥ A♥] [K♥ Q♦]
-	// Player 2: [7♣ 4♣ 5♠ 2♠ 3♥ 4♥ 7♥] Seven, Five, Four, Three, Two-low [7♣ 5♠ 4♣ 3♥ 2♠] [4♥ 7♥]
+	// Player 2: [7♣ 4♣ 5♠ 2♠ 3♥ 4♥ 7♥] Seven, Five, Four, Three, Two-low [7♣ 5♠ 4♣ 3♥ 2♠] [7♥ 4♥]
 	// Result:   Player 2 wins with Seven, Five, Four, Three, Two-low
 	// ------ Razz 2 ------
-	// Player 1: [3♠ 3♦ T♠ Q♠ T♥ 9♠ K♥] King, Queen, Ten, Nine, Three-low [K♥ Q♠ T♠ 9♠ 3♠] [3♦ T♥]
+	// Player 1: [3♠ 3♦ T♠ Q♠ T♥ 9♠ K♥] King, Queen, Ten, Nine, Three-low [K♥ Q♠ T♠ 9♠ 3♠] [T♥ 3♦]
 	// Player 2: [6♦ Q♣ 8♥ 6♣ 3♥ T♣ 7♥] Ten, Eight, Seven, Six, Three-low [T♣ 8♥ 7♥ 6♦ 3♥] [Q♣ 6♣]
-	// Player 3: [Q♦ K♠ 8♣ A♥ 7♣ 9♣ 2♣] Nine, Eight, Seven, Two, Ace-low [9♣ 8♣ 7♣ 2♣ A♥] [Q♦ K♠]
+	// Player 3: [Q♦ K♠ 8♣ A♥ 7♣ 9♣ 2♣] Nine, Eight, Seven, Two, Ace-low [9♣ 8♣ 7♣ 2♣ A♥] [K♠ Q♦]
 	// Player 4: [K♦ T♦ 8♦ 4♥ 3♣ J♠ 2♦] Ten, Eight, Four, Three, Two-low [T♦ 8♦ 4♥ 3♣ 2♦] [K♦ J♠]
-	// Player 5: [J♦ 2♥ Q♥ 6♠ 5♦ 7♠ A♦] Seven, Six, Five, Two, Ace-low [7♠ 6♠ 5♦ 2♥ A♦] [J♦ Q♥]
+	// Player 5: [J♦ 2♥ Q♥ 6♠ 5♦ 7♠ A♦] Seven, Six, Five, Two, Ace-low [7♠ 6♠ 5♦ 2♥ A♦] [Q♥ J♦]
 	// Result:   Player 5 wins with Seven, Six, Five, Two, Ace-low
 	// ------ Razz 3 ------
-	// Player 1: [K♠ Q♠ 4♣ J♦ 7♥ 7♣ J♥] King, Queen, Jack, Seven, Four-low [K♠ Q♠ J♦ 7♥ 4♣] [7♣ J♥]
-	// Player 2: [J♠ 3♣ 8♥ 2♠ J♣ Q♣ 7♦] Jack, Eight, Seven, Three, Two-low [J♠ 8♥ 7♦ 3♣ 2♠] [J♣ Q♣]
+	// Player 1: [K♠ Q♠ 4♣ J♦ 7♥ 7♣ J♥] King, Queen, Jack, Seven, Four-low [K♠ Q♠ J♦ 7♥ 4♣] [J♥ 7♣]
+	// Player 2: [J♠ 3♣ 8♥ 2♠ J♣ Q♣ 7♦] Jack, Eight, Seven, Three, Two-low [J♠ 8♥ 7♦ 3♣ 2♠] [Q♣ J♣]
 	// Player 3: [3♠ T♠ 2♣ Q♦ T♥ K♥ 3♦] King, Queen, Ten, Three, Two-low [K♥ Q♦ T♠ 3♠ 2♣] [T♥ 3♦]
 	// Player 4: [5♣ 5♥ T♦ 2♦ 4♥ 9♦ 2♥] Ten, Nine, Five, Four, Two-low [T♦ 9♦ 5♣ 4♥ 2♦] [5♥ 2♥]
-	// Player 5: [7♠ 3♥ 6♠ A♣ 8♠ 6♦ A♦] Eight, Seven, Six, Three, Ace-low [8♠ 7♠ 6♠ 3♥ A♣] [6♦ A♦]
-	// Player 6: [4♠ 8♦ K♦ T♣ K♣ 5♠ 9♣] Ten, Nine, Eight, Five, Four-low [T♣ 9♣ 8♦ 5♠ 4♠] [K♦ K♣]
+	// Player 5: [7♠ 3♥ 6♠ A♣ 8♠ 6♦ A♦] Eight, Seven, Six, Three, Ace-low [8♠ 7♠ 6♠ 3♥ A♣] [A♦ 6♦]
+	// Player 6: [4♠ 8♦ K♦ T♣ K♣ 5♠ 9♣] Ten, Nine, Eight, Five, Four-low [T♣ 9♣ 8♦ 5♠ 4♠] [K♣ K♦]
 	// Result:   Player 5 wins with Eight, Seven, Six, Three, Ace-low
 	// ------ Razz 4 ------
-	// Player 1: [6♠ K♥ A♣ 8♣ 2♠ 5♦ A♥] Eight, Six, Five, Two, Ace-low [8♣ 6♠ 5♦ 2♠ A♣] [K♥ A♥]
+	// Player 1: [6♠ K♥ A♣ 8♣ 2♠ 5♦ A♥] Eight, Six, Five, Two, Ace-low [8♣ 6♠ 5♦ 2♠ A♣] [A♥ K♥]
 	// Player 2: [Q♥ 4♥ J♣ 5♥ 2♦ 7♣ 3♠] Seven, Five, Four, Three, Two-low [7♣ 5♥ 4♥ 3♠ 2♦] [Q♥ J♣]
 	// Player 3: [2♣ 6♥ 5♣ Q♠ 6♦ 9♥ 3♣] Nine, Six, Five, Three, Two-low [9♥ 6♥ 5♣ 3♣ 2♣] [Q♠ 6♦]
-	// Player 4: [9♠ J♥ K♠ J♠ 6♣ K♦ T♠] King, Jack, Ten, Nine, Six-low [K♠ J♥ T♠ 9♠ 6♣] [J♠ K♦]
+	// Player 4: [9♠ J♥ K♠ J♠ 6♣ K♦ T♠] King, Jack, Ten, Nine, Six-low [K♠ J♥ T♠ 9♠ 6♣] [K♦ J♠]
 	// Player 5: [3♦ 4♦ K♣ 8♦ 8♥ 9♣ T♥] Ten, Nine, Eight, Four, Three-low [T♥ 9♣ 8♦ 4♦ 3♦] [K♣ 8♥]
 	// Player 6: [T♣ Q♦ A♠ 7♥ Q♣ 7♦ 2♥] Queen, Ten, Seven, Two, Ace-low [Q♦ T♣ 7♥ 2♥ A♠] [Q♣ 7♦]
 	// Result:   Player 2 wins with Seven, Five, Four, Three, Two-low
 	// ------ Razz 5 ------
-	// Player 1: [3♦ 4♦ 5♦ J♣ 4♥ K♥ 8♣] Jack, Eight, Five, Four, Three-low [J♣ 8♣ 5♦ 4♦ 3♦] [4♥ K♥]
+	// Player 1: [3♦ 4♦ 5♦ J♣ 4♥ K♥ 8♣] Jack, Eight, Five, Four, Three-low [J♣ 8♣ 5♦ 4♦ 3♦] [K♥ 4♥]
 	// Player 2: [T♥ J♠ K♠ 2♣ 4♣ 5♠ 2♦] Jack, Ten, Five, Four, Two-low [J♠ T♥ 5♠ 4♣ 2♣] [K♠ 2♦]
-	// Player 3: [A♣ 9♠ T♠ 3♠ K♣ 8♦ A♥] Ten, Nine, Eight, Three, Ace-low [T♠ 9♠ 8♦ 3♠ A♣] [K♣ A♥]
+	// Player 3: [A♣ 9♠ T♠ 3♠ K♣ 8♦ A♥] Ten, Nine, Eight, Three, Ace-low [T♠ 9♠ 8♦ 3♠ A♣] [A♥ K♣]
 	// Player 4: [7♦ 3♣ 8♠ 7♣ 6♦ 6♥ 6♣] Pair, Sixes, kickers Eight, Seven, Three [6♦ 6♥ 8♠ 7♦ 3♣] [7♣ 6♣]
 	// Player 5: [5♣ Q♠ J♥ 2♠ A♠ 8♥ 4♠] Eight, Five, Four, Two, Ace-low [8♥ 5♣ 4♠ 2♠ A♠] [Q♠ J♥]
-	// Player 6: [6♠ 7♠ 7♥ 2♥ 9♦ K♦ T♦] Ten, Nine, Seven, Six, Two-low [T♦ 9♦ 7♠ 6♠ 2♥] [7♥ K♦]
+	// Player 6: [6♠ 7♠ 7♥ 2♥ 9♦ K♦ T♦] Ten, Nine, Seven, Six, Two-low [T♦ 9♦ 7♠ 6♠ 2♥] [K♦ 7♥]
 	// Result:   Player 5 wins with Eight, Five, Four, Two, Ace-low
 }
 
@@ -897,7 +897,7 @@ func Example_badugi() {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
 		pockets, _ := cardrank.Badugi.Deal(r, 1, game.players)
-		evs := cardrank.Badugi.Eval(pockets, nil)
+		evs := cardrank.Badugi.EvalPockets(pockets, nil)
 		fmt.Printf("------ Badugi %d ------\n", i+1)
 		for j := 0; j < game.players; j++ {
 			desc := evs[j].Desc(false)
@@ -949,7 +949,7 @@ func Example_badugi() {
 	// Player 3: [A♣ 9♠ T♠ 3♠] Three, Ace-low [3♠ A♣] [T♠ 9♠]
 	// Player 4: [7♦ 3♣ 8♠ 7♣] Eight, Seven, Three-low [8♠ 7♦ 3♣] [7♣]
 	// Player 5: [5♣ Q♠ J♥ 2♠] Jack, Five, Two-low [J♥ 5♣ 2♠] [Q♠]
-	// Player 6: [6♠ 7♠ 7♥ 2♥] Six, Two-low [6♠ 2♥] [7♠ 7♥]
+	// Player 6: [6♠ 7♠ 7♥ 2♥] Six, Two-low [6♠ 2♥] [7♥ 7♠]
 	// Result:   Player 4 wins with Eight, Seven, Three-low
 }
 
@@ -1073,22 +1073,22 @@ func ExampleDealer_fusionHiLo() {
 	//     Board: [As Ks 6h Ac 8s]
 	// Showdown:
 	//   Run 0:
-	//     0: [Ac As 5c 5d Ks] [4h 7s 6h 9h] Two Pair, Aces over Fives, kicker King
+	//     0: [Ac As 5c 5d Ks] [9h 7s 6h 4h] Two Pair, Aces over Fives, kicker King
 	//        [] [] None
-	//     1: [Ac As 9h 9s Qs] [4c 8d Ks 6h] Two Pair, Aces over Nines, kicker Queen
+	//     1: [Ac As 9h 9s Qs] [Ks 8d 6h 4c] Two Pair, Aces over Nines, kicker Queen
 	//        [] [] None
 	//     Result: 1 scoops with Two Pair, Aces over Nines, kicker Queen
 	//   Run 1:
-	//     0: [Ac As 7d 7s 5c] [4h 5d Ks 6h] Two Pair, Aces over Sevens, kicker Five
-	//        [7d 6h 5c 4h As] [5d 7s Ks Ac] Seven, Six, Five, Four, Ace-low
-	//     1: [Ac As Ks Qs 9s] [4c 8d 6h 7d] Pair, Aces, kickers King, Queen, Nine
-	//        [8d 7d 6h 4c As] [Qs 9s Ks Ac] Eight, Seven, Six, Four, Ace-low
+	//     0: [Ac As 7d 7s 5c] [Ks 6h 5d 4h] Two Pair, Aces over Sevens, kicker Five
+	//        [7d 6h 5c 4h As] [Ac Ks 7s 5d] Seven, Six, Five, Four, Ace-low
+	//     1: [Ac As Ks Qs 9s] [8d 7d 6h 4c] Pair, Aces, kickers King, Queen, Nine
+	//        [8d 7d 6h 4c As] [Ac Ks Qs 9s] Eight, Seven, Six, Four, Ace-low
 	//     Result: 0 wins with Two Pair, Aces over Sevens, kicker Five
 	//             0 wins with Seven, Six, Five, Four, Ace-low
 	//   Run 2:
-	//     0: [Ac As 5c 5d Ks] [4h 7s 6h 8s] Two Pair, Aces over Fives, kicker King
-	//        [8s 6h 5c 4h As] [5d 7s Ks Ac] Eight, Six, Five, Four, Ace-low
-	//     1: [As Ks Qs 9s 8s] [4c 8d 6h Ac] Flush, Ace-high, kickers King, Queen, Nine, Eight
+	//     0: [Ac As 5c 5d Ks] [8s 7s 6h 4h] Two Pair, Aces over Fives, kicker King
+	//        [8s 6h 5c 4h As] [Ac Ks 7s 5d] Eight, Six, Five, Four, Ace-low
+	//     1: [As Ks Qs 9s 8s] [Ac 8d 6h 4c] Flush, Ace-high, kickers King, Queen, Nine, Eight
 	//        [] [] None
 	//     Result: 1 wins with Flush, Ace-high, kickers King, Queen, Nine, Eight
 	//             0 wins with Eight, Six, Five, Four, Ace-low
@@ -1146,19 +1146,19 @@ func ExampleDealer_fusionHiLo() {
 	// Showdown:
 	//   Run 0:
 	//     0: inactive
-	//     1: [6c 6d 5c 5s Kc] [4h As 9d 8h] Two Pair, Sixes over Fives, kicker King
-	//        [8h 6c 5c 4h As] [5s 6d Kc 9d] Eight, Six, Five, Four, Ace-low
-	//     2: [Ac Kc 8c 6c 5c] [Th 4d 9d 8h] Flush, Ace-high, kickers King, Eight, Six, Five
-	//        [8h 6c 5c 4d Ac] [Th 8c Kc 9d] Eight, Six, Five, Four, Ace-low
+	//     1: [6c 6d 5c 5s Kc] [As 9d 8h 4h] Two Pair, Sixes over Fives, kicker King
+	//        [8h 6c 5c 4h As] [Kc 9d 6d 5s] Eight, Six, Five, Four, Ace-low
+	//     2: [Ac Kc 8c 6c 5c] [Th 9d 8h 4d] Flush, Ace-high, kickers King, Eight, Six, Five
+	//        [8h 6c 5c 4d Ac] [Kc Th 9d 8c] Eight, Six, Five, Four, Ace-low
 	//     3: inactive
 	//     4: inactive
 	//     Result: 2 wins with Flush, Ace-high, kickers King, Eight, Six, Five
 	//             1, 2 split with Eight, Six, Five, Four, Ace-low
 	//   Run 1:
 	//     0: inactive
-	//     1: [5c 5s Kc Qd 7d] [6d 4h 9d Jc] Pair, Fives, kickers King, Queen, Seven
+	//     1: [5c 5s Kc Qd 7d] [Jc 9d 6d 4h] Pair, Fives, kickers King, Queen, Seven
 	//        [] [] None
-	//     2: [Ac Kc Jc 8c 5c] [Th 8d 9d Qd] Flush, Ace-high, kickers King, Jack, Eight, Five
+	//     2: [Ac Kc Jc 8c 5c] [Qd Th 9d 8d] Flush, Ace-high, kickers King, Jack, Eight, Five
 	//        [] [] None
 	//     3: inactive
 	//     4: inactive
@@ -1211,24 +1211,24 @@ func ExampleDealer_fusionHiLo() {
 	// Showdown:
 	//   Run 0:
 	//     0: inactive
-	//     1: [Qc Qd Tc Td Kc] [5d Jd 3s 4h] Two Pair, Queens over Tens, kicker King
+	//     1: [Qc Qd Tc Td Kc] [Jd 5d 4h 3s] Two Pair, Queens over Tens, kicker King
 	//        [] [] None
-	//     2: [Kc Qc Tc 9h 7d] [5c 6s 3s 4h] Nothing, King-high, kickers Queen, Ten, Nine, Seven
+	//     2: [Kc Qc Tc 9h 7d] [6s 5c 4h 3s] King-high, kickers Queen, Ten, Nine, Seven
 	//        [] [] None
-	//     3: [Kc Ks 3h 3s Qc] [As 8c Tc 4h] Two Pair, Kings over Threes, kicker Queen
+	//     3: [Kc Ks 3h 3s Qc] [As Tc 8c 4h] Two Pair, Kings over Threes, kicker Queen
 	//        [] [] None
-	//     4: [Kc Qc Jc Tc 7c] [7s Jh 3s 4h] Flush, King-high, kickers Queen, Jack, Ten, Seven
+	//     4: [Kc Qc Jc Tc 7c] [Jh 7s 4h 3s] Flush, King-high, kickers Queen, Jack, Ten, Seven
 	//        [] [] None
 	//     5: inactive
 	//     Result: 4 scoops with Flush, King-high, kickers Queen, Jack, Ten, Seven
 	//   Run 1:
 	//     0: inactive
-	//     1: [Tc Td Kc Qd 4h] [5d Jd 3s 2d] Pair, Tens, kickers King, Queen, Four
+	//     1: [Tc Td Kc Qd 4h] [Jd 5d 3s 2d] Pair, Tens, kickers King, Queen, Four
 	//        [] [] None
-	//     2: [6s 5c 4h 3s 2d] [9h 7d Tc Kc] Straight, Six-high
-	//        [6s 5c 4h 3s 2d] [9h 7d Tc Kc] Six, Five, Four, Three, Two-low
+	//     2: [6s 5c 4h 3s 2d] [Kc Tc 9h 7d] Straight, Six-high
+	//        [6s 5c 4h 3s 2d] [Kc Tc 9h 7d] Six, Five, Four, Three, Two-low
 	//     3: [Kc Ks 3h 3s Tc] [As 8c 4h 2d] Two Pair, Kings over Threes, kicker Ten
-	//        [8c 4h 3s 2d As] [3h Ks Tc Kc] Eight, Four, Three, Two, Ace-low
+	//        [8c 4h 3s 2d As] [Kc Ks Tc 3h] Eight, Four, Three, Two, Ace-low
 	//     4: [Jc Jh Kc Tc 4h] [7c 7s 3s 2d] Pair, Jacks, kickers King, Ten, Four
 	//        [] [] None
 	//     5: inactive

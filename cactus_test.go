@@ -3,8 +3,48 @@
 package cardrank
 
 import (
+	"os"
+	"strings"
 	"testing"
 )
+
+func TestCactus(t *testing.T) {
+	if s := os.Getenv("TESTS"); !strings.Contains(s, "cactus") && !strings.Contains(s, "all") {
+		t.Skip("skipping: $ENV{TESTS} does not contain 'cactus' or 'all'")
+	}
+	if cactus == nil {
+		t.Skip("skipping: cactus is not available")
+	}
+	u, f, tests, exp, ev := shuffled(DeckFrench), NewEval(cactus), cactusTests(false, true), EvalOf(Holdem), EvalOf(Holdem)
+	for c0 := 0; c0 < 52; c0++ {
+		for c1 := c0 + 1; c1 < 52; c1++ {
+			for c2 := c1 + 1; c2 < 52; c2++ {
+				for c3 := c2 + 1; c3 < 52; c3++ {
+					for c4 := c3 + 1; c4 < 52; c4++ {
+						for c5 := c4 + 1; c5 < 52; c5++ {
+							for c6 := c5 + 1; c6 < 52; c6++ {
+								v := []Card{u[c0], u[c1], u[c2], u[c3], u[c4], u[c5], u[c6]}
+								f(exp, v, nil)
+								if r := exp.HiRank; r == 0 || r == Invalid {
+									t.Fatalf("test cactus %v expected valid rank, got: %d", v, r)
+								}
+								for _, test := range tests {
+									test.eval(ev, v, nil)
+									switch r, exp := ev.HiRank, exp.HiRank; {
+									case r == 0, r == Invalid:
+										t.Errorf("test %s %v expected valid rank, got: %d", test.name, v, r)
+									case r != exp:
+										t.Errorf("test %s %v expected %d, got: %d", test.name, v, exp, r)
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
 
 func TestNextBitPermutation(t *testing.T) {
 	n := uint32(31)

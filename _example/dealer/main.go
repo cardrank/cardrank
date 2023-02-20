@@ -25,9 +25,8 @@ func main() {
 		fmt.Printf("------ %s %d ------\n", typ, seed)
 		// setup dealer and display
 		d := typ.Dealer(r, 3, players)
-		desc := typ.TypeDesc()
-		fmt.Printf("Eval: %s\n", desc.Eval)
-		fmt.Printf("Comp: %s/%s\n", desc.HiComp, desc.LoComp)
+		desc := typ.Desc()
+		fmt.Printf("Eval: %l\n", typ)
 		fmt.Printf("Desc: %s/%s\n", desc.HiDesc, desc.LoDesc)
 		// display deck
 		deck := d.Deck.All()

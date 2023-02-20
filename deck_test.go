@@ -16,6 +16,7 @@ func TestDeck(t *testing.T) {
 		{52, DeckFrench, "23456789TJQKA"},
 		{36, DeckShort, "6789TJQKA"},
 		{32, DeckManila, "789TJQKA"},
+		{28, DeckSpanish, "89TJQKA"},
 		{20, DeckRoyal, "TJQKA"},
 	}
 	for _, v := range tests {
@@ -154,15 +155,25 @@ func testDeckShoe(t *testing.T, exp int, typ DeckType) {
 
 func TestDealer(t *testing.T) {
 	// seed := time.Now().UnixNano()
-	seed := int64(1676122011905868217)
+	// seed := int64(1676122011905868217)
+	seed := int64(1677109206437341728)
 	t.Logf("seed: %d", seed)
 	r := rand.New(rand.NewSource(seed))
 	for _, tt := range Types() {
-		for i := 2; i <= tt.Max(); i++ {
-			typ, count, s := tt, i, r.Int63()
-			t.Run(fmt.Sprintf("%s/%d", typ, count), func(t *testing.T) {
-				testDealer(t, typ, count, s, nil)
-			})
+		if max := tt.Max(); max != 1 {
+			for i := 2; i <= max; i++ {
+				typ, count, s := tt, i, r.Int63()
+				t.Run(fmt.Sprintf("%s/%d", typ, count), func(t *testing.T) {
+					testDealer(t, typ, count, s, nil)
+				})
+			}
+		} else {
+			for i := 1; i <= 8; i++ {
+				typ, s := tt, r.Int63()
+				t.Run(fmt.Sprintf("%s/%d", typ, i), func(t *testing.T) {
+					testDealer(t, typ, 1, s, nil)
+				})
+			}
 		}
 	}
 }
@@ -202,9 +213,8 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 	t.Helper()
 	r := rand.New(rand.NewSource(seed))
 	d := typ.Dealer(r, 1, count)
-	desc := typ.TypeDesc()
-	t.Logf("Eval: %s", desc.Eval)
-	t.Logf("Comp: %s/%s", desc.HiComp, desc.LoComp)
+	desc := typ.Desc()
+	t.Logf("Eval: %l", typ)
 	t.Logf("Desc: %s/%s", desc.HiDesc, desc.LoDesc)
 	deck := d.Deck.All()
 	t.Logf("Deck: %s [%d]", desc.Deck, len(deck))
@@ -250,9 +260,9 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 			}
 		}
 		hi, lo := res.Win()
-		t.Logf("    Result: %d with %s", hi, hi)
+		t.Logf("    Result: %S", hi)
 		if lo != nil {
-			t.Logf("            %d with %s", lo, lo)
+			t.Logf("            %S", lo)
 		}
 	}
 }

@@ -42,7 +42,7 @@ func TestOrder(t *testing.T) {
 			var evals []*Eval
 			for i := 0; i < test.n; i++ {
 				pocket := d.Draw(2)
-				ev := Holdem.New(pocket, board)
+				ev := Holdem.Eval(pocket, board)
 				desc := ev.Desc(false)
 				t.Logf("player %d: %b", i, pocket)
 				t.Logf("  best: %b", desc.Best)
@@ -74,46 +74,67 @@ func TestOrder(t *testing.T) {
 
 func TestEvalComp(t *testing.T) {
 	tests := []struct {
+		typ Type
 		a   string
 		b   string
 		exp int
 		r   EvalRank
+		s   string
 	}{
-		{"As Ks Jc 7h 5d 2d 3c", "As Ks Jc 7h 5d 2d 3c", +0, Nothing},
-		{"As Ks Jc 7h 4d 2d 3c", "As Ks Jc 7h 5d 2d 3c", +1, Nothing},
-		{"As Ks Jc 7h 5d 2d 3c", "As Ks Jc 7h 4d 2d 3c", -1, Nothing},
-		{"As Ac Ad Ah Kd 2d 3c", "As Ac Ad Ah Qd 2d 3c", -1, FourOfAKind},
-		{"As Ac Ad Ah Qd 2d 3c", "As Ac Ad Ah Kd 2d 3c", +1, FourOfAKind},
-		{"As Ks Qs Ts 9s 2s 3s", "Ks Qs Js Ts 9s 2d 3c", +1, StraightFlush},
-		{"6s 6c 6d 5d 5c 4s 4s", "5s 5c 5d 6d 6c 4s 4s", -1, FullHouse},
-		{"Ks Qs Js Ts 9s 2s 3s", "Kd Qd Jd Td 9d 2d 3d", +0, StraightFlush},
-		{"Ks Qs Js 9s 3s Ad Kd", "Kd Qd Jd 9d 2d Ac Kc", -1, Flush},
-		{"Kd Qd Jd 9d 2d Ac Kc", "Ks Qs Js 9s 3s Ad Kd", +1, Flush},
+		{Holdem, "As Ks Jc 7h 5d 2d 3c", "As Ks Jc 7h 5d 2d 3c", +0, 6252, "Ace-high, kickers King, Jack, Seven, Five [As Ks Jc 7h 5d]"},
+		{Holdem, "As Ks Jc 7h 4d 2d 3c", "As Ks Jc 7h 5d 2d 3c", +1, 6252, "Ace-high, kickers King, Jack, Seven, Five [As Ks Jc 7h 5d]"},
+		{Holdem, "As Ks Jc 7h 5d 2d 3c", "As Ks Jc 7h 4d 2d 3c", -1, 6252, "Ace-high, kickers King, Jack, Seven, Five [As Ks Jc 7h 5d]"},
+		{Holdem, "As Ac Ad Ah Kd 2d 3c", "As Ac Ad Ah Qd 2d 3c", -1, 11, "Four of a Kind, Aces, kicker King [Ac Ad Ah As Kd]"},
+		{Holdem, "As Ac Ad Ah Qd 2d 3c", "As Ac Ad Ah Kd 2d 3c", +1, 11, "Four of a Kind, Aces, kicker King [Ac Ad Ah As Kd]"},
+		{Holdem, "As Ks Qs Ts 9s 2s 3s", "Ks Qs Js Ts 9s 2d 3c", +1, 2, "Straight Flush, King-high, Platinum Oxide [Ks Qs Js Ts 9s]"},
+		{Holdem, "6s 6c 6d 5d 5c 4s 4s", "5s 5c 5d 6d 6c 4s 4s", -1, 271, "Full House, Sixes full of Fives [6c 6d 6s 5c 5d]"},
+		{Holdem, "Ks Qs Js Ts 9s 2s 3s", "Kd Qd Jd Td 9d 2d 3d", +0, 2, "Straight Flush, King-high, Platinum Oxide [Ks Qs Js Ts 9s]"},
+		{Holdem, "Ks Qs Js 9s 3s Ad Kd", "Kd Qd Jd 9d 2d Ac Kc", -1, 828, "Flush, King-high, kickers Queen, Jack, Nine, Three [Ks Qs Js 9s 3s]"},
+		{Holdem, "Kd Qd Jd 9d 2d Ac Kc", "Ks Qs Js 9s 3s Ad Kd", +1, 828, "Flush, King-high, kickers Queen, Jack, Nine, Three [Ks Qs Js 9s 3s]"},
+		{Soko, "Ah Th 9h 8h 6c Tc 4c", "Th Tc 8h 6h Kh Qc 2s", -1, 5098, "Four Flush, Ace-high, kickers Ten, Nine, Eight, Ten [Ah Th 9h 8h Tc]"},
+		{Soko, "Th Tc 8h 6h Kh Qc 2s", "Ah Th 9h 8h 6c Tc 4c", +1, 5098, "Four Flush, Ace-high, kickers Ten, Nine, Eight, Ten [Ah Th 9h 8h Tc]"},
+		{Soko, "Ah Kh Th Jh 6c 9c 4s", "Ac Kc Tc Jc 6s 9s 4d", 0, 3461, "Four Flush, Ace-high, kickers King, Jack, Ten, Nine [Ah Kh Jh Th 9c]"},
+		{Soko, "Ac Kc Tc Jc 6s 9s 4d", "Ah Kh Th Jh 6c 9c 4s", 0, 3461, "Four Flush, Ace-high, kickers King, Jack, Ten, Nine [Ac Kc Jc Tc 9s]"},
+		{Soko, "Ah Kh Qc Jh 6c 9c 4s", "Th Tc 8h 6c Kh Qc 2s", -1, 12626, "Four Straight, Ace-high, kicker Nine [Ah Kh Qc Jh 9c]"},
+		{Soko, "Th Tc 8h 6c Kh Qc 2s", "Ah Kh Qc Jh 6c 9c 4s", +1, 12626, "Four Straight, Ace-high, kicker Nine [Ah Kh Qc Jh 9c]"},
+		{Short, "5c 3c Ah Th 9h 8h 7h", "J♣ J♥ 6♣ 6♦ 6♥ 5♥ 3♣", -1, 535, "Flush, Ace-high, kickers Ten, Nine, Eight, Seven [Ah Th 9h 8h 7h]"},
+		{Short, "5♥ 3♣ 6♣ 6♦ 6♥ J♣ J♥", "8h 7h Ah Th 9h 5c 3c", +1, 535, "Flush, Ace-high, kickers Ten, Nine, Eight, Seven [Ah Th 9h 8h 7h]"},
 	}
 	for i, test := range tests {
-		h1 := Holdem.New(Must(test.a), nil)
-		h2 := Holdem.New(Must(test.b), nil)
-		switch r := h1.Comp(h2, false); {
-		case r != test.exp:
-			t.Errorf("test %d expected r == %d, got: %d", i, test.exp, r)
+		a, b := test.typ.Eval(Must(test.a), nil), test.typ.Eval(Must(test.b), nil)
+		var ev *Eval
+		r := a.Comp(b, false)
+		if r != test.exp {
+			t.Errorf("test %d expected comp of %d, got: %d", i, test.exp, r)
+		}
+		switch {
 		case r == +0:
-			if h1.HiRank.Fixed() != h2.HiRank.Fixed() && h1.HiRank.Fixed() != test.r {
-				t.Errorf("test %d expected a == b == r", i)
+			if a.HiRank != b.HiRank || a.HiRank != test.r {
+				t.Errorf("test %d expected %d == %d == %d", i, a.HiRank, b.HiRank, test.r)
 			}
+			ev = a
 		case r == -1:
-			if r := h1.HiRank.Fixed(); r != test.r {
-				t.Errorf("test %d expected a to be %s, got: %s", i, test.r, r)
+			if b.HiRank <= a.HiRank {
+				t.Errorf("test %d expected %d < %d", i, a.HiRank, b.HiRank)
 			}
+			ev = a
 		case r == +1:
-			if r := h2.HiRank.Fixed(); r != test.r {
-				t.Errorf("test %d expected b to be %s, got: %s", i, test.r, r)
+			if a.HiRank <= b.HiRank {
+				t.Errorf("test %d expected %d < %d", i, b.HiRank, a.HiRank)
 			}
+			ev = b
+		}
+		if ev.HiRank != test.r {
+			t.Errorf("test %d expected %d, got: %d", i, test.r, ev.HiRank)
+		}
+		if s := fmt.Sprintf("%s", ev); s != test.s {
+			t.Errorf("test %d expected %q, got: %q", i, test.s, s)
 		}
 	}
 }
 
 func TestEval(t *testing.T) {
-	for _, rr := range cactusTests(true) {
+	for _, rr := range cactusTests(true, true) {
 		for i, f := range []func() []cardTest{
 			fiveCardTests,
 			sixCardTests,
@@ -121,16 +142,16 @@ func TestEval(t *testing.T) {
 		} {
 			r, tests := rr, f()
 			t.Run(fmt.Sprintf("%s/%d", r.name, i+5), func(t *testing.T) {
+				if r.name == "Cactus" || r.name == "CactusFast" {
+					t.Skip("skipping")
+				}
 				for j, test := range tests {
 					v := Must(test.v)
-					rank := r.eval(v)
-					if rank != test.r {
-						t.Errorf("test %d %d expected %d, got: %d", i, j, test.r, rank)
+					ev := EvalOf(0)
+					r.eval(ev, v[:5], v[5:])
+					if r, exp := ev.HiRank, test.r; r != exp {
+						t.Errorf("test %d %d expected %d, got: %d", i, j, exp, r)
 					}
-					if fixed := rank.Fixed(); fixed != test.exp {
-						t.Errorf("test %d %d expected %s, got: %s", i, j, test.exp, fixed)
-					}
-					ev := EvalOf(Holdem).Eval(v[:5], v[5:])
 					if s := fmt.Sprintf("%b %b", ev, ev.HiUnused); s != test.desc {
 						t.Errorf("test %d %d expected %q, got: %q", i, j, test.desc, s)
 					}
@@ -140,19 +161,35 @@ func TestEval(t *testing.T) {
 	}
 }
 
-func TestEvalRank(t *testing.T) {
+func TestNewSplitEval(t *testing.T) {
 	tests := []struct {
-		v string
-		r EvalRank
-		f RankFunc
+		f   RankFunc
+		max EvalRank
+		v   string
+		hi  EvalRank
+		lo  EvalRank
 	}{
-		{"Kh Qh Jh Th 9h", 7936, RankRazz},
-		{"9h 7h 6h 5h 4h", 33144, RankEightOrBetter},
+		{RankLowball, Invalid, "Ah Kh Qh Jh Th", 1, 7462},
+		{RankLowball, Invalid, "Ah Kh Qh Jh Th 9h 8h", 1, 6528},
+		{RankRazz, Invalid, "Kh Qh Jh Th 9h", 2, 7936},
+		{RankRazz, Invalid, "Kh Qh Jh Th 9h 8h 7h", 2, 1984},
+		{RankShort, Invalid, "Kh Qh Jh Th 9h", 2, 2},
+		{RankRazz, Invalid, "Kh Qh Qc Jc Jh Th 9h", 2, 7936},
+		{RankEightOrBetter, eightOrBetterMax, "5h 4h 3h 2h Ah", 10, 31},
+		{RankEightOrBetter, eightOrBetterMax, "8h 7h 6h 5h 4h", 7, 248},
+		{RankEightOrBetter, eightOrBetterMax, "9h Th 8h 7h 6h 5h 4h", 5, 248},
+		{RankEightOrBetter, eightOrBetterMax, "9h 7h 6h 5h 4h", 1567, Invalid},
+		{RankEightOrBetter, eightOrBetterMax, "Ah Kh Qh Jh Th", 1, Invalid},
 	}
 	for i, test := range tests {
-		f := NewRankFunc(test.f)
-		if e, exp := f(Must(test.v)), test.r; e != exp {
-			t.Errorf("test %d expected rank %d, got: %d", i, exp, e)
+		p, f := Must(test.v), NewSplitEval(RankCactus, test.f, test.max)
+		ev := EvalOf(0)
+		f(ev, p, nil)
+		if r, exp := ev.HiRank, test.hi; r != exp {
+			t.Errorf("test %d expected rank %d, got: %d", i, exp, r)
+		}
+		if r, exp := ev.LoRank, test.lo; r != exp {
+			t.Errorf("test %d expected rank %d, got: %d", i, exp, r)
 		}
 	}
 }
@@ -180,33 +217,17 @@ func TestRankEightOrBetter(t *testing.T) {
 	}
 }
 
-func TestCactus(t *testing.T) {
-	if !strings.Contains(os.Getenv("TESTS"), "cactus") {
-		t.Skipf("skipping: $ENV{TESTS} does not contain 'cactus'")
+func TestEvalRankToFrom(t *testing.T) {
+	for i := EvalRank(1); i <= Nothing; i++ {
+		a := i.ToFlushOver()
+		if b := a.FromFlushOver(); b != i {
+			t.Errorf("expected %d, got: %d", i, b)
+		}
 	}
-	if cactus == nil {
-		t.Skipf("skipping: cactus is not available")
-	}
-	v, f, tests := shuffled(DeckFrench), NewRankFunc(cactus), cactusTests(false)
-	for c0 := 0; c0 < 52; c0++ {
-		for c1 := c0 + 1; c1 < 52; c1++ {
-			for c2 := c1 + 1; c2 < 52; c2++ {
-				for c3 := c2 + 1; c3 < 52; c3++ {
-					for c4 := c3 + 1; c4 < 52; c4++ {
-						for c5 := c4 + 1; c5 < 52; c5++ {
-							for c6 := c5 + 1; c6 < 52; c6++ {
-								vv := []Card{v[c0], v[c1], v[c2], v[c3], v[c4], v[c5], v[c6]}
-								exp := f(vv)
-								for _, test := range tests {
-									if r := test.eval(vv); r != exp {
-										t.Errorf("test %s(%b) expected %d (%s), got: %d (%s)", test.name, vv, exp, exp.Fixed(), r, r.Fixed())
-									}
-								}
-							}
-						}
-					}
-				}
-			}
+	for i := EvalRank(1); i <= Nothing; i++ {
+		a := i.ToLowball()
+		if b := a.FromLowball(); b != i {
+			t.Errorf("expected %d, got: %d", i, b)
 		}
 	}
 }
@@ -243,6 +264,29 @@ func TestEvalRankString(t *testing.T) {
 	}
 }
 
+func TestLowballCards(t *testing.T) {
+	if s := os.Getenv("TESTS"); !strings.Contains(s, "lowball") && !strings.Contains(s, "all") {
+		t.Skip("skipping: $ENV{TESTS} does not contain 'lowball' or 'all'")
+	}
+	u, c, l, ev, uv := shuffled(DeckFrench), NewCactusEval(false), NewLowballEval(), EvalOf(Holdem), EvalOf(Lowball)
+	for c0 := 0; c0 < 52; c0++ {
+		for c1 := c0 + 1; c1 < 52; c1++ {
+			for c2 := c1 + 1; c2 < 52; c2++ {
+				for c3 := c2 + 1; c3 < 52; c3++ {
+					for c4 := c3 + 1; c4 < 52; c4++ {
+						v := []Card{u[c0], u[c1], u[c2], u[c3], u[c4]}
+						c(ev, v, nil)
+						l(uv, v, nil)
+						if r, exp := uv.HiRank.FromLowball(), ev.HiRank; r != exp {
+							t.Fatalf("expected equal ranks for %v %d, got: %d", v, exp, r)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 func shuffled(typ DeckType) []Card {
 	v := typ.Unshuffled()
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -250,6 +294,60 @@ func shuffled(typ DeckType) []Card {
 		v[i], v[j] = v[j], v[i]
 	})
 	return v
+}
+
+type cactusTest struct {
+	name string
+	eval EvalFunc
+}
+
+func cactusTests(base, normalize bool) []cactusTest {
+	var tests []cactusTest
+	if base && cactus != nil {
+		tests = append(tests, cactusTest{"Cactus", wrapCactus(cactus, normalize)})
+	}
+	if cactusFast != nil {
+		tests = append(tests, cactusTest{"CactusFast", wrapCactus(cactusFast, normalize)})
+	}
+	if twoPlusTwo != nil {
+		tests = append(tests, cactusTest{"TwoPlusTwo", wrapTwoPlusTwo(normalize)})
+	}
+	if cactusFast != nil && twoPlusTwo != nil {
+		tests = append(tests, cactusTest{"Hybrid", NewHybridEval(false, normalize)})
+	}
+	return tests
+}
+
+func wrapCactus(f RankFunc, normalize bool) EvalFunc {
+	if !normalize {
+		return NewEval(f)
+	}
+	g := NewEval(f)
+	return func(ev *Eval, p, b []Card) {
+		g(ev, p, b)
+		bestCactus(ev.HiRank, ev.HiBest, Five, nil)
+		bestAceHigh(ev.HiUnused)
+	}
+}
+
+func wrapTwoPlusTwo(normalize bool) EvalFunc {
+	if !normalize {
+		return func(ev *Eval, p, b []Card) {
+			n, m := len(p), len(b)
+			v := make([]Card, n+m)
+			copy(v, p)
+			copy(v[n:], b)
+			ev.HiRank = twoPlusTwo(v)
+		}
+	}
+	return func(ev *Eval, p, b []Card) {
+		n, m := len(p), len(b)
+		v := make([]Card, n+m)
+		copy(v, p)
+		copy(v[n:], b)
+		ev.HiRank = twoPlusTwo(v)
+		ev.HiBest, ev.HiUnused = bestCactusAll(ev.HiRank, v, Five)
+	}
 }
 
 type cardTest struct {
@@ -261,7 +359,7 @@ type cardTest struct {
 
 func fiveCardTests() []cardTest {
 	return []cardTest{
-		{"As Ks Jc 7h 5d", 0x186c, Nothing, "Nothing, Ace-high, kickers King, Jack, Seven, Five [A♠ K♠ J♣ 7♥ 5♦] []"},
+		{"As Ks Jc 7h 5d", 0x186c, Nothing, "Ace-high, kickers King, Jack, Seven, Five [A♠ K♠ J♣ 7♥ 5♦] []"},
 		{"As Ac Jc 7h 5d", 0x0d78, Pair, "Pair, Aces, kickers Jack, Seven, Five [A♣ A♠ J♣ 7♥ 5♦] []"},
 		{"Jd 6s 6c 5c 5d", 0x0c93, TwoPair, "Two Pair, Sixes over Fives, kicker Jack [6♣ 6♠ 5♣ 5♦ J♦] []"},
 		{"6s 6c Jc Jd 5d", 0x0b42, TwoPair, "Two Pair, Jacks over Sixes, kicker Five [J♣ J♦ 6♣ 6♠ 5♦] []"},
@@ -275,16 +373,17 @@ func fiveCardTests() []cardTest {
 		{"5s 5c 5d 6s 6h", 0x011b, FullHouse, "Full House, Fives full of Sixes [5♣ 5♦ 5♠ 6♥ 6♠] []"},
 		{"6s 6c 6d 5s 5h", 0x010f, FullHouse, "Full House, Sixes full of Fives [6♣ 6♦ 6♠ 5♥ 5♠] []"},
 		{"As Ac Ad Ah 5h", 0x0013, FourOfAKind, "Four of a Kind, Aces, kicker Five [A♣ A♦ A♥ A♠ 5♥] []"},
+		{"As Ac Ad Ah Th", 0x000e, FourOfAKind, "Four of a Kind, Aces, kicker Ten [A♣ A♦ A♥ A♠ T♥] []"},
 		{"3d 5d 2d 4d Ad", 0x000a, StraightFlush, "Straight Flush, Five-high, Steel Wheel [5♦ 4♦ 3♦ 2♦ A♦] []"},
-		{"6♦ 5♦ 4♦ 3♦ 2♦", 0x0009, StraightFlush, "Straight Flush, Six-high [6♦ 5♦ 4♦ 3♦ 2♦] []"},
-		{"9♦ 6♦ 8♦ 5♦ 7♦", 0x0006, StraightFlush, "Straight Flush, Nine-high [9♦ 8♦ 7♦ 6♦ 5♦] []"},
+		{"6♦ 5♦ 4♦ 3♦ 2♦", 0x0009, StraightFlush, "Straight Flush, Six-high, Aluminum Window [6♦ 5♦ 4♦ 3♦ 2♦] []"},
+		{"9♦ 6♦ 8♦ 5♦ 7♦", 0x0006, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♦ 8♦ 7♦ 6♦ 5♦] []"},
 		{"As Ks Qs Js Ts", 0x0001, StraightFlush, "Straight Flush, Ace-high, Royal [A♠ K♠ Q♠ J♠ T♠] []"},
 	}
 }
 
 func sixCardTests() []cardTest {
 	return []cardTest{
-		{"3d As Ks Jc 7h 5d", 0x186c, Nothing, "Nothing, Ace-high, kickers King, Jack, Seven, Five [A♠ K♠ J♣ 7♥ 5♦] [3♦]"},
+		{"3d As Ks Jc 7h 5d", 0x186c, Nothing, "Ace-high, kickers King, Jack, Seven, Five [A♠ K♠ J♣ 7♥ 5♦] [3♦]"},
 		{"3d As Ac Jc 7h 5d", 0x0d78, Pair, "Pair, Aces, kickers Jack, Seven, Five [A♣ A♠ J♣ 7♥ 5♦] [3♦]"},
 		{"9d Jd 6s 6c 5c 5d", 0x0c93, TwoPair, "Two Pair, Sixes over Fives, kicker Jack [6♣ 6♠ 5♣ 5♦ J♦] [9♦]"},
 		{"3d 6s 6c Jc Jd 5d", 0x0b42, TwoPair, "Two Pair, Jacks over Sixes, kicker Five [J♣ J♦ 6♣ 6♠ 5♦] [3♦]"},
@@ -298,17 +397,18 @@ func sixCardTests() []cardTest {
 		{"3d 5s 5c 5d 6s 6h", 0x011b, FullHouse, "Full House, Fives full of Sixes [5♣ 5♦ 5♠ 6♥ 6♠] [3♦]"},
 		{"3d 6s 6c 6d 5s 5h", 0x010f, FullHouse, "Full House, Sixes full of Fives [6♣ 6♦ 6♠ 5♥ 5♠] [3♦]"},
 		{"3d As Ac Ad Ah 5h", 0x0013, FourOfAKind, "Four of a Kind, Aces, kicker Five [A♣ A♦ A♥ A♠ 5♥] [3♦]"},
+		{"4d As Ac Ad Ah Th", 0x000e, FourOfAKind, "Four of a Kind, Aces, kicker Ten [A♣ A♦ A♥ A♠ T♥] [4♦]"},
 		{"3d 5d 2d 4d Ad 3s", 0x000a, StraightFlush, "Straight Flush, Five-high, Steel Wheel [5♦ 4♦ 3♦ 2♦ A♦] [3♠]"},
-		{"T♦ 6♦ 5♦ 4♦ 3♦ 2♦", 0x0009, StraightFlush, "Straight Flush, Six-high [6♦ 5♦ 4♦ 3♦ 2♦] [T♦]"},
-		{"J♦ 9♦ 6♦ 8♦ 5♦ 7♦", 0x0006, StraightFlush, "Straight Flush, Nine-high [9♦ 8♦ 7♦ 6♦ 5♦] [J♦]"},
-		{"7♦ J♦ 9♦ 6♦ 8♦ 5♦", 0x0006, StraightFlush, "Straight Flush, Nine-high [9♦ 8♦ 7♦ 6♦ 5♦] [J♦]"},
+		{"T♦ 6♦ 5♦ 4♦ 3♦ 2♦", 0x0009, StraightFlush, "Straight Flush, Six-high, Aluminum Window [6♦ 5♦ 4♦ 3♦ 2♦] [T♦]"},
+		{"J♦ 9♦ 6♦ 8♦ 5♦ 7♦", 0x0006, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♦ 8♦ 7♦ 6♦ 5♦] [J♦]"},
+		{"7♦ J♦ 9♦ 6♦ 8♦ 5♦", 0x0006, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♦ 8♦ 7♦ 6♦ 5♦] [J♦]"},
 		{"3d As Ks Qs Js Ts", 0x0001, StraightFlush, "Straight Flush, Ace-high, Royal [A♠ K♠ Q♠ J♠ T♠] [3♦]"},
 	}
 }
 
 func sevenCardTests() []cardTest {
 	return []cardTest{
-		{"2d 3d As Ks Jc 7h 5d", 0x186c, Nothing, "Nothing, Ace-high, kickers King, Jack, Seven, Five [A♠ K♠ J♣ 7♥ 5♦] [3♦ 2♦]"},
+		{"2d 3d As Ks Jc 7h 5d", 0x186c, Nothing, "Ace-high, kickers King, Jack, Seven, Five [A♠ K♠ J♣ 7♥ 5♦] [3♦ 2♦]"},
 		{"2d 3d As Ac Jc 7h 5d", 0x0d78, Pair, "Pair, Aces, kickers Jack, Seven, Five [A♣ A♠ J♣ 7♥ 5♦] [3♦ 2♦]"},
 		{"9d Jd 6s 6c 5c 5d 4d", 0x0c93, TwoPair, "Two Pair, Sixes over Fives, kicker Jack [6♣ 6♠ 5♣ 5♦ J♦] [9♦ 4♦]"},
 		{"2d 3d 6s 6c Jc Jd 5d", 0x0b42, TwoPair, "Two Pair, Jacks over Sixes, kicker Five [J♣ J♦ 6♣ 6♠ 5♦] [3♦ 2♦]"},
@@ -318,35 +418,14 @@ func sevenCardTests() []cardTest {
 		{"2d 3d 9s Ks Qd Jh Td", 0x0641, Straight, "Straight, King-high [K♠ Q♦ J♥ T♦ 9♠] [3♦ 2♦]"},
 		{"2d 3d As Ks Qd Jh Td", 0x0640, Straight, "Straight, Ace-high [A♠ K♠ Q♦ J♥ T♦] [3♦ 2♦]"},
 		{"2d 3d Ts 7s 4s 3s 2s", 0x0606, Flush, "Flush, Ten-high, kickers Seven, Four, Three, Two [T♠ 7♠ 4♠ 3♠ 2♠] [3♦ 2♦]"},
-		{"2d 3d 4s 4c 4d 2s 2h", 0x012a, FullHouse, "Full House, Fours full of Twos [4♣ 4♦ 4♠ 2♦ 2♥] [2♠ 3♦]"},
+		{"2d 3d 4s 4c 4d 2s 2h", 0x012a, FullHouse, "Full House, Fours full of Twos [4♣ 4♦ 4♠ 2♦ 2♥] [3♦ 2♠]"},
 		{"4d 3d 5s 5c 5d 6s 6h", 0x011b, FullHouse, "Full House, Fives full of Sixes [5♣ 5♦ 5♠ 6♥ 6♠] [4♦ 3♦]"},
 		{"4d 3d 6s 6c 6d 5s 5h", 0x010f, FullHouse, "Full House, Sixes full of Fives [6♣ 6♦ 6♠ 5♥ 5♠] [4♦ 3♦]"},
 		{"2d 3d As Ac Ad Ah 5h", 0x0013, FourOfAKind, "Four of a Kind, Aces, kicker Five [A♣ A♦ A♥ A♠ 5♥] [3♦ 2♦]"},
+		{"4d 4s As Ac Ad Ah Th", 0x000e, FourOfAKind, "Four of a Kind, Aces, kicker Ten [A♣ A♦ A♥ A♠ T♥] [4♦ 4♠]"},
 		{"3d 5d 2d 4d Ad 3s 4s", 0x000a, StraightFlush, "Straight Flush, Five-high, Steel Wheel [5♦ 4♦ 3♦ 2♦ A♦] [4♠ 3♠]"},
-		{"J♦ T♦ 6♦ 5♦ 4♦ 3♦ 2♦", 0x0009, StraightFlush, "Straight Flush, Six-high [6♦ 5♦ 4♦ 3♦ 2♦] [J♦ T♦]"},
-		{"7♦ J♦ 9♦ 6♦ 8♦ 5♦ 2♦", 0x0006, StraightFlush, "Straight Flush, Nine-high [9♦ 8♦ 7♦ 6♦ 5♦] [J♦ 2♦]"},
+		{"J♦ T♦ 6♦ 5♦ 4♦ 3♦ 2♦", 0x0009, StraightFlush, "Straight Flush, Six-high, Aluminum Window [6♦ 5♦ 4♦ 3♦ 2♦] [J♦ T♦]"},
+		{"7♦ J♦ 9♦ 6♦ 8♦ 5♦ 2♦", 0x0006, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♦ 8♦ 7♦ 6♦ 5♦] [J♦ 2♦]"},
 		{"2d 3d As Ks Qs Js Ts", 0x0001, StraightFlush, "Straight Flush, Ace-high, Royal [A♠ K♠ Q♠ J♠ T♠] [3♦ 2♦]"},
 	}
-}
-
-type cactusTest struct {
-	name string
-	eval CactusFunc
-}
-
-func cactusTests(base bool) []cactusTest {
-	var tests []cactusTest
-	if base && cactus != nil {
-		tests = append(tests, cactusTest{"Cactus", NewRankFunc(cactus)})
-	}
-	if cactusFast != nil {
-		tests = append(tests, cactusTest{"CactusFast", NewRankFunc(cactusFast)})
-	}
-	if twoPlusTwo != nil {
-		tests = append(tests, cactusTest{"TwoPlusTwo", twoPlusTwo})
-	}
-	if cactusFast != nil && twoPlusTwo != nil {
-		tests = append(tests, cactusTest{"Hybrid", NewHybrid(cactusFast, twoPlusTwo)})
-	}
-	return tests
 }

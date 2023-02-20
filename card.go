@@ -100,7 +100,7 @@ func (rank Rank) Byte() byte {
 	case Two:
 		return '2'
 	}
-	return 0
+	return '0'
 }
 
 // Index the int index for the card rank (0-12 for Two-Ace).
@@ -149,6 +149,33 @@ func (rank Rank) PluralName() string {
 	return rank.Name() + "s"
 }
 
+// StraightFlushName returns the name for a Straight Flush of rank.
+func (rank Rank) StraightFlushName() string {
+	switch rank {
+	case Ace:
+		return "Royal"
+	case King:
+		return "Platinum Oxide"
+	case Queen:
+		return "Silver Tongue"
+	case Jack:
+		return "Bronze Fist"
+	case Ten:
+		return "Golden Ratio"
+	case Nine:
+		return "Iron Maiden"
+	case Eight:
+		return "Tin Cup"
+	case Seven:
+		return "Brass Axe"
+	case Six:
+		return "Aluminum Window"
+	case Five:
+		return "Steel Wheel"
+	}
+	return ""
+}
+
 // Suit is a card suit.
 type Suit uint8
 
@@ -195,7 +222,7 @@ func (suit Suit) Byte() byte {
 	case Club:
 		return 'c'
 	}
-	return 0
+	return '0'
 }
 
 // Index returns the int index for the card suit (0-3 for Spade, Heart,
@@ -470,8 +497,8 @@ func (c Card) Index() int {
 	return c.SuitIndex()*13 + c.RankIndex()
 }
 
-// AceIndex returns the Ace low index of the card.
-func (c Card) AceIndex() int {
+// AceRank returns the Ace low index of the card.
+func (c Card) AceRank() int {
 	return int(c>>8&0xf+1) % 13
 }
 
@@ -521,6 +548,7 @@ func (c Card) String() string {
 //	l - plural suit name, lower cased (spades hearts diamonds clubs)
 //	L - plural suit name, title cased (Spades Hearts Diamonds Clubs)
 //	d - base 10 integer value
+//	F - straight flush name for the rank
 func (c Card) Format(f fmt.State, verb rune) {
 	r, s := c.Rank(), c.Suit()
 	var buf []byte
@@ -568,6 +596,8 @@ func (c Card) Format(f fmt.State, verb rune) {
 		if verb == 'l' {
 			buf = bytes.ToLower(buf)
 		}
+	case 'F':
+		buf = append(buf, r.StraightFlushName()...)
 	case 'd':
 		buf = append(buf, strconv.Itoa(int(c))...)
 	default:

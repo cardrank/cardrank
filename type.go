@@ -2,24 +2,40 @@ package cardrank
 
 import (
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 	"unicode"
 )
 
-// Type is a hand eval type.
+// Type is a package level eval type, providing a package-level interface for
+// using DefaultTypes], and wraps the [TypeDesc].
+//
+// [DefaultTypes] will be registered during init, unless using the
+// [noinit][#noinit] tag.
+//
+// See [TypeDesc].
 type Type uint16
 
-// Hand eval types.
+// Types.
 const (
 	Holdem         Type = 'H'<<8 | 'h' // Hh
+	Split          Type = 'H'<<8 | 'l' // Hl
 	Short          Type = 'H'<<8 | 's' // Hs
 	Manila         Type = 'H'<<8 | 'm' // Hm
+	Spanish        Type = 'H'<<8 | 'p' // Hp
 	Royal          Type = 'H'<<8 | 'r' // Hr
 	Double         Type = 'H'<<8 | 'd' // Hd
 	Showtime       Type = 'H'<<8 | 't' // Ht
 	Swap           Type = 'H'<<8 | 'w' // Hw
+	River          Type = 'H'<<8 | 'v' // Hv
+	Dallas         Type = 'H'<<8 | 'a' // Ha
+	Houston        Type = 'H'<<8 | 'u' // Hu
+	Draw           Type = 'D'<<8 | 'h' // Dh
+	DrawHiLo       Type = 'D'<<8 | 'l' // Dl
+	Stud           Type = 'S'<<8 | 'h' // Sh
+	StudHiLo       Type = 'S'<<8 | 'l' // Sl
+	StudFive       Type = 'S'<<8 | '5' // S5
+	Video          Type = 'J'<<8 | 'h' // Jh
 	Omaha          Type = 'O'<<8 | '4' // O4
 	OmahaHiLo      Type = 'O'<<8 | 'l' // Ol
 	OmahaDouble    Type = 'O'<<8 | 'd' // Od
@@ -29,25 +45,13 @@ const (
 	CourchevelHiLo Type = 'O'<<8 | 'e' // Oe
 	Fusion         Type = 'O'<<8 | 'f' // Of
 	FusionHiLo     Type = 'O'<<8 | 'F' // OF
-	Stud           Type = 'S'<<8 | 'h' // Sh
-	StudHiLo       Type = 'S'<<8 | 'l' // Sl
-	Razz           Type = 'R'<<8 | 'a' // Ra
-	Badugi         Type = 'B'<<8 | 'a' // Ba
+	Soko           Type = 'K'<<8 | 'h' // Kh
+	SokoHiLo       Type = 'K'<<8 | 'l' // Kl
 	Lowball        Type = 'L'<<8 | '1' // L1
 	LowballTriple  Type = 'L'<<8 | '3' // L3
-	Soko           Type = 'K'<<8 | 'o' // Ko
+	Razz           Type = 'R'<<8 | 'a' // Ra
+	Badugi         Type = 'B'<<8 | 'a' // Ba
 )
-
-// IdToType converts id to its type.
-func IdToType(id string) (Type, error) {
-	switch {
-	case len(id) != 2,
-		!unicode.IsLetter(rune(id[0])) && !unicode.IsNumber(rune(id[0])),
-		!unicode.IsLetter(rune(id[1])) && !unicode.IsNumber(rune(id[1])):
-		return 0, ErrInvalidId
-	}
-	return Type(id[0])<<8 | Type(id[1]), nil
-}
 
 // DefaultTypes returns the default type descriptions.
 func DefaultTypes() []TypeDesc {
@@ -58,13 +62,24 @@ func DefaultTypes() []TypeDesc {
 		name string
 		opt  TypeOption
 	}{
-		{"Hh", Holdem, "Holdem", WithHoldem()},
+		{"Hh", Holdem, "Holdem", WithHoldem(false)},
+		{"Hl", Split, "Split", WithHoldem(true)},
 		{"Hs", Short, "Short", WithShort()},
 		{"Hm", Manila, "Manila", WithManila()},
+		{"Hp", Spanish, "Spanish", WithSpanish()},
 		{"Hr", Royal, "Royal", WithRoyal()},
 		{"Hd", Double, "Double", WithDouble()},
-		{"Ht", Showtime, "Showtime", WithShowtime()},
-		{"Hw", Swap, "Swap", WithSwap()},
+		{"Ht", Showtime, "Showtime", WithShowtime(false)},
+		{"Hw", Swap, "Swap", WithSwap(false)},
+		{"Hv", River, "River", WithRiver(false)},
+		{"Ha", Dallas, "Dallas", WithDallas(false)},
+		{"Hu", Houston, "Houston", WithHouston(false)},
+		{"Dh", Draw, "Draw", WithDraw(false)},
+		{"Dl", DrawHiLo, "DrawHiLo", WithDraw(true)},
+		{"Sh", Stud, "Stud", WithStud(false)},
+		{"Sl", StudHiLo, "StudHiLo", WithStud(true)},
+		{"S5", StudFive, "StudFive", WithStudFive(false)},
+		{"Jh", Video, "Video", WithVideo(false)},
 		{"O4", Omaha, "Omaha", WithOmaha(false)},
 		{"Ol", OmahaHiLo, "OmahaHiLo", WithOmaha(true)},
 		{"Od", OmahaDouble, "OmahaDouble", WithOmahaDouble()},
@@ -74,15 +89,14 @@ func DefaultTypes() []TypeDesc {
 		{"Oe", CourchevelHiLo, "CourchevelHiLo", WithCourchevel(true)},
 		{"Of", Fusion, "Fusion", WithFusion(false)},
 		{"OF", FusionHiLo, "FusionHiLo", WithFusion(true)},
-		{"Sh", Stud, "Stud", WithStud(false)},
-		{"Sl", StudHiLo, "StudHiLo", WithStud(true)},
-		{"Ra", Razz, "Razz", WithRazz()},
-		{"Ba", Badugi, "Badugi", WithBadugi()},
+		{"Kh", Soko, "Soko", WithSoko(false)},
+		{"Kl", SokoHiLo, "SokoHiLo", WithSoko(true)},
 		{"L1", Lowball, "Lowball", WithLowball(false)},
 		{"L3", LowballTriple, "LowballTriple", WithLowball(true)},
-		{"Ko", Soko, "Soko", WithSoko()},
+		{"Ra", Razz, "Razz", WithRazz()},
+		{"Ba", Badugi, "Badugi", WithBadugi()},
 	} {
-		desc, err := NewTypeDesc(d.id, d.typ, d.name, d.opt)
+		desc, err := NewType(d.id, d.typ, d.name, d.opt)
 		if err != nil {
 			panic(err)
 		}
@@ -91,20 +105,15 @@ func DefaultTypes() []TypeDesc {
 	return v
 }
 
-// Types returns the registered types.
-func Types() []Type {
-	var v []TypeDesc
-	for _, desc := range descs {
-		v = append(v, desc)
+// IdToType converts id to its type.
+func IdToType(id string) (Type, error) {
+	switch {
+	case len(id) != 2,
+		!unicode.IsLetter(rune(id[0])) && !unicode.IsNumber(rune(id[0])),
+		!unicode.IsLetter(rune(id[1])) && !unicode.IsNumber(rune(id[1])):
+		return 0, ErrInvalidId
 	}
-	sort.Slice(v, func(i, j int) bool {
-		return v[i].Num < v[j].Num
-	})
-	types := make([]Type, len(v))
-	for i := 0; i < len(types); i++ {
-		types[i] = v[i].Type
-	}
-	return types
+	return Type(id[0])<<8 | Type(id[1]), nil
 }
 
 // MarshalText satisfies the encoding.TextMarshaler interface.
@@ -130,46 +139,59 @@ func (typ *Type) UnmarshalText(buf []byte) error {
 	return ErrInvalidType
 }
 
-// Id satisfies the fmt.Stringer interface.
+// Id returns the type's id.
 func (typ Type) Id() string {
-	return string([]byte{byte(typ >> 8 & 0xf), byte(typ & 0xf)})
+	return string([]byte{byte(typ >> 8), byte(typ)})
 }
 
 // Format satisfies the fmt.Formatter interface.
 func (typ Type) Format(f fmt.State, verb rune) {
+	var buf []byte
 	switch verb {
 	case 'c':
-		fmt.Fprint(f, typ.Id())
-		return
+		buf = []byte(typ.Id())
+	case 's', 'v':
+		if desc, ok := descs[typ]; ok {
+			buf = []byte(desc.Name)
+		} else {
+			buf = []byte("Type(" + strconv.Itoa(int(typ)) + ")")
+		}
+	case 'l':
+		if desc, ok := descs[typ]; ok {
+			buf = []byte(desc.Eval.Name())
+			if desc.Low {
+				buf = append(buf, " Hi/Lo"...)
+			}
+		} else {
+			buf = []byte("Type(" + strconv.Itoa(int(typ)) + ")")
+		}
+	default:
+		buf = []byte(fmt.Sprintf("%%!%c(ERROR=unknown verb, type: %d)", verb, int(typ)))
 	}
-	if desc, ok := descs[typ]; ok {
-		fmt.Fprint(f, desc.Name)
-	} else {
-		fmt.Fprintf(f, "Type(%d)", typ)
-	}
+	_, _ = f.Write(buf)
 }
 
-// TypeDesc returns the type description.
-func (typ Type) TypeDesc() TypeDesc {
+// Desc returns the type's description.
+func (typ Type) Desc() TypeDesc {
 	return descs[typ]
 }
 
-// Name returns the type name.
+// Name returns the type's name.
 func (typ Type) Name() string {
 	return descs[typ].Name
 }
 
-// Max returns the type max players.
+// Max returns the type's max players.
 func (typ Type) Max() int {
 	return descs[typ].Max
 }
 
-// Low returns true when the type has a low board.
+// Low returns true when the type supports 8-or-better lo eval.
 func (typ Type) Low() bool {
 	return descs[typ].Low
 }
 
-// Double returns true when the type has a double board.
+// Double returns true when the type has double boards.
 func (typ Type) Double() bool {
 	return descs[typ].Double
 }
@@ -194,7 +216,7 @@ func (typ Type) Blinds() []string {
 	return nil
 }
 
-// Streets returns the type's street names.
+// Streets returns the type's street descriptions.
 func (typ Type) Streets() []StreetDesc {
 	if desc, ok := descs[typ]; ok {
 		v := make([]StreetDesc, len(desc.Streets))
@@ -262,33 +284,6 @@ func (typ Type) Deck() *Deck {
 	return descs[typ].Deck.New()
 }
 
-// NewComp returns a compare func.
-func (typ Type) NewComp(low bool) func(*Eval, *Eval) int {
-	f, loMax := descs[typ].HiComp.Comp, Invalid
-	if low && descs[typ].Low {
-		f, loMax = descs[typ].LoComp.Comp, rankEightOrBetterMax
-	}
-	return func(a, b *Eval) int {
-		switch {
-		case a == nil && b == nil:
-			return -1
-		case a == nil:
-			return +1
-		case b == nil:
-			return -1
-		}
-		return f(a, b, loMax)
-	}
-}
-
-// Desc returns the type's hi desc type.
-func (typ Type) Desc(low bool) DescType {
-	if low {
-		return descs[typ].LoDesc
-	}
-	return descs[typ].HiDesc
-}
-
 // Dealer creates a new dealer with a deck shuffled by shuffles, for the pocket
 // count.
 func (typ Type) Dealer(shuffler Shuffler, shuffles, count int) *Dealer {
@@ -309,16 +304,23 @@ func (typ Type) Deal(shuffler Shuffler, shuffles, count int) ([][]Card, []Card) 
 	return nil, nil
 }
 
-// New creates a new eval for the type, and evaluates the pocket and board.
-func (typ Type) New(pocket, board []Card) *Eval {
-	return EvalOf(typ).Eval(pocket, board)
+// New creates a new eval for the type and pocket.
+func (typ Type) New() *Eval {
+	return EvalOf(typ)
 }
 
-// Eval creates a new eval for the type for each of the pockets and board.
-func (typ Type) Eval(pockets [][]Card, board []Card) []*Eval {
+// Eval creates a new eval, and evaluates the type and pocket.
+func (typ Type) Eval(pocket, board []Card) *Eval {
+	ev := EvalOf(typ)
+	ev.Eval(pocket, board)
+	return ev
+}
+
+// EvalPockets creates new evals and evaluates each of the pockets and board.
+func (typ Type) EvalPockets(pockets [][]Card, board []Card) []*Eval {
 	evs := make([]*Eval, len(pockets))
 	for i := 0; i < len(pockets); i++ {
-		evs[i] = typ.New(pockets[i], board)
+		evs[i] = typ.Eval(pockets[i], board)
 	}
 	return evs
 }
@@ -333,9 +335,10 @@ type TypeDesc struct {
 	Name string
 	// Max is the max number of players.
 	Max int
-	// Low is true when the type is a Hi/Lo variant.
+	// Low is true when the type's Cactus or Omaha eval is the Hi/Lo variant,
+	// enabling 8-or-better on the lo eval.
 	Low bool
-	// Double is true when there are two boards.
+	// Double is true when there are double the number boards.
 	Double bool
 	// Show is true when folded cards are shown.
 	Show bool
@@ -349,18 +352,15 @@ type TypeDesc struct {
 	Deck DeckType
 	// Eval is the eval type.
 	Eval EvalType
-	// HiComp is the hi compare type.
-	HiComp CompType
-	// LoComp is the lo compare type.
-	LoComp CompType
 	// HiDesc is the hi desc type.
 	HiDesc DescType
 	// LoDesc is the lo desc type.
 	LoDesc DescType
 }
 
-// NewTypeDesc creates a new type description.
-func NewTypeDesc(id string, typ Type, name string, opts ...TypeOption) (*TypeDesc, error) {
+// NewType creates a new type description. Any created type must be registered
+// by calling [RegisterType] before it can be used for eval.
+func NewType(id string, typ Type, name string, opts ...TypeOption) (*TypeDesc, error) {
 	switch id, err := IdToType(id); {
 	case err != nil:
 		return nil, err
@@ -372,8 +372,6 @@ func NewTypeDesc(id string, typ Type, name string, opts ...TypeOption) (*TypeDes
 		Name:   name,
 		Deck:   DeckFrench,
 		Eval:   EvalCactus,
-		HiComp: CompHi,
-		LoComp: CompLo,
 		HiDesc: DescCactus,
 		LoDesc: DescLow,
 	}
@@ -399,9 +397,17 @@ func (desc *TypeDesc) Apply(opts ...StreetOption) {
 type TypeOption func(*TypeDesc)
 
 // WithHoldem is a type description option to set Holdem definitions.
-func WithHoldem(opts ...StreetOption) TypeOption {
+//
+// Holdem is a best-5 card game played with a standard (French) deck,
+// comprising a pocket of 2 cards, 5 community board cards, and a Pre-Flop,
+// Flop, Turn, and River streets. 2 pocket cards are dealt on the Pre-Flop,
+// with 3 board cards on the Flop, 1 board card on the Turn, and one on the
+// River. 1 card is discarded on the Flop, Turn, and River, prior to the board
+// cards being dealt.
+func WithHoldem(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
+		desc.Low = low
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
 		desc.Apply(opts...)
@@ -409,6 +415,9 @@ func WithHoldem(opts ...StreetOption) TypeOption {
 }
 
 // WithShort is a type description option to set Short definitions.
+//
+// Short is a Holdem variant played with a Short (6+) deck. Flushes rank over
+// Full Houses.
 func WithShort(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 6
@@ -416,14 +425,17 @@ func WithShort(opts ...StreetOption) TypeOption {
 		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
 		desc.Deck = DeckShort
 		desc.Eval = EvalShort
-		desc.HiComp = CompShort
-		desc.HiDesc = DescShort
-		desc.LoDesc = DescShort
+		desc.HiDesc = DescFlushOver
 		desc.Apply(opts...)
 	}
 }
 
 // WithManila is a type description option to set Manila definitions.
+//
+// Manila is a Holdem variant played with a Manila (7+) deck that forces the
+// use of 2 pocket cards, adding a Drop street before the Flop, with the 5
+// (instead of 4) streets receiving 1 board card each. Flushes rank over Full
+// Houses.
 func WithManila(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 6
@@ -431,22 +443,44 @@ func WithManila(opts ...StreetOption) TypeOption {
 		desc.Streets = HoldemStreets(2, 0, 1, 1, 1)
 		desc.Deck = DeckManila
 		desc.Eval = EvalManila
-		desc.HiComp = CompShort
-		desc.HiDesc = DescManila
-		desc.LoDesc = DescManila
+		desc.HiDesc = DescFlushOver
 		desc.Streets[0].Board = 1
-		desc.Streets = append(desc.Streets[:2], append([]StreetDesc{
-			{
-				Id:    'l',
-				Name:  "Flop",
-				Board: 1,
-			},
-		}, desc.Streets[2:]...)...)
+		desc.Streets = insert(desc.Streets, 1, StreetDesc{
+			Id:    'd',
+			Name:  "Drop",
+			Board: 1,
+		})
+		desc.Apply(opts...)
+	}
+}
+
+// WithSpanish is a type description option to set Spanish definitions.
+//
+// Spanish is a Holdem variant played with a Spanish deck (8+) that forces the
+// use of 2 pocket cards, adding a Drop street before the Flop, with the 5
+// (instead of 4) streets receiving 1 board card each. Flushes rank over Full
+// Houses.
+func WithSpanish(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 6
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(2, 0, 1, 1, 1)
+		desc.Deck = DeckSpanish
+		desc.Eval = EvalSpanish
+		desc.HiDesc = DescFlushOver
+		desc.Streets[0].Board = 1
+		desc.Streets = insert(desc.Streets, 1, StreetDesc{
+			Id:    'd',
+			Name:  "Drop",
+			Board: 1,
+		})
 		desc.Apply(opts...)
 	}
 }
 
 // WithRoyal is a type description option to set Royal definitions.
+//
+// Royal is a Holdem variant played with a Royal deck.
 func WithRoyal(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 5
@@ -458,22 +492,27 @@ func WithRoyal(opts ...StreetOption) TypeOption {
 }
 
 // WithDouble is a type description option to set Double definitions.
+//
+// Double is a Holdem variant where there are two community boards dealt in
+// tandem, comprising the Hi and Lo.
 func WithDouble(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
 		desc.Double = true
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
-		desc.LoComp = CompLo
 		desc.LoDesc = DescCactus
 		desc.Apply(opts...)
 	}
 }
 
 // WithShowtime is a type description option to set Showtime definitions.
-func WithShowtime(opts ...StreetOption) TypeOption {
+//
+// Showtime is a Holdem variant where folded cards are shown.
+func WithShowtime(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
+		desc.Low = low
 		desc.Show = true
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
@@ -482,9 +521,12 @@ func WithShowtime(opts ...StreetOption) TypeOption {
 }
 
 // WithSwap is a type description option to set Swap definitions.
-func WithSwap(opts ...StreetOption) TypeOption {
+//
+// Swap is a Holdem variant that allows the swapping of cards.
+func WithSwap(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
+		desc.Low = low
 		desc.Once = true
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
@@ -495,7 +537,127 @@ func WithSwap(opts ...StreetOption) TypeOption {
 	}
 }
 
+// WithRiver is a type description option to set River definitions.
+//
+// River is a Holdem variant that deals 1 pocket card on the river, and no
+// board cards on the river.
+func WithRiver(low bool, opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 10
+		desc.Low = low
+		desc.Once = true
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(2, 1, 3, 1, 0)
+		desc.Streets[3].Pocket = 1
+		desc.Apply(opts...)
+	}
+}
+
+// WithDallas is a type description option to set Dallas definitions.
+//
+// Dallas is Holdem variant that forces the use of the 2 pocket cards and any 3
+// board cards. Essentially Omaha, but with 2 pocket cards instead of 4.
+func WithDallas(low bool, opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 10
+		desc.Low = low
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
+		desc.Eval = EvalDallas
+		desc.Apply(opts...)
+	}
+}
+
+// WithHouston is a type description option to set Houston definitions.
+//
+// Houston is a Holdem variant with 3 pocket cards, 2 board cards dealt on the
+// Flop, and requires using 2 of the 3 pocket cards, and any 3 board cards to
+// make the best-5 cards. Essentially Omaha, but with 3 pocket cards instead of
+// 4.
+func WithHouston(low bool, opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 10
+		desc.Low = low
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(3, 1, 2, 1, 1)
+		desc.Eval = EvalHouston
+		desc.Apply(opts...)
+	}
+}
+
+// WithDraw is a type description option to set Draw definitions.
+//
+// Draw is a best-5 card game played with a standard (French) deck, comprising
+// a pocket of 5 cards, no community cards, with a Ante, 6th, and River streets.
+// 5 cards are dealt on the Ante, and up to 5 cards can be drawn (exchanged) on
+// the 6th street.
+func WithDraw(low bool, opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 10
+		desc.Low = low
+		desc.Blinds = StudBlinds()
+		desc.Streets = NumberedStreets(5, 0, 0)
+		desc.Streets[1].PocketDraw = 5
+		desc.Apply(opts...)
+	}
+}
+
+// WithStud is a type description option to set Stud definitions.
+//
+// Stud is a best-5 card game, played with a standard (French) deck, comprising
+// a pocket of 7 cards, no community cards, with Ante, 4th, 5th, 6th and River
+// streets. 3 pocket cards are dealt on the Ante, with 1 up, and 1 pocket card
+// is dealt up on the 4th, 5th, and 6th streets, with a final pocket card dealt
+// down on the 7th street.
+func WithStud(low bool, opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 7
+		desc.Low = low
+		desc.Blinds = StudBlinds()
+		desc.Streets = StudStreets()
+		desc.Apply(opts...)
+	}
+}
+
+// WithStudFive is a type description option to set StudFive definitions.
+//
+// StudFive is a best-5 card game palyed with a standard (French) deck,
+// comprising a pocket of 5 cards, no community cards, with Ante, 3rd, 4th, and
+// River streets. 2 pocket cards are dealt on the Ante, with 1 up, and 1 pocket
+// card dealt up on the 3rd, 4th, and 5th streets.
+func WithStudFive(low bool, opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 10
+		desc.Low = low
+		desc.Blinds = StudBlinds()
+		desc.Streets = StudFiveStreets()
+		desc.Apply(opts...)
+	}
+}
+
+// WithVideo is a type description option to set Video definitions.
+//
+// Video is a best-5 card game, played with a standard (French) deck,
+// comprising a pocket of 5 cards, no community cards, with a Ante and River. 5
+// pocket cards are dealt on the Ante, all up. Up to 5 cards can be drawn
+// (exchanged) on the River.
+func WithVideo(low bool, opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 1
+		desc.Low = low
+		desc.Blinds = StudBlinds()
+		desc.Streets = NumberedStreets(5, 0)
+		desc.Streets[0].PocketUp = 5
+		desc.Streets[1].PocketDraw = 5
+		desc.Eval = EvalJacksOrBetter
+		desc.Apply(opts...)
+	}
+}
+
 // WithOmaha is a type description option to set Omaha definitions.
+//
+// Omaha is a Holdem variant with 4 pocket cards, requiring the use of 2 of the
+// pocket and 3 of the board to make the best-5 cards.
 func WithOmaha(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 9
@@ -503,12 +665,14 @@ func WithOmaha(low bool, opts ...StreetOption) TypeOption {
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(4, 1, 3, 1, 1)
 		desc.Eval = EvalOmaha
-		desc.LoComp = CompLo
 		desc.Apply(opts...)
 	}
 }
 
 // WithOmahaDouble is a type description option to set OmahaDouble definitions.
+//
+// OmahaDouble is a Omaha variant where there are two community boards dealt in
+// tandem, comprising the Hi and Lo.
 func WithOmahaDouble(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 9
@@ -516,13 +680,15 @@ func WithOmahaDouble(opts ...StreetOption) TypeOption {
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(4, 1, 3, 1, 1)
 		desc.Eval = EvalOmaha
-		desc.LoComp = CompHi
 		desc.LoDesc = DescCactus
 		desc.Apply(opts...)
 	}
 }
 
 // WithOmahaFive is a type description option to set OmahaFive definitions.
+//
+// Omaha is a Holdem variant with 5 pocket cards, requiring the use of 2 of the
+// pocket and 3 of the board to make the best-5 cards.
 func WithOmahaFive(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8
@@ -530,12 +696,14 @@ func WithOmahaFive(low bool, opts ...StreetOption) TypeOption {
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(5, 0, 3, 1, 1)
 		desc.Eval = EvalOmahaFive
-		desc.LoComp = CompLo
 		desc.Apply(opts...)
 	}
 }
 
 // WithOmahaSix is a type description option to set OmahaSix definitions.
+//
+// Omaha is a Holdem variant with 6 pocket cards, requiring the use of 2 of the
+// pocket and 3 of the board to make the best-5 cards.
 func WithOmahaSix(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 7
@@ -543,12 +711,14 @@ func WithOmahaSix(low bool, opts ...StreetOption) TypeOption {
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(6, 0, 3, 1, 1)
 		desc.Eval = EvalOmahaSix
-		desc.LoComp = CompLo
 		desc.Apply(opts...)
 	}
 }
 
 // WithCourchevel is a type description option to set Courchevel definitions.
+//
+// Courchevel is a OmahaFive variant, where 1 board card is dealt on the
+// Pre-Flop, and 2 on the Flop.
 func WithCourchevel(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8
@@ -556,7 +726,6 @@ func WithCourchevel(low bool, opts ...StreetOption) TypeOption {
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(5, 0, 3, 1, 1)
 		desc.Eval = EvalOmahaFive
-		desc.LoComp = CompLo
 		// pre-flop
 		desc.Streets[0].Pocket = 5
 		desc.Streets[0].Board = 1
@@ -569,6 +738,9 @@ func WithCourchevel(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithFusion is a type description option to set Fusion definitions.
+//
+// Fusion is a Omaha variant where only 2 pocket cards are dealt on the
+// Pre-Flop, with 1 additional pocket card dealt on the Flop and Turn.
 func WithFusion(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 9
@@ -576,7 +748,6 @@ func WithFusion(low bool, opts ...StreetOption) TypeOption {
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
 		desc.Eval = EvalOmaha
-		desc.LoComp = CompLo
 		// flop and turn get additional pocket
 		desc.Streets[1].Pocket = 1
 		desc.Streets[2].Pocket = 1
@@ -584,22 +755,51 @@ func WithFusion(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithStud is a type description option to set Stud definitions.
-func WithStud(low bool, opts ...StreetOption) TypeOption {
+// WithSoko is a type description option to set Soko definitions.
+//
+// Soko is a Holdem variant with 2 additional hand ranks, a Four Flush
+// comprising 4 cards of the same suit, and a Four Straight, comprising 4 cards
+// in sequential rank (no wrapping straights), that beat Pair and Nothing.
+func WithSoko(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
-		desc.Max = 7
+		desc.Max = 8
 		desc.Low = low
-		desc.Blinds = StudBlinds()
-		desc.Streets = StudStreets()
-		desc.Eval = EvalStud
-		desc.LoComp = CompLo
+		desc.Streets = NumberedStreets(2, 3)
+		desc.Blinds = HoldemBlinds()
+		desc.Eval = EvalSoko
+		desc.HiDesc = DescSoko
+		desc.Apply(opts...)
+	}
+}
+
+// WithLowball is a type description option to set Lowball definitions.
+//
+// Lowball is a best-5 low game played with a standard (French) deck,
+// comprising 5 pocket cards, no community cards, and a Ante, 6th, 7th, and
+// River streets using a 2-to-7 low ("Lowball") inverted ranking system, where
+// Aces always play high, and non-Flush, and non-Straight lows are best. For
+// multi variants, up to 5 cards can be drawn (exchanged) on the 6th, 7th, and
+// River streets. Non-multi variants may only exchange up to 5 cards only once
+// on either the 6th, 7th, or River streets.
+func WithLowball(multi bool, opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 8
+		desc.Once = !multi
+		desc.Streets = NumberedStreets(5, 0, 0, 0)
+		desc.Blinds = HoldemBlinds()
+		desc.Eval = EvalLowball
+		desc.HiDesc = DescLowball
+		for i := 1; i < 4; i++ {
+			desc.Streets[i].PocketDraw = 5
+		}
 		desc.Apply(opts...)
 	}
 }
 
 // WithRazz is a type description option to set Razz definitions.
 //
-// Same as Stud, but with a Ace-to-Five low card ranking.
+// Razz is a Stud variant, using a A-to-5 low ranking, where Aces play low, and
+// Flushes and Straights do not affect ranking.
 func WithRazz(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 7
@@ -607,12 +807,15 @@ func WithRazz(opts ...StreetOption) TypeOption {
 		desc.Streets = StudStreets()
 		desc.Eval = EvalRazz
 		desc.HiDesc = DescRazz
-		desc.LoDesc = DescRazz
 		desc.Apply(opts...)
 	}
 }
 
 // WithBadugi is a type description option to set Badugi definitions.
+//
+// Badugi is a best-4, lowest non-matching-suit card game played with a
+// standard (French) deck, comprising a pocket of 4 cards, no community cards,
+// and Ante, 5th, 6th, and River streets.
 //
 //	4 cards, low evaluation of separate suits
 //	All 4 face down pre-flop
@@ -624,42 +827,9 @@ func WithBadugi(opts ...StreetOption) TypeOption {
 		desc.Blinds = HoldemBlinds()
 		desc.Eval = EvalBadugi
 		desc.HiDesc = DescLow
-		desc.LoDesc = DescLow
 		for i := 1; i < 4; i++ {
 			desc.Streets[i].PocketDraw = 4
 		}
-		desc.Apply(opts...)
-	}
-}
-
-// WithLowball is a type description option to set Lowball definitions.
-func WithLowball(multi bool, opts ...StreetOption) TypeOption {
-	return func(desc *TypeDesc) {
-		desc.Max = 8
-		desc.Once = !multi
-		desc.Streets = NumberedStreets(5, 0, 0, 0)
-		desc.Blinds = HoldemBlinds()
-		desc.Eval = EvalLowball
-		desc.HiDesc = DescLowball
-		desc.LoDesc = DescLowball
-		desc.HiComp = CompLowball
-		for i := 1; i < 4; i++ {
-			desc.Streets[1].PocketDraw = 5
-		}
-		desc.Apply(opts...)
-	}
-}
-
-// WithSoko is a type description option to set Soko definitions.
-func WithSoko(opts ...StreetOption) TypeOption {
-	return func(desc *TypeDesc) {
-		desc.Max = 8
-		desc.Streets = NumberedStreets(2, 3)
-		desc.Blinds = HoldemBlinds()
-		desc.Eval = EvalSoko
-		desc.HiDesc = DescSoko
-		desc.LoDesc = DescSoko
-		desc.HiComp = CompSoko
 		desc.Apply(opts...)
 	}
 }
@@ -701,6 +871,9 @@ func (desc StreetDesc) Desc() string {
 			v = append(v, fmt.Sprintf("d: %d", desc.BoardDiscard))
 		}
 		v = append(v, fmt.Sprintf("b: %d", desc.Board))
+	}
+	if 0 < desc.PocketDraw {
+		v = append(v, fmt.Sprintf("w: %d", desc.PocketDraw))
 	}
 	var s string
 	if len(v) != 0 {
@@ -755,7 +928,17 @@ func HoldemStreets(pocket, discard, flop, turn, river int) []StreetDesc {
 func StudStreets() []StreetDesc {
 	v := NumberedStreets(3, 1, 1, 1, 1)
 	for i := 0; i < 4; i++ {
-		v[0].PocketUp = 1
+		v[i].PocketUp = 1
+	}
+	return v
+}
+
+// StudFiveStreets creates Stud streets for the ante, third street, fourth
+// street, and river.
+func StudFiveStreets() []StreetDesc {
+	v := NumberedStreets(2, 1, 1, 1)
+	for i := 0; i < 4; i++ {
+		v[i].PocketUp = 1
 	}
 	return v
 }
@@ -796,51 +979,53 @@ type EvalType uint8
 
 // Eval types.
 const (
-	EvalCactus    EvalType = 0
-	EvalShort     EvalType = 't'
-	EvalManila    EvalType = 'm'
-	EvalOmaha     EvalType = 'o'
-	EvalOmahaFive EvalType = 'v'
-	EvalOmahaSix  EvalType = 'i'
-	EvalStud      EvalType = 's'
-	EvalRazz      EvalType = 'r'
-	EvalBadugi    EvalType = 'b'
-	EvalLowball   EvalType = '2'
-	EvalSoko      EvalType = 'k'
+	EvalCactus        EvalType = 0
+	EvalJacksOrBetter EvalType = 'j'
+	EvalShort         EvalType = 't'
+	EvalManila        EvalType = 'm'
+	EvalSpanish       EvalType = 'p'
+	EvalDallas        EvalType = 'a'
+	EvalHouston       EvalType = 'u'
+	EvalOmaha         EvalType = 'o'
+	EvalOmahaFive     EvalType = 'v'
+	EvalOmahaSix      EvalType = 'i'
+	EvalSoko          EvalType = 'k'
+	EvalLowball       EvalType = 'l'
+	EvalRazz          EvalType = 'r'
+	EvalBadugi        EvalType = 'b'
 )
 
 // New creates the eval type.
 func (typ EvalType) New(low bool) EvalFunc {
 	switch typ {
 	case EvalCactus:
-		return NewCactusEval(DefaultEval, Five)
+		return NewCactusEval(low)
+	case EvalJacksOrBetter:
+		return NewJacksOrBetterEval(low)
 	case EvalShort:
 		return NewShortEval()
 	case EvalManila:
 		return NewManilaEval()
-	case EvalOmaha, EvalOmahaFive, EvalOmahaSix, EvalStud:
-		loMax := Invalid
-		if low {
-			loMax = rankEightOrBetterMax
-		}
-		switch typ {
-		case EvalOmaha:
-			return NewOmahaEval(loMax)
-		case EvalOmahaFive:
-			return NewOmahaFiveEval(loMax)
-		case EvalOmahaSix:
-			return NewOmahaSixEval(loMax)
-		case EvalStud:
-			return NewStudEval(loMax)
-		}
+	case EvalSpanish:
+		return NewSpanishEval()
+	case EvalDallas:
+		return NewDallasEval(RankCactus, Five, low, nil)
+	case EvalHouston:
+		return NewHoustonEval(RankCactus, Five, nil)
+	case EvalOmaha:
+		return NewOmahaEval(low)
+	case EvalOmahaFive:
+		return NewOmahaFiveEval(low)
+	case EvalOmahaSix:
+		return NewOmahaSixEval(low)
+	case EvalSoko:
+		return NewSokoEval(low)
+	case EvalLowball:
+		return NewLowballEval()
 	case EvalRazz:
 		return NewRazzEval()
 	case EvalBadugi:
 		return NewBadugiEval()
-	case EvalLowball:
-		return NewLowballEval()
-	case EvalSoko:
-		return NewSokoEval()
 	}
 	return nil
 }
@@ -866,16 +1051,19 @@ func (typ EvalType) Byte() byte {
 	switch typ {
 	case EvalCactus:
 		return 'c'
-	case EvalShort,
+	case EvalJacksOrBetter,
+		EvalShort,
 		EvalManila,
+		EvalSpanish,
+		EvalDallas,
+		EvalHouston,
 		EvalOmaha,
 		EvalOmahaFive,
 		EvalOmahaSix,
-		EvalStud,
-		EvalRazz,
-		EvalBadugi,
+		EvalSoko,
 		EvalLowball,
-		EvalSoko:
+		EvalRazz,
+		EvalBadugi:
 		return byte(typ)
 	}
 	return ' '
@@ -886,108 +1074,32 @@ func (typ EvalType) Name() string {
 	switch typ {
 	case EvalCactus:
 		return "Cactus"
+	case EvalJacksOrBetter:
+		return "JacksOrBetter"
 	case EvalShort:
 		return "Short"
 	case EvalManila:
 		return "Manila"
+	case EvalSpanish:
+		return "Spanish"
+	case EvalDallas:
+		return "Dallas"
+	case EvalHouston:
+		return "Houston"
 	case EvalOmaha:
 		return "Omaha"
 	case EvalOmahaFive:
 		return "OmahaFive"
 	case EvalOmahaSix:
 		return "OmahaSix"
-	case EvalStud:
-		return "Stud"
+	case EvalSoko:
+		return "Soko"
+	case EvalLowball:
+		return "Lowball"
 	case EvalRazz:
 		return "Razz"
 	case EvalBadugi:
 		return "Badugi"
-	case EvalLowball:
-		return "Lowball"
-	case EvalSoko:
-		return "Soko"
-	}
-	return ""
-}
-
-// CompType is a compare type.
-type CompType uint8
-
-// Comp types.
-const (
-	CompHi      CompType = 0
-	CompLo      CompType = 'l'
-	CompShort   CompType = 's'
-	CompManila  CompType = 'm'
-	CompLowball CompType = '2'
-	CompSoko    CompType = 'k'
-)
-
-// Comp compares a, b.
-func (typ CompType) Comp(a, b *Eval, loMax EvalRank) int {
-	switch typ {
-	case CompHi:
-		return HiComp(a, b, loMax)
-	case CompLo:
-		return LoComp(a, b, loMax)
-	case CompShort:
-		return ShortComp(a, b, loMax)
-	case CompManila:
-		return ManilaComp(a, b, loMax)
-	case CompLowball:
-		return LowballComp(a, b, loMax)
-	case CompSoko:
-		return SokoComp(a, b, loMax)
-	}
-	return 0
-}
-
-// Format satisfies the fmt.Formatter interface.
-func (typ CompType) Format(f fmt.State, verb rune) {
-	var buf []byte
-	switch verb {
-	case 'd':
-		buf = []byte(strconv.Itoa(int(typ)))
-	case 'c':
-		buf = []byte{typ.Byte()}
-	case 's', 'v':
-		buf = []byte(typ.Name())
-	default:
-		buf = []byte(fmt.Sprintf("%%!%c(ERROR=unknown verb, comp: %d)", verb, int(typ)))
-	}
-	_, _ = f.Write(buf)
-}
-
-// Byte returns the comp type as a byte.
-func (typ CompType) Byte() byte {
-	switch typ {
-	case CompHi:
-		return 'h'
-	case CompLo,
-		CompShort,
-		CompManila,
-		CompLowball,
-		CompSoko:
-		return byte(typ)
-	}
-	return ' '
-}
-
-// Name returns the comp type's name.
-func (typ CompType) Name() string {
-	switch typ {
-	case CompHi:
-		return "Hi"
-	case CompLo:
-		return "Lo"
-	case CompShort:
-		return "Short"
-	case CompManila:
-		return "Manila"
-	case CompLowball:
-		return "Lowball"
-	case CompSoko:
-		return "Soko"
 	}
 	return ""
 }
@@ -997,13 +1109,12 @@ type DescType uint8
 
 // Desc types.
 const (
-	DescCactus  DescType = 0
-	DescLow     DescType = 'l'
-	DescShort   DescType = 's'
-	DescManila  DescType = 'm'
-	DescRazz    DescType = 'r'
-	DescLowball DescType = '2'
-	DescSoko    DescType = 'k'
+	DescCactus    DescType = 0
+	DescFlushOver DescType = 'f'
+	DescSoko      DescType = 'k'
+	DescLow       DescType = 'l'
+	DescLowball   DescType = 'b'
+	DescRazz      DescType = 'r'
 )
 
 // Format satisfies the fmt.Formatter interface.
@@ -1027,12 +1138,11 @@ func (typ DescType) Byte() byte {
 	switch typ {
 	case DescCactus:
 		return 'c'
-	case DescLow,
-		DescShort,
-		DescManila,
-		DescRazz,
+	case DescFlushOver,
+		DescSoko,
+		DescLow,
 		DescLowball,
-		DescSoko:
+		DescRazz:
 		return byte(typ)
 	}
 	return ' '
@@ -1043,24 +1153,22 @@ func (typ DescType) Name() string {
 	switch typ {
 	case DescCactus:
 		return "Cactus"
-	case DescLow:
-		return "Low"
-	case DescShort:
-		return "Short"
-	case DescManila:
-		return "Manila"
-	case DescRazz:
-		return "Razz"
-	case DescLowball:
-		return "Lowball"
+	case DescFlushOver:
+		return "FlushOver"
 	case DescSoko:
 		return "Soko"
+	case DescLow:
+		return "Low"
+	case DescLowball:
+		return "Lowball"
+	case DescRazz:
+		return "Razz"
 	}
 	return ""
 }
 
 // Desc writes a description for the verb to f.
-func (typ DescType) Desc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
+func (typ DescType) Desc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	switch verb {
 	case 'd':
 		fmt.Fprintf(f, "%d", int(rank))
@@ -1069,19 +1177,17 @@ func (typ DescType) Desc(f fmt.State, verb rune, rank EvalRank, best, unused []C
 	case 'v', 's':
 		switch typ {
 		case DescCactus:
-			CactusDesc(f, verb, rank, best, unused, low)
+			CactusDesc(f, verb, rank, best, unused)
 		case DescLow:
-			LowDesc(f, verb, rank, best, unused, low)
-		case DescShort:
-			ShortDesc(f, verb, rank, best, unused, low)
-		case DescManila:
-			ManilaDesc(f, verb, rank, best, unused, low)
+			LowDesc(f, verb, rank, best, unused)
+		case DescFlushOver:
+			FlushOverDesc(f, verb, rank, best, unused)
 		case DescRazz:
-			RazzDesc(f, verb, rank, best, unused, low)
+			RazzDesc(f, verb, rank, best, unused)
 		case DescLowball:
-			LowballDesc(f, verb, rank, best, unused, low)
+			LowballDesc(f, verb, rank, best, unused)
 		case DescSoko:
-			SokoDesc(f, verb, rank, best, unused, low)
+			SokoDesc(f, verb, rank, best, unused)
 		}
 	default:
 		fmt.Fprintf(f, "%%!%c(ERROR=unknown verb, desc: %d)", verb, int(typ))
@@ -1100,83 +1206,13 @@ func WithStreetPocket(street, pocket int) StreetOption {
 	}
 }
 
-// HiComp is a hi eval compare func.
-func HiComp(a, b *Eval, _ EvalRank) int {
-	switch {
-	case a.HiRank < b.HiRank:
-		return -1
-	case b.HiRank < a.HiRank:
-		return +1
-	}
-	return 0
-}
-
-// LoComp is a lo eval compare func.
-func LoComp(a, b *Eval, loMax EvalRank) int {
-	switch low := loMax != Invalid; {
-	case low && a.LoRank == Invalid && b.LoRank != Invalid:
-		return +1
-	case low && b.LoRank == Invalid && a.LoRank != Invalid:
-		return -1
-	case a.LoRank < b.LoRank:
-		return -1
-	case b.LoRank < a.LoRank:
-		return +1
-	}
-	return 0
-}
-
-// ShortComp is the Short compare func.
-func ShortComp(a, b *Eval, _ EvalRank) int {
-	switch af, bf := a.HiRank.Fixed(), b.HiRank.Fixed(); {
-	case af == Flush && bf == FullHouse:
-		return -1
-	case af == FullHouse && bf == Flush:
-		return +1
-	case a.HiRank < b.HiRank:
-		return -1
-	case b.HiRank < a.HiRank:
-		return +1
-	}
-	return 0
-}
-
-// ManilaComp is the Manila compare func.
-func ManilaComp(a, b *Eval, _ EvalRank) int {
-	switch af, bf := a.HiRank.Fixed(), b.HiRank.Fixed(); {
-	case af == Flush && bf == FullHouse:
-		return -1
-	case af == FullHouse && bf == Flush:
-		return +1
-	case a.HiRank < b.HiRank:
-		return -1
-	case b.HiRank < a.HiRank:
-		return +1
-	}
-	return 0
-}
-
-// LowballComp is the Lowball compare func.
-func LowballComp(a, b *Eval, _ EvalRank) int {
-	switch af, bf := rankMax-a.HiRank, rankMax-b.HiRank; {
-	case af == bf:
-	}
-	// log.Printf("a: %v // b: %v", a.HiRank, b.HiRank)
-	return 0
-}
-
-// SokoComp is the Soko compare func.
-func SokoComp(a, b *Eval, _ EvalRank) int {
-	return 0
-}
-
 // CactusDesc writes a Cactus description to f for the rank, best, and unused
 // cards.
 //
 // Examples:
 //
 //	Straight Flush, Ace-high, Royal
-//	Straight Flush, King-high
+//	Straight Flush, King-high, Platinum Oxide
 //	Straight Flush, Five-high, Steel Wheel
 //	Four of a Kind, Nines, kicker Jack
 //	Full House, Sixes full of Fours
@@ -1185,29 +1221,11 @@ func SokoComp(a, b *Eval, _ EvalRank) int {
 //	Three of a Kind, Fours, kickers Ace, King
 //	Two Pair, Nines over Sixes, kicker Jack
 //	Pair, Aces, kickers King, Queen, Nine
-//	Nothing, Seven-high, kickers Six, Five, Three, Two
-func CactusDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
-	// add additional straight flush names (at some point)
-	// A: Royal
-	// K: Platinum Oxide
-	// Q: Silver Tongue
-	// J: Bronze Fist
-	// T: Golden Ratio
-	// 9: Iron Maiden
-	// 8: Tin Cup
-	// 7: Brass Axe
-	// 6: Aluminum Window
-	// 5: Steel Wheel
+//	Seven-high, kickers Six, Five, Three, Two
+func CactusDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	switch rank.Fixed() {
 	case StraightFlush:
-		switch best[0].Rank() {
-		case Ace:
-			fmt.Fprintf(f, "Straight Flush, %N-high, Royal", best[0])
-		case Five:
-			fmt.Fprintf(f, "Straight Flush, %N-high, Steel Wheel", best[0])
-		default:
-			fmt.Fprintf(f, "Straight Flush, %N-high", best[0])
-		}
+		fmt.Fprintf(f, "Straight Flush, %N-high, %F", best[0], best[0])
 	case FourOfAKind:
 		fmt.Fprintf(f, "Four of a Kind, %P, kicker %N", best[0], best[4])
 	case FullHouse:
@@ -1222,282 +1240,74 @@ func CactusDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low 
 		fmt.Fprintf(f, "Two Pair, %P over %P, kicker %N", best[0], best[2], best[4])
 	case Pair:
 		fmt.Fprintf(f, "Pair, %P, kickers %N, %N, %N", best[0], best[2], best[3], best[4])
+	case Nothing:
+		fmt.Fprintf(f, "%N-high, kickers %N, %N, %N, %N", best[0], best[1], best[2], best[3], best[4])
 	default:
-		fmt.Fprintf(f, "Nothing, %N-high, kickers %N, %N, %N, %N", best[0], best[1], best[2], best[3], best[4])
+		fmt.Fprint(f, "None")
+	}
+}
+
+// FlushOverDesc writes a FlushOver description to f for the rank, best, and
+// unused cards.
+func FlushOverDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+	CactusDesc(f, verb, rank.FromFlushOver(), best, unused)
+}
+
+// SokoDesc writes a Soko description to f for the rank, best, and unused cards.
+func SokoDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+	switch {
+	case rank <= TwoPair:
+		CactusDesc(f, verb, rank, best, unused)
+	case rank <= sokoFlush:
+		fmt.Fprintf(f, "Four Flush, %N-high, kickers %N, %N, %N, %N", best[0], best[1], best[2], best[3], best[4])
+	case rank <= sokoStraight:
+		fmt.Fprintf(f, "Four Straight, %N-high, kicker %N", best[0], best[4])
+	default:
+		CactusDesc(f, verb, rank-sokoStraight+TwoPair, best, unused)
 	}
 }
 
 // LowDesc writes a Low description to f for the rank, best, and unused cards.
-func LowDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
+func LowDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	switch {
 	case rank == 0, rank == Invalid:
-		fmt.Fprint(f, "None")
+		_, _ = f.Write([]byte("None"))
 	default:
-		v := make([]string, len(best))
 		for i := 0; i < len(best); i++ {
-			v[i] = best[i].Rank().Name()
+			if i != 0 {
+				_, _ = f.Write([]byte(", "))
+			}
+			best[i].Format(f, 'N')
 		}
-		fmt.Fprint(f, strings.Join(v, ", ")+"-low")
-	}
-}
-
-// ShortDesc writes a Short description to f for the rank, best, and unused
-// cards.
-func ShortDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
-	switch {
-	case rank.Fixed() == StraightFlush && best[0].Rank() == Nine:
-		fmt.Fprintf(f, "Straight Flush, %N-high, Iron Maiden", best[0])
-	default:
-		CactusDesc(f, verb, rank, best, unused, low)
-	}
-}
-
-// ManilaDesc writes a Manila description to f for the rank, best, and unused
-// cards.
-func ManilaDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
-	switch {
-	case rank.Fixed() == StraightFlush && best[0].Rank() == Ten:
-		fmt.Fprintf(f, "Straight Flush, %N-high, Golden Ratio", best[0])
-	default:
-		CactusDesc(f, verb, rank, best, unused, low)
-	}
-}
-
-// RazzDesc writes a Razz description to f for the rank, best, and unused
-// cards.
-func RazzDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
-	switch {
-	case rank < rankAceFiveMax:
-		LowDesc(f, verb, rank, best, unused, true)
-	default:
-		CactusDesc(f, verb, Invalid-rank, best, unused, false)
+		_, _ = f.Write([]byte("-low"))
 	}
 }
 
 // LowballDesc writes a Lowball description to f for the rank, best, and unused
 // cards.
-func LowballDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
-	fmt.Fprintf(f, "(lowball desc incomplete: %d)", rank)
-}
-
-// SokoDesc writes a Soko description to f for the rank, best, and unused cards.
-func SokoDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, low bool) {
-	fmt.Fprintf(f, "(soko desc incomplete: %d)", rank)
-}
-
-// bestHoldem sets the best holdem.
-func bestHoldem(ev *Eval, v []Card, straightHigh Rank) {
-	// order high to low
-	sort.Slice(v, func(i, j int) bool {
-		m, n := v[i].Rank(), v[j].Rank()
-		if m == n {
-			return v[j].Suit() < v[i].Suit()
-		}
-		return n < m
-	})
-	// set best, unused
-	switch ev.HiRank.Fixed() {
-	case StraightFlush:
-		v = bestStraightFlush(v, straightHigh, true)
-	case Flush:
-		v = bestFlush(v)
-	case Straight:
-		v = bestStraight(v, straightHigh, true)
-	case FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, Pair:
-		v = bestSet(v)
-	case Nothing:
+func LowballDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+	switch r := rank.FromLowball(); {
+	case rank <= StraightFlush:
+		LowDesc(f, verb, r, best, unused)
+		fmt.Fprintf(f, ", No. %d", rank)
+	case Pair < r && r <= Nothing || r == Straight:
+		LowDesc(f, verb, r, best, unused)
+	case r == StraightFlush:
+		CactusDesc(f, verb, Flush, best, unused)
 	default:
-		// bad rank
-		ev.HiRank = Invalid
-		return
+		CactusDesc(f, verb, r, best, unused)
 	}
-	ev.HiBest, ev.HiUnused = v[:5], v[5:]
 }
 
-// bestOmaha sets the best omaha on the eval.
-func bestOmaha(ev *Eval, loMax EvalRank) {
-	// order best
-	sort.Slice(ev.HiBest, func(i, j int) bool {
-		m, n := ev.HiBest[i].Rank(), ev.HiBest[j].Rank()
-		if m == n {
-			return ev.HiBest[j].Suit() < ev.HiBest[i].Suit()
-		}
-		return n < m
-	})
-	switch ev.HiRank.Fixed() {
-	case StraightFlush:
-		ev.HiBest = bestStraightFlush(ev.HiBest, Five, true)
-	case Flush:
-		ev.HiBest = bestFlush(ev.HiBest)
-	case Straight:
-		ev.HiBest = bestStraight(ev.HiBest, Five, true)
-	case FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, Pair:
-		ev.HiBest = bestSet(ev.HiBest)
-	case Nothing:
+// RazzDesc writes a Razz description to f for the rank, best, and unused
+// cards.
+func RazzDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+	switch {
+	case rank < aceFiveMax:
+		LowDesc(f, verb, rank, best, unused)
 	default:
-		// bad rank
-		ev.HiRank = Invalid
-		return
+		CactusDesc(f, verb, Invalid-rank, best, unused)
 	}
-	if loMax != Invalid && ev.LoRank < loMax {
-		sort.Slice(ev.LoBest, func(i, j int) bool {
-			return ev.LoBest[j].AceIndex() < ev.LoBest[i].AceIndex()
-		})
-	} else {
-		ev.LoBest, ev.LoUnused = nil, nil
-	}
-}
-
-// bestLowball returns the best lowball.
-func bestLowball(ev *Eval, v []Card) {
-	// order high to low
-	sort.Slice(v, func(i, j int) bool {
-		m, n := v[i].Rank(), v[j].Rank()
-		if m == n {
-			return v[j].Suit() < v[i].Suit()
-		}
-		return n < m
-	})
-	// set best, unused
-	switch ev.HiRank.Fixed() {
-	case StraightFlush:
-		ev.HiBest = bestStraightFlush(v, Seven, false)
-	case Flush:
-		ev.HiBest = bestFlush(v)
-	case Straight:
-		ev.HiBest = bestStraight(v, Seven, false)
-	case FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, Pair:
-		ev.HiBest = bestSet(v)
-	case Nothing:
-		ev.HiBest = v
-	default:
-		ev.HiRank = Invalid
-		return
-	}
-	bestHoldem(ev, v, Six)
-}
-
-// bestStraightFlush returns the best-five straight flush in v.
-func bestStraightFlush(v []Card, high Rank, wrap bool) []Card {
-	s := orderSuits(v)
-	var b, d []Card
-	for _, c := range v {
-		switch c.Suit() {
-		case s[0]:
-			b = append(b, c)
-		default:
-			d = append(d, c)
-		}
-	}
-	return append(bestStraight(b, high, wrap), d...)
-}
-
-// bestFlush returns the best-five flush in v.
-func bestFlush(v []Card) []Card {
-	suits := orderSuits(v)
-	var b, d []Card
-	for _, c := range v {
-		switch c.Suit() {
-		case suits[0]:
-			b = append(b, c)
-		default:
-			d = append(d, c)
-		}
-	}
-	return append(b, d...)
-}
-
-// bestStraight returns the best-five straight in v.
-func bestStraight(v []Card, high Rank, wrap bool) []Card {
-	m := make(map[Rank][]Card)
-	for _, c := range v {
-		r := c.Rank()
-		m[r] = append(m[r], c)
-	}
-	var b []Card
-	for i := Ace; high <= i; i-- {
-		// last card index
-		j := i - Six
-		// check ace
-		if i == high && wrap {
-			j = Ace
-		}
-		if m[i] != nil && m[i-1] != nil && m[i-2] != nil && m[i-3] != nil && m[j] != nil {
-			// collect b, removing from m
-			b = []Card{m[i][0], m[i-1][0], m[i-2][0], m[i-3][0], m[j][0]}
-			m[i] = m[i][1:]
-			m[i-1] = m[i-1][1:]
-			m[i-2] = m[i-2][1:]
-			m[i-3] = m[i-3][1:]
-			m[j] = m[j][1:]
-			break
-		}
-	}
-	// collect remaining
-	var d []Card
-	for i := int(Ace); 0 <= i; i-- {
-		if _, ok := m[Rank(i)]; ok && m[Rank(i)] != nil {
-			d = append(d, m[Rank(i)]...)
-		}
-	}
-	return append(b, d...)
-}
-
-// bestSet returns the best matching sets in v.
-func bestSet(v []Card) []Card {
-	ranks := orderRanks(v)
-	var a, b, d []Card
-	for _, c := range v {
-		switch c.Rank() {
-		case ranks[0]:
-			a = append(a, c)
-		case ranks[1]:
-			b = append(b, c)
-		default:
-			d = append(d, c)
-		}
-	}
-	return append(a, append(b, d...)...)
-}
-
-// orderSuits orders v's card suits by count.
-func orderSuits(v []Card) []Suit {
-	m := make(map[Suit]int)
-	var suits []Suit
-	for _, c := range v {
-		s := c.Suit()
-		if _, ok := m[s]; !ok {
-			suits = append(suits, s)
-		}
-		m[s]++
-	}
-	sort.Slice(suits, func(i, j int) bool {
-		if m[suits[i]] == m[suits[j]] {
-			return suits[j] < suits[i]
-		}
-		return m[suits[j]] < m[suits[i]]
-	})
-	return suits
-}
-
-// orderRanks orders v's card ranks by count.
-func orderRanks(v []Card) []Rank {
-	m := make(map[Rank]int)
-	var ranks []Rank
-	for _, c := range v {
-		r := c.Rank()
-		if _, ok := m[r]; !ok {
-			ranks = append(ranks, r)
-		}
-		m[r]++
-	}
-	sort.Slice(ranks, func(i, j int) bool {
-		if m[ranks[i]] == m[ranks[j]] {
-			return ranks[j] < ranks[i]
-		}
-		return m[ranks[j]] < m[ranks[i]]
-	})
-	return ranks
 }
 
 // ordinal returns the ordinal string for n (1st, 2nd, ...).

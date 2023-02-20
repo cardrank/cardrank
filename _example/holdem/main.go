@@ -16,12 +16,12 @@ func main() {
 	// note: use a better pseudo-random number generator
 	r := rand.New(rand.NewSource(seed))
 	pockets, board := cardrank.Holdem.Deal(r, 3, players)
-	evs := cardrank.Holdem.Eval(pockets, board)
+	evs := cardrank.Holdem.EvalPockets(pockets, board)
 	fmt.Printf("------ Holdem %d ------\n", seed)
 	fmt.Printf("Board: %b\n", board)
 	for i := 0; i < players; i++ {
 		desc := evs[i].Desc(false)
-		fmt.Printf("  %d: %b %b %s\n", i+1, desc.Best, desc.Unused, desc)
+		fmt.Printf("  %d: %b %b %b %s\n", i+1, pockets[i], desc.Best, desc.Unused, desc)
 	}
 	order, pivot := cardrank.Order(evs, false)
 	desc := evs[order[0]].Desc(false)

@@ -16,13 +16,13 @@ func main() {
 	// note: use a better pseudo-random number generator
 	r := rand.New(rand.NewSource(seed))
 	pockets, board := cardrank.OmahaHiLo.Deal(r, 3, players)
-	evs := cardrank.OmahaHiLo.Eval(pockets, board)
+	evs := cardrank.OmahaHiLo.EvalPockets(pockets, board)
 	fmt.Printf("------ OmahaHiLo %d ------\n", seed)
 	fmt.Printf("Board: %b\n", board)
 	for i := 0; i < players; i++ {
 		hi, lo := evs[i].Desc(false), evs[i].Desc(true)
-		fmt.Printf("  %d: %b %b %s\n", i+1, hi.Best, hi.Unused, hi)
-		fmt.Printf("     %b %b %s\n", lo.Best, lo.Unused, lo)
+		fmt.Printf("  %d: %b %b %b %s\n", i+1, pockets[i], hi.Best, hi.Unused, hi)
+		fmt.Printf("                   %b %b %s\n", lo.Best, lo.Unused, lo)
 	}
 	hiOrder, hiPivot := cardrank.Order(evs, false)
 	loOrder, loPivot := cardrank.Order(evs, true)

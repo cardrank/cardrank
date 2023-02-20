@@ -23,6 +23,8 @@ const (
 	DeckShort = DeckType(Six)
 	// DeckManila is a deck of Manila (7+) cards.
 	DeckManila = DeckType(Seven)
+	// DeckSpanish is a deck of Spanish (8+) cards.
+	DeckSpanish = DeckType(Eight)
 	// DeckRoyal is a deck of Royal (10+) cards.
 	DeckRoyal = DeckType(Ten)
 )
@@ -36,6 +38,8 @@ func (typ DeckType) Name() string {
 		return "Short"
 	case DeckManila:
 		return "Manila"
+	case DeckSpanish:
+		return "Spanish"
 	case DeckRoyal:
 		return "Royal"
 	}
@@ -72,6 +76,8 @@ func (typ DeckType) Format(f fmt.State, verb rune) {
 		buf = []byte(typ.Desc(verb != 's'))
 	case 'v':
 		buf = []byte("DeckType(" + Rank(typ).Name() + ")")
+	default:
+		buf = []byte(fmt.Sprintf("%%!%c(ERROR=unknown verb, deck: %d)", verb, int(typ)))
 	}
 	_, _ = f.Write(buf)
 }
@@ -79,7 +85,7 @@ func (typ DeckType) Format(f fmt.State, verb rune) {
 // Unshuffled returns a set of unshuffled cards for the deck type.
 func (typ DeckType) Unshuffled() []Card {
 	switch typ {
-	case DeckFrench, DeckShort, DeckManila, DeckRoyal:
+	case DeckFrench, DeckShort, DeckManila, DeckSpanish, DeckRoyal:
 		v := make([]Card, 4*(Ace-Rank(typ)+1))
 		var i int
 		for _, s := range []Suit{Spade, Heart, Diamond, Club} {
@@ -95,16 +101,18 @@ func (typ DeckType) Unshuffled() []Card {
 
 // deck cards.
 var (
-	deckFrench []Card
-	deckShort  []Card
-	deckManila []Card
-	deckRoyal  []Card
+	deckFrench  []Card
+	deckShort   []Card
+	deckManila  []Card
+	deckSpanish []Card
+	deckRoyal   []Card
 )
 
 func init() {
 	deckFrench = DeckFrench.Unshuffled()
 	deckShort = DeckShort.Unshuffled()
 	deckManila = DeckManila.Unshuffled()
+	deckSpanish = DeckSpanish.Unshuffled()
 	deckRoyal = DeckRoyal.Unshuffled()
 }
 
@@ -119,6 +127,8 @@ func (typ DeckType) Shoe(count int) *Deck {
 		v = deckShort
 	case DeckManila:
 		v = deckManila
+	case DeckSpanish:
+		v = deckSpanish
 	case DeckRoyal:
 		v = deckRoyal
 	default:
@@ -155,7 +165,7 @@ func DeckOf(cards ...Card) *Deck {
 	}
 }
 
-// NewDeck creates a deck of 52 unshuffled cards.
+// NewDeck creates a French deck of 52 unshuffled cards.
 func NewDeck() *Deck {
 	return DeckFrench.New()
 }
@@ -274,6 +284,8 @@ func (d *Dealer) Format(f fmt.State, verb rune) {
 		buf = []byte(d.Streets[d.i].Name)
 	case 's':
 		buf = []byte(d.Streets[d.i].Desc())
+	default:
+		buf = []byte(fmt.Sprintf("%%!%c(ERROR=unknown verb, dealer)", verb))
 	}
 	_, _ = f.Write(buf)
 }
@@ -308,7 +320,7 @@ func (d *Dealer) HasBoard() bool {
 
 // HasActive returns true when there is more than 1 active positions.
 func (d *Dealer) HasActive() bool {
-	return 0 <= d.i && 1 < len(d.Active)
+	return 0 <= d.i && (d.Type.Max() == 1 || 1 < len(d.Active))
 }
 
 // Pocket returns the number of pocket cards to be dealt on the street.
@@ -415,7 +427,8 @@ func (d *Dealer) ChangeRuns(runs int) bool {
 
 // Next iterates the run and the street, discarding cards prior to dealing
 // additional pocket and board cards for each run. Returns true when there are
-// additional runs or streets, and having at least 2 active positions.
+// additional runs or streets, and having at least 2 active positions for a
+// [Type] having more than 1 player.
 func (d *Dealer) Next() bool {
 	switch {
 	case d.i == -1 && d.r == -1:
@@ -495,7 +508,7 @@ func (d *Dealer) Deal(run int) {
 func (d *Dealer) eval() {
 	switch n := len(d.Active); {
 	case d.Results != nil:
-	case n == 1 && d.runs == 1:
+	case n == 1 && d.runs == 1 && d.Max != 1:
 		// only one active position
 		var i int
 		for ; i < d.Count && !d.Active[i]; i++ {
@@ -509,7 +522,7 @@ func (d *Dealer) eval() {
 			res.LoOrder, res.LoPivot = res.HiOrder, res.HiPivot
 		}
 		d.Results = []*Result{res}
-	case n > 1:
+	case n > 1 || d.Max == 1:
 		d.Results = make([]*Result, d.runs)
 		for run := 0; run < d.runs; run++ {
 			d.Results[run] = d.Eval(run)
@@ -548,9 +561,12 @@ func (run *Run) Eval(typ Type, active map[int]bool, double bool) []*Eval {
 	evs := make([]*Eval, n)
 	for i := 0; i < n; i++ {
 		if active[i] {
-			evs[i] = typ.New(run.Pockets[i], run.Hi)
+			evs[i] = typ.New()
+			evs[i].Eval(run.Pockets[i], run.Hi)
 			if double {
-				evs[i].Double(run.Pockets[i], run.Lo)
+				ev := EvalOf(typ)
+				ev.Eval(run.Pockets[i], run.Lo)
+				evs[i].LoRank, evs[i].LoBest, evs[i].LoUnused = ev.HiRank, ev.HiBest, ev.HiUnused
 			}
 		}
 	}
@@ -626,6 +642,28 @@ func NewWin(evs []*Eval, order []int, pivot int, low, scoop bool) *Win {
 	}
 }
 
+// Desc returns the win descriptions.
+func (win *Win) Desc() []*Desc {
+	var v []*Desc
+	for i := 0; i < win.Pivot; i++ {
+		if d := win.Evals[win.Order[i]].Desc(win.Low); d != nil && d.Rank != 0 && d.Rank != Invalid {
+			v = append(v, d)
+		}
+	}
+	return v
+}
+
+// Invalid returns true when there are no valid winners.
+func (win *Win) Invalid() bool {
+	switch {
+	case win == nil, win.Pivot == 0,
+		len(win.Evals) == 0, len(win.Order) == 0:
+		return false
+	}
+	d := win.Evals[win.Order[0]].Desc(win.Low)
+	return d == nil || d.Rank == 0 || d.Rank == Invalid
+}
+
 // Format satisfies the fmt.Formatter interface.
 func (win *Win) Format(f fmt.State, verb rune) {
 	switch verb {
@@ -638,12 +676,22 @@ func (win *Win) Format(f fmt.State, verb rune) {
 	case 's':
 		win.Evals[win.Order[0]].Desc(win.Low).Format(f, 's')
 	case 'S':
+		if !win.Invalid() {
+			win.Format(f, 'd')
+			fmt.Fprint(f, " with ")
+			win.Format(f, 's')
+		} else {
+			fmt.Fprint(f, "None")
+		}
+	case 'v':
 		var v []string
 		for i := 0; i < win.Pivot; i++ {
 			desc := win.Evals[win.Order[i]].Desc(win.Low)
 			v = append(v, fmt.Sprintf("%v", desc.Best))
 		}
 		fmt.Fprint(f, strings.Join(v, ", "))
+	default:
+		fmt.Fprintf(f, "%%!%c(ERROR=unknown verb, win)", verb)
 	}
 }
 

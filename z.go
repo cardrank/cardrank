@@ -3,5 +3,9 @@
 package cardrank
 
 func init() {
-	_ = Init()
+	Init()
+	if err := RegisterDefaultTypes(); err != nil {
+		panic(err)
+	}
+	InitSoko()
 }

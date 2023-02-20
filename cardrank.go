@@ -3,18 +3,19 @@
 // hand ranks.
 package cardrank
 
-import "unicode"
+import (
+	"sort"
+	"unicode"
+)
 
 var (
-	// DefaultEval is the default eval rank func.
-	DefaultEval CactusFunc
-	// DefaultCactus is the default Cactus Kev implementation.
-	DefaultCactus RankFunc
+	// RankCactus is the default Cactus Kev func.
+	RankCactus RankFunc
 
 	// Package rank funcs (set in z.go).
 	cactus     RankFunc
 	cactusFast RankFunc
-	twoPlusTwo CactusFunc
+	twoPlusTwo func([]Card) EvalRank
 
 	// descs are the registered type descriptions.
 	descs = make(map[Type]TypeDesc)
@@ -24,23 +25,28 @@ var (
 )
 
 // Init inits the package level default variables. Must be manually called
-// prior to using this package when built with the `noinit` build tag.
-func Init() error {
-	switch {
-	case twoPlusTwo != nil && cactusFast != nil:
-		DefaultEval = NewHybrid(cactusFast, twoPlusTwo)
-	case cactusFast != nil:
-		DefaultEval = NewRankFunc(cactusFast)
-	case cactus != nil:
-		DefaultEval = NewRankFunc(cactus)
+// prior to using this package when built with the [noinit][#noinit] build tag.
+func Init() {
+	if RankCactus == nil {
+		switch {
+		case cactusFast != nil:
+			RankCactus = cactusFast
+		case cactus != nil:
+			RankCactus = cactus
+		}
 	}
-	switch {
-	case cactusFast != nil:
-		DefaultCactus = cactusFast
-	case cactus != nil:
-		DefaultCactus = cactus
+}
+
+// RegisterDefaultTypes registers default types.
+//
+// See [DefaultTypes].
+func RegisterDefaultTypes() error {
+	for _, desc := range DefaultTypes() {
+		if err := RegisterType(desc); err != nil {
+			return err
+		}
 	}
-	return RegisterDefaultTypes()
+	return nil
 }
 
 // RegisterType registers a type.
@@ -61,14 +67,20 @@ func RegisterType(desc TypeDesc) error {
 	return nil
 }
 
-// RegisterDefaultTypes registers default types.
-func RegisterDefaultTypes() error {
-	for _, desc := range DefaultTypes() {
-		if err := RegisterType(desc); err != nil {
-			return err
-		}
+// Types returns registered types.
+func Types() []Type {
+	var v []TypeDesc
+	for _, desc := range descs {
+		v = append(v, desc)
 	}
-	return nil
+	sort.Slice(v, func(i, j int) bool {
+		return v[i].Num < v[j].Num
+	})
+	types := make([]Type, len(v))
+	for i := 0; i < len(types); i++ {
+		types[i] = v[i].Type
+	}
+	return types
 }
 
 // Error is a error.
@@ -104,6 +116,11 @@ func min[T ordered](a, b T) T {
 	return b
 }
 
+// insert inserts a at i in v.
+func insert[T any](v []T, i int, a ...T) []T {
+	return append(v[:i], append(a, v[i:]...)...)
+}
+
 // equals returns true when a equals b.
 func equals[T comparable](a, b []T) bool {
 	n := len(a)
@@ -126,88 +143,6 @@ func contains[T comparable](v []T, a T) bool {
 		}
 	}
 	return false
-}
-
-// t4c2 is used for taking 4, choosing 2.
-var t4c2 = [6][4]uint8{
-	{0, 1, 2, 3},
-	{0, 2, 1, 3},
-	{0, 3, 1, 2},
-	{1, 2, 0, 3},
-	{1, 3, 0, 2},
-	{2, 3, 0, 1},
-}
-
-// t5c2 is used for taking 5, choosing 2.
-var t5c2 = [10][5]uint8{
-	{0, 1, 2, 3, 4},
-	{0, 2, 1, 3, 4},
-	{0, 3, 1, 2, 4},
-	{0, 4, 1, 2, 3},
-	{1, 2, 0, 3, 4},
-	{1, 3, 0, 2, 4},
-	{1, 4, 0, 2, 3},
-	{2, 3, 0, 1, 4},
-	{2, 4, 0, 1, 3},
-	{3, 4, 0, 1, 2},
-}
-
-// t5c3 is used for taking 5, choosing 3.
-var t5c3 = [10][5]uint8{
-	{0, 1, 2, 3, 4},
-	{0, 1, 3, 2, 4},
-	{0, 1, 4, 2, 3},
-	{0, 2, 3, 1, 4},
-	{0, 2, 4, 1, 3},
-	{0, 3, 4, 1, 2},
-	{1, 2, 3, 0, 4},
-	{1, 2, 4, 0, 3},
-	{1, 3, 4, 0, 2},
-	{2, 3, 4, 0, 1},
-}
-
-// t6c2 is used for taking 6, choosing 2.
-var t6c2 = [15][6]uint8{
-	{0, 1, 2, 3, 4, 5},
-	{0, 2, 1, 3, 4, 5},
-	{0, 3, 1, 2, 4, 5},
-	{0, 4, 1, 2, 3, 5},
-	{0, 5, 1, 2, 3, 4},
-	{1, 2, 0, 3, 4, 5},
-	{1, 3, 0, 2, 4, 5},
-	{1, 4, 0, 2, 3, 5},
-	{1, 5, 0, 2, 3, 4},
-	{2, 3, 0, 1, 4, 5},
-	{2, 4, 0, 1, 3, 5},
-	{2, 5, 0, 1, 3, 4},
-	{3, 4, 0, 1, 2, 5},
-	{3, 5, 0, 1, 2, 4},
-	{4, 5, 0, 1, 2, 3},
-}
-
-// t7c5 is used for taking 7, choosing 5.
-var t7c5 = [21][7]uint8{
-	{0, 1, 2, 3, 4, 5, 6},
-	{0, 1, 2, 3, 5, 4, 6},
-	{0, 1, 2, 3, 6, 4, 5},
-	{0, 1, 2, 4, 5, 3, 6},
-	{0, 1, 2, 4, 6, 3, 5},
-	{0, 1, 2, 5, 6, 3, 4},
-	{0, 1, 3, 4, 5, 2, 6},
-	{0, 1, 3, 4, 6, 2, 5},
-	{0, 1, 3, 5, 6, 2, 4},
-	{0, 1, 4, 5, 6, 2, 3},
-	{0, 2, 3, 4, 5, 1, 6},
-	{0, 2, 3, 4, 6, 1, 5},
-	{0, 2, 3, 5, 6, 1, 4},
-	{0, 2, 4, 5, 6, 1, 3},
-	{0, 3, 4, 5, 6, 1, 2},
-	{1, 2, 3, 4, 5, 0, 6},
-	{1, 2, 3, 4, 6, 0, 5},
-	{1, 2, 3, 5, 6, 0, 4},
-	{1, 2, 4, 5, 6, 0, 3},
-	{1, 3, 4, 5, 6, 0, 2},
-	{2, 3, 4, 5, 6, 0, 1},
 }
 
 // primes are the first 13 prime numbers (one per card rank).

@@ -10,7 +10,7 @@ import (
 
 func init() {
 	if twoplustwo01Dat != nil {
-		twoPlusTwo = NewTwoPlusTwo()
+		twoPlusTwo = NewTwoPlusTwoEval()
 	}
 }
 
@@ -27,7 +27,7 @@ func init() {
 //
 // When recombined, the lookup table has the same hash as the original table
 // generated using the C code.
-func NewTwoPlusTwo() CactusFunc {
+func NewTwoPlusTwoEval() func([]Card) EvalRank {
 	const total, chunk, last = 32487834, 2621440, 1030554
 	tbl, pos := make([]uint32, total), 0
 	for i, buf := range [][]byte{
