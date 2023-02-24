@@ -76,6 +76,7 @@ func bench7(b *testing.B, f EvalFunc, n int) {
 					for c4 := c3 + 1; c4 < 52; c4++ {
 						for c5 := c4 + 1; c5 < 52; c5++ {
 							for c6 := c5 + 1; c6 < 52; c6++ {
+								ev.HiRank, ev.LoRank = Invalid, Invalid
 								f(ev, []Card{v[c0], v[c1], v[c2], v[c3], v[c4], v[c5], v[c6]}, nil)
 								if benchR == 0 || benchR == Invalid || HighCard < benchR {
 									b.Fail()
@@ -125,6 +126,7 @@ func benchType(b *testing.B, typ Type, n int) {
 	f := evals[typ]
 	for {
 		for i := 0; i < len(v)-p-m; i++ {
+			ev.HiRank, ev.LoRank = Invalid, Invalid
 			f(ev, v[i:i+p], v[i+p:i+p+m])
 			if benchE = ev.HiRank; benchE == 0 || benchE == Invalid {
 				b.Fail()

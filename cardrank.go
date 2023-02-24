@@ -1,6 +1,6 @@
-// Package github.com/cardrank/cardrank is a library of types, utilities, and
-// interfaces for working with playing cards, card decks, and evaluating poker
-// hand ranks.
+// Package cardrank is a library of types, utilities, and interfaces for
+// working with playing cards, card decks, evaluating poker hand ranks,
+// managing deals and run outs for different game types.
 package cardrank
 
 import (

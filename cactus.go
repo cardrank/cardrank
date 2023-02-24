@@ -11,7 +11,7 @@ var flush5 map[uint32]EvalRank
 // unique5 is the unique5 map.
 var unique5 map[uint32]EvalRank
 
-// Cactus is a Cactus Kev hand rank func that generates the lookup maps on the
+// Cactus is a Cactus Kev rank eval func, using lookup maps generated on the
 // fly.
 //
 // See: https://archive.is/G6GZg
@@ -122,7 +122,7 @@ func nextBitPermutation(bits uint32) uint32 {
 	return i | ((((i & -i) / (bits & -bits)) >> 1) - 1)
 }
 
-// primeProduct returns the prime product of the hand.
+// primeProduct returns the prime product of the cards.
 func primeProduct(c0, c1, c2, c3, c4 Card) uint32 {
 	i := uint32(c0) & 0xff
 	i *= uint32(c1) & 0xff
@@ -132,7 +132,7 @@ func primeProduct(c0, c1, c2, c3, c4 Card) uint32 {
 	return i
 }
 
-// primeProductBits returns the prime product of the hand's rank bits.
+// primeProductBits returns the prime product of the rank bits.
 func primeProductBits(bits uint32) uint32 {
 	i := uint32(1)
 	for j := 0; j < 13; j++ {

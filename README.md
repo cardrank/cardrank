@@ -2,7 +2,7 @@
 
 Package `github.com/cardrank/cardrank` is a library of types, utilities, and
 interfaces for working with playing cards, card decks, evaluating poker hand
-ranks, and managing deals and run outs for different game types.
+ranks, managing deals and run outs for different game types.
 
 <!-- START supports -->
 Supports [Texas Holdem][holdem-example], [Texas Holdem Short (6+)][short-example],

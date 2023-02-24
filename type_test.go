@@ -65,6 +65,35 @@ func TestHoldem(t *testing.T) {
 	}
 }
 
+func TestDallas(t *testing.T) {
+	tests := []struct {
+		v string
+		b string
+		u string
+		r EvalRank
+		s string
+	}{
+		{"2d 2h 3c 5c 5s Jh 7c", "", "", 0, ""},
+	}
+	for i, test := range tests {
+		pocket, best, unused := Must(test.v), Must(test.b), Must(test.u)
+		ev := Dallas.Eval(pocket[:2], pocket[2:])
+		if r, exp := ev.HiRank, test.r; r != exp {
+			t.Errorf("test %d %v expected %d, got: %d", i, pocket, exp, r)
+		}
+		if !equals(ev.HiBest, best) {
+			t.Errorf("test %d %v expected %v, got: %v", i, pocket, best, ev.HiBest)
+		}
+		if !equals(ev.HiUnused, unused) {
+			t.Errorf("test %d %v expected %v, got: %v", i, pocket, unused, ev.HiUnused)
+		}
+		desc := ev.Desc(false)
+		if s, exp := fmt.Sprintf("%s %b", desc, desc.Best), test.s; s != exp {
+			t.Errorf("test %d expected %q, got: %q", i, exp, s)
+		}
+	}
+}
+
 func TestShort(t *testing.T) {
 	tests := []struct {
 		v string

@@ -423,13 +423,13 @@ func NewCactusEval(low bool) EvalFunc {
 	}
 }
 
-// NewModifiedCactusEval creates a modified Cactus eval.
-func NewModifiedCactusEval(hi RankFunc, straightHigh Rank, low bool, inv func(EvalRank) EvalRank) EvalFunc {
+// NewModifiedEval creates a modified Cactus eval.
+func NewModifiedEval(hi RankFunc, straightHigh Rank, low bool, inv func(EvalRank) EvalRank) EvalFunc {
 	var f EvalFunc
-	if !low {
-		f = NewEval(hi)
-	} else {
+	if low {
 		f = NewSplitEval(hi, RankEightOrBetter, eightOrBetterMax)
+	} else {
+		f = NewEval(hi)
 	}
 	return func(ev *Eval, p, b []Card) {
 		f(ev, p, b)
@@ -463,7 +463,7 @@ func NewJacksOrBetterEval(low bool) EvalFunc {
 
 // NewShortEval creates a Short rank eval func.
 func NewShortEval() EvalFunc {
-	return NewModifiedCactusEval(RankShort, Nine, false, EvalRank.FromFlushOver)
+	return NewModifiedEval(RankShort, Nine, false, EvalRank.FromFlushOver)
 }
 
 // NewManilaEval creates a Manila rank eval func.
@@ -478,7 +478,7 @@ func NewSpanishEval() EvalFunc {
 
 // NewDallasEval creates a Dallas rank eval func.
 //
-// Uses pocket of 2 and 3 from board a board of 3, 4, or 5.
+// Uses pocket of 2 and 3 from a board of 3, 4, or 5.
 func NewDallasEval(hi RankFunc, straightHigh Rank, low bool, inv func(EvalRank) EvalRank) EvalFunc {
 	lo, max := RankFunc(nil), Invalid
 	if low {
@@ -509,16 +509,17 @@ func NewDallasEval(hi RankFunc, straightHigh Rank, low bool, inv func(EvalRank) 
 
 // NewHoustonEval creates a Houston rank eval func.
 //
-// Uses pocket of 2 from 3 cards, and 3 from board a board of 3, 4, or 5.
+// Uses pocket of 2 from 3 cards, and 3 from a board of 3, 4, or 5.
 func NewHoustonEval(hi RankFunc, straightHigh Rank, inv func(EvalRank) EvalRank) EvalFunc {
 	f := NewDallasEval(hi, straightHigh, false, inv)
 	return func(ev *Eval, p, b []Card) {
 		if len(p) != 3 {
 			return
 		}
-		v, uv := make([]Card, 2), EvalOf(ev.Type)
+		v := make([]Card, 2)
 		for i := 0; i < 3; i++ {
 			v[0], v[1] = p[i%3], p[(i+1)%3]
+			uv := EvalOf(ev.Type)
 			f(uv, v, b)
 			if uv.HiRank < ev.HiRank {
 				ev.HiRank, ev.HiBest, ev.HiUnused = uv.HiRank, uv.HiBest, uv.HiUnused
@@ -624,11 +625,20 @@ func NewOmahaSixEval(low bool) EvalFunc {
 
 // NewSokoEval creates a Soko rank eval func.
 func NewSokoEval(low bool) EvalFunc {
-	f := NewEval(RankSoko)
+	var f EvalFunc
+	if low {
+		f = NewSplitEval(RankSoko, RankEightOrBetter, eightOrBetterMax)
+	} else {
+		f = NewEval(RankSoko)
+	}
 	return func(ev *Eval, p, b []Card) {
 		f(ev, p, b)
 		bestSoko(ev.HiRank, ev.HiBest)
 		bestAceHigh(ev.HiUnused)
+		if low {
+			bestAceLow(ev.LoBest)
+			bestAceHigh(ev.LoUnused)
+		}
 	}
 }
 

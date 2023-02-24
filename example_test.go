@@ -26,18 +26,18 @@ func ExampleFromString() {
 }
 
 func ExampleMust() {
-	hand := cardrank.Must("Ah K♠ 🃍 J♤ 10h")
-	fmt.Printf("%b", hand)
+	v := cardrank.Must("Ah K♠ 🃍 J♤ 10h")
+	fmt.Printf("%b", v)
 	// Output:
 	// [A♥ K♠ Q♦ J♠ T♥]
 }
 
 func ExampleCard_unmarshal() {
-	var hand []cardrank.Card
-	if err := json.Unmarshal([]byte(`["3s", "4c", "5c", "Ah", "2d"]`), &hand); err != nil {
+	var v []cardrank.Card
+	if err := json.Unmarshal([]byte(`["3s", "4c", "5c", "Ah", "2d"]`), &v); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%s\n", hand)
+	fmt.Printf("%s\n", v)
 	// Output:
 	// [3s 4c 5c Ah 2d]
 }
@@ -47,8 +47,8 @@ func ExampleDeck_Draw() {
 	// note: use a real random source
 	r := rand.New(rand.NewSource(52))
 	d.Shuffle(r, 1)
-	hand := d.Draw(7)
-	fmt.Printf("%b\n", hand)
+	v := d.Draw(7)
+	fmt.Printf("%b\n", v)
 	// Output:
 	// [9♣ 6♥ Q♠ 3♠ J♠ 9♥ K♣]
 }
@@ -497,7 +497,7 @@ func Example_omahaHiLo() {
 			desc := evs[loOrder[0]].Desc(true)
 			fmt.Printf("Result (Lo): Players %s push with %s\n", strings.Join(s, ", "), desc)
 		} else {
-			fmt.Printf("Result (Lo): no player made a low hand\n")
+			fmt.Printf("Result (Lo): no player made a lo\n")
 		}
 	}
 	// Output:
@@ -529,7 +529,7 @@ func Example_omahaHiLo() {
 	//   Hi: Pair, Nines, kickers Queen, Jack, Seven [9♣ 9♠ Q♥ J♦ 7♣] [6♠ 3♣ 3♥ 2♥]
 	//   Lo: None [] []
 	// Result (Hi): Player 1 scoops with Four of a Kind, Threes, kicker Nine
-	// Result (Lo): no player made a low hand
+	// Result (Lo): no player made a lo
 	// ------ OmahaHiLo 3 ------
 	// Board: [J♣ T♥ 4♥ K♣ Q♣]
 	// Player 1: [K♠ Q♠ 4♣ J♦]
@@ -551,7 +551,7 @@ func Example_omahaHiLo() {
 	//   Hi: Two Pair, Kings over Tens, kicker Queen [K♣ K♦ T♣ T♥ Q♣] [J♣ 8♦ 4♥ 4♠]
 	//   Lo: None [] []
 	// Result (Hi): Player 1 scoops with Two Pair, Kings over Queens, kicker Jack
-	// Result (Lo): no player made a low hand
+	// Result (Lo): no player made a lo
 	// ------ OmahaHiLo 4 ------
 	// Board: [2♦ 6♦ 6♣ Q♣ 7♣]
 	// Player 1: [6♠ K♥ A♣ 8♣]
@@ -717,7 +717,7 @@ func Example_studHiLo() {
 			desc := evs[loOrder[0]].Desc(true)
 			fmt.Printf("Result (Lo): Players %s push with %s\n", strings.Join(s, ", "), desc)
 		} else {
-			fmt.Printf("Result (Lo): no player made a low hand\n")
+			fmt.Printf("Result (Lo): no player made a lo\n")
 		}
 	}
 	// Output:

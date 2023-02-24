@@ -306,6 +306,12 @@ func (d *Dealer) NextId() byte {
 	return 0
 }
 
+// HasNext returns true when there is one or more remaining streets.
+func (d *Dealer) HasNext() bool {
+	n := len(d.Streets)
+	return n != 0 && d.i < n
+}
+
 // HasPocket returns true when one or more pocket cards are dealt for the
 // street.
 func (d *Dealer) HasPocket() bool {

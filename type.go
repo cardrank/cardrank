@@ -757,9 +757,9 @@ func WithFusion(low bool, opts ...StreetOption) TypeOption {
 
 // WithSoko is a type description option to set Soko definitions.
 //
-// Soko is a Holdem variant with 2 additional hand ranks, a Four Flush
-// comprising 4 cards of the same suit, and a Four Straight, comprising 4 cards
-// in sequential rank (no wrapping straights), that beat Pair and Nothing.
+// Soko is a Holdem variant with 2 additional ranks, a Four Flush (4 cards of
+// the same suit), and a Four Straight (4 cards in sequential rank, with no
+// wrapping straights), besting Pair and Nothing ranks.
 func WithSoko(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8

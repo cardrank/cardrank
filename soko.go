@@ -7,13 +7,13 @@ var (
 )
 
 func init() {
-	sokoFlush4, sokoStraight4 = SokoMaps()
+	sokoFlush4, sokoStraight4 = sokoMaps()
 }
 
-// SokoMaps generates Soko flush4 and straight4 maps.
+// sokoMaps generates Soko flush4 and straight4 maps.
 //
 // See: https://www.denexa.com/blog/soko-canadian-stud/
-func SokoMaps() (map[uint32]EvalRank, map[uint32]EvalRank) {
+func sokoMaps() (map[uint32]EvalRank, map[uint32]EvalRank) {
 	flush4, straight4 := make(map[uint32]EvalRank), make(map[uint32]EvalRank)
 	// calculate flush rank offset
 	for i, r0 := 0, 12; r0 >= 0; r0-- {

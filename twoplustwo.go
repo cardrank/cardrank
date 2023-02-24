@@ -14,16 +14,14 @@ func init() {
 	}
 }
 
-// NewTwoPlusTwo creates a new two plus hand rank eval func.
-//
-// The TwoPlusTwo eval is a version of the 2+2 poker forum hand rank evaluator.
-// Uses the embedded twoplustwo*.dat files to provide extremely fast 7 card
-// hand lookup. Uses Cactus Kev values.
+// NewTwoPlusTwo creates a new Two-Plus-Two rank eval func, a version of the
+// 2+2 poker forum rank evaluator. Uses the embedded twoplustwo*.dat files to
+// provide extremely fast 7 card lookup.
 //
 // The lookup table is contained in the 'twoplustwo*.dat' files, and were
 // broken up from a single file to get around GitHub's size limitations. Files
-// were generated with 'gen.go', which is a pure-Go implementation of the code
-// generator available at: https://github.com/tangentforks/TwoPlusTwoHandEvaluator
+// were generated with 'internal/twoplustwogen.go', which is a pure-Go
+// port of the code generator available at: https://github.com/tangentforks/TwoPlusTwoHandEvaluator
 //
 // When recombined, the lookup table has the same hash as the original table
 // generated using the C code.
