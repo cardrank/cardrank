@@ -7,5 +7,4 @@ func init() {
 	if err := RegisterDefaultTypes(); err != nil {
 		panic(err)
 	}
-	InitSoko()
 }

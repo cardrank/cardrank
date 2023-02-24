@@ -1,8 +1,8 @@
 # About
 
 Package `github.com/cardrank/cardrank` is a library of types, utilities, and
-interfaces for working with playing cards, card decks, and evaluating poker
-hand ranks.
+interfaces for working with playing cards, card decks, evaluating poker hand
+ranks, and managing deals and run outs for different game types.
 
 <!-- START supports -->
 Supports [Texas Holdem][holdem-example], [Texas Holdem Short (6+)][short-example],
@@ -23,8 +23,7 @@ The `github.com/cardrank/cardrank` package contains types for [cards][card],
 hands][eval], and [managing deals and run outs][dealer].
 
 A single [package level type][type] provides a standard interface for dealing
-cards for, and [evaluating ranks of 5, 6, or 7 card poker hands][eval] of the
-following:
+cards for, and [evaluating the relative poker ranks][eval] of the following:
 
 <!-- START overview -->
 * [Texas Holdem][holdem-example]
@@ -60,11 +59,11 @@ additional examples showing use of various types, utilities, and interfaces is
 available in the [Go package documentation][pkg].
 
 Below are quick examples for [`Dealer`][dealer], [`Holdem`][type] and
-[`OmahaHiLo`][type] included in the [example](/_example) directory:
+[`OmahaHiLo`][type] included in the [example directory](/_example):
 
 * [dealer](/_example/dealer) - shows use of the [`Dealer`][dealer], to handle dealing cards, handling multiple run outs, and determining winners using for all [`Type`'s][type]
 * [holdem](/_example/holdem) - shows using types and utilities to deal a hand of [`Holdem`][holdem-example]
-* [holdem](/_example/omahahilo) - shows using types and utilities to deal a hand of [`OmahaHiLo`][holdem-example], showcasing "lo" winners
+* [omahahilo](/_example/omahahilo) - shows using types and utilities to deal a hand of [`OmahaHiLo`][omaha-hi-lo-example], showcasing "lo" winners
 
 ### Eval Ranking
 
@@ -79,13 +78,13 @@ fmt.Printf("%t\n", cardrank.StraightFlush < cardrank.FullHouse)
 true
 ```
 
-Pocket and board [`Card`'s][card] can be passed to a [`Type`'s][type] `New`
+Pocket and board [`Card`'s][card] can be passed to a [`Type`'s][type] `Eval`
 method, which in turn uses the `Type`'s registered [`EvalFunc`][eval-func] and
-returns the [`Eval`uated][eval] value:
+returns an [`Eval`uated][eval] value:
 
 ```go
 v := cardrank.Must("Ah Kh Qh Jh Th")
-ev := cardrank.Holdem.New(v, nil)
+ev := cardrank.Holdem.Eval(v, nil)
 fmt.Printf("%s - %d\n", ev, ev.HiRank)
 
 // Output:
@@ -97,7 +96,7 @@ are capable of evaluating fewer `Card`'s:
 
 ```go
 v := cardrank.Must("2h 3s 4c")
-ev := cardrank.Badugi.New(v, nil)
+ev := cardrank.Badugi.Eval(v, nil)
 fmt.Printf("%s\n", ev)
 
 // Output:
@@ -112,13 +111,11 @@ If an invalid number of cards is passed to a `Type`'s `EvalFunc`, the `Eval`'s
 determine a winner, by comparing the [`Eval.HiRank`][eval.hi-rank] or
 [`Eval.LoRank`][eval.lo-rank] values.
 
-Currently, no `Type`'s supports evaluating hands containing more than 7
-`Card`'s.
-
 #### Hi/Lo
 
 Different [poker types][type] may have both a "hi" and "lo" values, such as
-[double board Holdem][double-example], or as in [Omaha Hi/Lo][omaha-hi-lo-example].
+[double board Holdem][double-example], or Hi/Lo variants such as [Omaha
+Hi/Lo][omaha-hi-lo-example].
 
 When a [`Eval`][eval] is created, both the "hi" and "lo" (if applicable) values
 are evaluated, and stored in `Eval` as the [`HiRank`][eval.hi-rank] and and
@@ -133,22 +130,15 @@ implementations of different [Cactus Kev][cactus-kev] evaluators:
 * [`CactusFast`][cactus-fast] - the [Fast Cactus][senzee] poker hand evaluator, using Paul Senzee's perfect hash lookup
 * [`TwoPlusTwo`][two-plus-two] - the [2+2 forum][tangentforks] poker hand evaluator, using a 130 MiB lookup table
 
-See [below for more information](#default-rank-func) on the default rank func in
+See [below for more information](#rank-cactus-func) on the default rank func in
 use by the package, and for information on [using build tags][build-tags] to
 enable/disable functionality for different target runtime environments.
 
-#### Default Rank Func
+#### Rank Cactus Func
 
-The package-level [`DefaultRank`][default-rank] variable is used for regular
-poker evaluation. For most scenarios, the [`Hybrid`][hybrid] rank func provides
-the best possible evaluation performance, and is used by default when no [build
-tags][build-tags] have been specified.
-
-#### Hybrid
-
-The [`Hybrid`][hybrid] rank func uses either the [`CactusFast`][cactus-fast] or
-an instance of the [`TwoPlusTwo`][two-plus-two] depending on the [`Eval`][eval]
-having 5, 6, or 7 cards.
+The package-level [`RankCactus`][rank-cactus] variable is used for regular
+poker evaluation, and can be set externally when wanting to build new game
+types, or trying new algorithms.
 
 #### Two-Plus-Two
 
@@ -174,10 +164,9 @@ equivalent `HiRank`'s or `LoRank`'s.
 #### Comparing Eval Ranks
 
 A [`Eval`][eval] can be compared to another `Eval` using
-[`HiComp`][eval.hi-comp] and [`LoComp`][eval.lo-comp].
+[`Comp`][eval-comp].
 
-`HiComp` and `LowComp` return `-1`, `0`, or `+1`, making it easy to compare
-or sort hands:
+`Comp` returns `-1`, `0`, or `+1`, making it easy to compare or sort hands:
 
 ```go
 // Compare hi evals:
@@ -280,24 +269,23 @@ GOOS=js GOARCH=wasm go build -tags 'embedded noinit' -o cardrank.wasm
 ```
 
 When using the `noinit` build tag, the user will need to call the [`Init`
-func][init] to set `DefaultCactus`, `DefaultRank` and to register the default
-types automatically:
+func][init] to set `RankCactus` and to register the default types
+automatically:
 
 ```go
 // Set DefaultCactus, DefaultRank based on available implementations:
 cardrank.Init()
 ```
 
-Alternatively, the `DefaultCactus` and `DefaultRank` can be set manually. After
-`DefaultCactus` and `DefaultRank` have been set, call `RegisterDefaultTypes` to
-register built in types:
+Alternatively, the `RankCactus` can be set manually. After `RankCactus` has
+been set, call `RegisterDefaultTypes` to register built in types:
 
 ```go
-// Set manually (such as when using a third-party implementation):
-cardrank.DefaultCactus = cardrank.Cactus
-cardrank.DefaultRank = cardrank.NewEvalRank(cardrank.Cactus)
+// Set when using a third-party implementation, or experimenting with new
+// Cactus implementations:
+cardrank.RankCactus = cardrank.CactusFast
 
-// Then call RegisterDefaultTypes to register default types
+// Call RegisterDefaultTypes to register default types
 if err := cardrank.RegisterDefaultTypes(); err != nil {
 	panic(err)
 }
@@ -342,11 +330,8 @@ GOOS=js GOARCH=wasm go build -tags 'forcefat' -o cardrank.wasm
 [order]: https://pkg.go.dev/github.com/cardrank/cardrank#Order
 [eval-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#EvalRank
 [eval-func]: https://pkg.go.dev/github.com/cardrank/cardrank#EvalFunc
-[eval.hi-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.HiRank
-[eval.lo-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.LoRank
-[eval.hi-comp]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.HiComp
-[eval.lo-comp]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.LoComp
-[default-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#DefaultRank
+[eval-comp]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.Comp
+[rank-cactus]: https://pkg.go.dev/github.com/cardrank/cardrank#RankCactus
 [cactus]: https://pkg.go.dev/github.com/cardrank/cardrank#Cactus
 [cactus-fast]: https://pkg.go.dev/github.com/cardrank/cardrank#CactusFast
 [two-plus-two]: https://pkg.go.dev/github.com/cardrank/cardrank#TwoPlusTwo

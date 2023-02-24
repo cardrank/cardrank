@@ -6,8 +6,7 @@ var (
 	sokoStraight4 map[uint32]EvalRank
 )
 
-// InitSoko inits Soko maps.
-func InitSoko() {
+func init() {
 	sokoFlush4, sokoStraight4 = SokoMaps()
 }
 
