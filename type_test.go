@@ -312,6 +312,8 @@ func TestTypeComp(t *testing.T) {
 		{Omaha, "4s 3h 6c 2d Kd", "7s 7c 4h 2s", "Kh Qs 5h 2c", 3305, 1608, +1},
 		{Dallas, "4h Tc 4d 6s 6h", "4s 7h", "Jc Ts", 2310, 2966, -1},
 		{Dallas, "4h Tc 4d 6s 6h", "Jc Ts", "4s 7h", 2966, 2310, +1},
+		{OmahaFive, "Qs Ts 8s 10c 9s", "As Kc Jh Jd Th", "Ks Js 3h 4d 6h", 1601, 2, +1},
+		{OmahaFive, "Qs Ts 8s 10c 9s", "Ks Js 3h 4d 6h", "As Kc Jh Jd Th", 2, 1601, -1},
 	}
 	for i, test := range tests {
 		board := Must(test.board)
