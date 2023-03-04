@@ -7,13 +7,135 @@ import (
 	"unicode"
 )
 
-// Type is a package level eval type, providing a package-level interface for
-// using DefaultTypes], and wraps the [TypeDesc].
+// Type is a game eval type, providing a standard interface wrapping a
+// [TypeDesc]. [DefaultType]'s are registered by default unless using the
+// [noinit] build tag.
 //
-// [DefaultTypes] will be registered during init, unless using the
-// [noinit][#noinit] tag.
+// [Holdem] is a best-5 card game using a standard deck of 52 cards (see
+// [DeckFrench]), having a pocket of 2 cards, 5 community board cards, and a
+// Pre-Flop, Flop, Turn, and River streets. 2 pocket cards are dealt on the
+// Pre-Flop, with 3 board cards on the Flop, 1 board card on the Turn, and one
+// on the River. 1 card is discarded on the Flop, Turn, and River, prior to the
+// board cards being dealt.
 //
-// See [TypeDesc].
+// [Split] is the Hi/Lo variant of [Holdem], using a [RankEightOrBetter] as the
+// Lo eval.
+//
+// [Short] is a [Holdem] variant using a Short deck (a 6+ only card deck, see
+// [DeckShort]). [Flush] ranks over [FullHouse].
+//
+// [Manila] is a [Holdem] variant using a Manila deck (a 7+ only card deck, see
+// [DeckManila]), forcing the use of 2 pocket cards, adding a Drop street before
+// the Flop, and with all 5 streets (instead of 4) receiving 1 board card each.
+// [Flush] ranks over [FullHouse].
+//
+// [Spanish] is a [Holdem]/[Manila] variant, using a Spanish deck (a 8+ only
+// card deck, see [DeckSpanish]).
+//
+// [Royal] is a [Holdem] variant using a Royal deck (a 10+ only card deck, see
+// [DeckRoyal]).
+//
+// [Double] is a [Holdem] variant where there are two community boards,
+// comprising the Hi and Lo.
+//
+// [Showtime] is a [Holdem] variant where folded cards are shown.
+//
+// [Swap] is a [Holdem] variant where up to 2 cards may be drawn (exchanged)
+// once.
+//
+// [River] is a [Holdem] variant that deals 1 pocket card on the river instead
+// of a shared community board card on the river, resulting in a pocket of 3
+// and a community board of 4.
+//
+// [Dallas] is [Holdem] variant that forces the use of the 2 pocket cards and
+// any 3 board cards. Similar to [Omaha], but with 2 pocket cards instead of 4.
+//
+// [Houston] is a [Holdem] variant with 3 pocket cards, 2 board cards dealt on
+// the Flop (instead of 3), and requires using 2 of the 3 pocket cards, and any
+// 3 board cards to make the best-5. Essentially Omaha, but with 3 pocket cards
+// instead of 4, and a community board of 4.
+//
+// [Draw] is a best-5 card game using a standard deck of 52 cards (see
+// [DeckFrench]), comprising a pocket of 5 cards, no community cards, with a
+// Ante, 6th, and River streets. 5 cards are dealt on the Ante, and up to 5
+// cards can be drawn (exchanged) on the 6th street.
+//
+// [DrawHiLo] is the Hi/Lo variant of [Draw], using a [RankEightOrBetter] as
+// the Lo eval.
+//
+// [Stud] is a best-5 card game, using a standard deck of 52 cards (see
+// [DeckFrench]), comprising a pocket of 7 cards, no community cards, with
+// Ante, 4th, 5th, 6th and River streets. 3 pocket cards are dealt on the Ante,
+// with 1 pocket card turend up, and an additional pocket card dealt up on the
+// 4th, 5th, and 6th streets, with a final pocket card dealt down on the 7th
+// street for a total of 7 pocket cards.
+//
+// [StudHiLo] is the Hi/Lo variant of [Stud], using a [RankEightOrBetter] as
+// the Lo eval.
+//
+// [StudFive] is a best-5 card game using a standard deck of 52 cards (see
+// [DeckFrench]), comprising a pocket of 5 cards, no community cards, with
+// Ante, 3rd, 4th, and River streets. 2 pocket cards are dealt on the Ante,
+// with 1 pocket card dealt up, and an additional pocket card dealt up on the
+// 3rd, 4th, and 5th streets. It is similar to [Stud], but without 5th and 6th
+// streets.
+//
+// [Video] is a best-5 card game, using a standard deck of 52 cards (see
+// [DeckFrench]), comprising a pocket of 5 cards, no community cards, with a
+// Ante and River. 5 pocket cards are dealt on the Ante, all up. Up to 5 cards
+// can be drawn (exchanged) on the River. Uses a qualifier of a Jacks-or-better
+// for Hi eval (see [NewJacksOrBetterEval]).
+//
+// [Omaha] is a [Holdem] variant with 4 pocket cards, requiring use of 2 of the
+// pocket and 3 of the board to make the best-5.
+//
+// [OmahaHiLo] is the Hi/Lo variant of [Omaha], using a [RankEightOrBetter] as
+// the Lo eval.
+//
+// [OmahaDouble] is a [Omaha] variant where there are two community boards
+// comprising the Hi and Lo.
+//
+// [OmahaFive] is a [Holdem]/[Omaha] variant with 5 pocket cards, requiring the
+// use of 2 of the pocket and 3 of the board to make the best-5.
+//
+// [OmahaSix] is a [Holdem]/[Omaha] variant with 6 pocket cards, requiring the
+// use of 2 of the pocket and 3 of the board to make the best-5 cards.
+//
+// [Courchevel] is a [OmahaFive] variant, where 1 board card is dealt on the
+// Pre-Flop, and only 2 board cards dealt on the Flop.
+//
+// [Fusion] is a [Holdem]/[Omaha] variant where only 2 pocket cards are dealt
+// on the Pre-Flop, with 1 additional pocket card dealt on the Flop and Turn.
+//
+// [FusionHiLo] is the Hi/Lo variant of [Fusion], using a [RankEightOrBetter] as
+// the Lo eval.
+//
+// [Soko] is a [Holdem] variant with 2 additional ranks, a Four Flush (4 cards
+// of the same suit), and a Four Straight (4 cards in sequential rank, with no
+// wrapping straights), besting [Pair] and [Nothing].
+//
+// [SokoHiLo] is the Hi/Lo variant of [Soko], using a [RankEightOrBetter] as
+// the Lo eval.
+//
+// [Lowball] is a best-5 low card game using a standard deck of 52 cards (see
+// [DeckFrench]), comprising 5 pocket cards, no community cards, and a Ante,
+// 6th, 7th, and River streets using a 2-to-7 low ("Lowball") inverted ranking
+// system, where [Ace]'s always play high, and non-[Flush], and non-[Straight]
+// lows are best. Up to 5 cards may be drawn (exchanged) once on either the
+// 6th, 7th, or River streets.
+//
+// [LowballTriple] is a [Lowball] multi variant that allows any 5 cards to be
+// drawn (exchanged) on the 6th, 7th, or River streets.
+//
+// [Razz] is a [Stud] variant, using a Ace-to-5 low ranking (see
+// [RankRazz]/[RankAceFiveLow]), where [Ace]'s play low, and [Flush]'s and
+// [Straight]'s do not affect ranking.
+//
+// [Badugi] is a unique, best-4, lowest non-matching-suit card game (see
+// [NewBadugiEval]), using a standard deck of 52 cards (see [DeckFrench]),
+// comprising 4 pocket cards, no community cards, and Ante, 5th, 6th, and River
+// streets. Up to 4 cards can be drawn (exchanged) on the 5th, 6th, or River
+// streets.
 type Type uint16
 
 // Types.
@@ -53,7 +175,9 @@ const (
 	Badugi         Type = 'B'<<8 | 'a' // Ba
 )
 
-// DefaultTypes returns the default type descriptions.
+// DefaultTypes returns the default type descriptions. The returned
+// [TypeDesc]'s will be automatically registered, unless using the [noinit]
+// tag.
 func DefaultTypes() []TypeDesc {
 	var v []TypeDesc
 	for _, d := range []struct {
@@ -105,7 +229,7 @@ func DefaultTypes() []TypeDesc {
 	return v
 }
 
-// IdToType converts id to its type.
+// IdToType converts id to a type.
 func IdToType(id string) (Type, error) {
 	switch {
 	case len(id) != 2,
@@ -116,12 +240,12 @@ func IdToType(id string) (Type, error) {
 	return Type(id[0])<<8 | Type(id[1]), nil
 }
 
-// MarshalText satisfies the encoding.TextMarshaler interface.
+// MarshalText satisfies the [encoding.TextMarshaler] interface.
 func (typ Type) MarshalText() ([]byte, error) {
 	return []byte(typ.Id()), nil
 }
 
-// UnmarshalText satisfies the encoding.TextUnmarshaler interface.
+// UnmarshalText satisfies the [encoding.TextUnmarshaler] interface.
 func (typ *Type) UnmarshalText(buf []byte) error {
 	name := strings.ToLower(string(buf))
 	for t, desc := range descs {
@@ -144,7 +268,7 @@ func (typ Type) Id() string {
 	return string([]byte{byte(typ >> 8), byte(typ)})
 }
 
-// Format satisfies the fmt.Formatter interface.
+// Format satisfies the [fmt.Formatter] interface.
 func (typ Type) Format(f fmt.State, verb rune) {
 	var buf []byte
 	switch verb {
@@ -397,13 +521,6 @@ func (desc *TypeDesc) Apply(opts ...StreetOption) {
 type TypeOption func(*TypeDesc)
 
 // WithHoldem is a type description option to set Holdem definitions.
-//
-// Holdem is a best-5 card game played with a standard (French) deck,
-// comprising a pocket of 2 cards, 5 community board cards, and a Pre-Flop,
-// Flop, Turn, and River streets. 2 pocket cards are dealt on the Pre-Flop,
-// with 3 board cards on the Flop, 1 board card on the Turn, and one on the
-// River. 1 card is discarded on the Flop, Turn, and River, prior to the board
-// cards being dealt.
 func WithHoldem(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
@@ -415,9 +532,6 @@ func WithHoldem(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithShort is a type description option to set Short definitions.
-//
-// Short is a Holdem variant played with a Short (6+) deck. Flushes rank over
-// Full Houses.
 func WithShort(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 6
@@ -431,11 +545,6 @@ func WithShort(opts ...StreetOption) TypeOption {
 }
 
 // WithManila is a type description option to set Manila definitions.
-//
-// Manila is a Holdem variant played with a Manila (7+) deck that forces the
-// use of 2 pocket cards, adding a Drop street before the Flop, with the 5
-// (instead of 4) streets receiving 1 board card each. Flushes rank over Full
-// Houses.
 func WithManila(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 6
@@ -455,11 +564,6 @@ func WithManila(opts ...StreetOption) TypeOption {
 }
 
 // WithSpanish is a type description option to set Spanish definitions.
-//
-// Spanish is a Holdem variant played with a Spanish deck (8+) that forces the
-// use of 2 pocket cards, adding a Drop street before the Flop, with the 5
-// (instead of 4) streets receiving 1 board card each. Flushes rank over Full
-// Houses.
 func WithSpanish(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 6
@@ -479,8 +583,6 @@ func WithSpanish(opts ...StreetOption) TypeOption {
 }
 
 // WithRoyal is a type description option to set Royal definitions.
-//
-// Royal is a Holdem variant played with a Royal deck.
 func WithRoyal(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 5
@@ -492,9 +594,6 @@ func WithRoyal(opts ...StreetOption) TypeOption {
 }
 
 // WithDouble is a type description option to set Double definitions.
-//
-// Double is a Holdem variant where there are two community boards dealt in
-// tandem, comprising the Hi and Lo.
 func WithDouble(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
@@ -507,8 +606,6 @@ func WithDouble(opts ...StreetOption) TypeOption {
 }
 
 // WithShowtime is a type description option to set Showtime definitions.
-//
-// Showtime is a Holdem variant where folded cards are shown.
 func WithShowtime(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
@@ -521,8 +618,6 @@ func WithShowtime(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithSwap is a type description option to set Swap definitions.
-//
-// Swap is a Holdem variant that allows the swapping of cards.
 func WithSwap(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
@@ -538,14 +633,10 @@ func WithSwap(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithRiver is a type description option to set River definitions.
-//
-// River is a Holdem variant that deals 1 pocket card on the river, and no
-// board cards on the river.
 func WithRiver(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
 		desc.Low = low
-		desc.Once = true
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(2, 1, 3, 1, 0)
 		desc.Streets[3].Pocket = 1
@@ -554,9 +645,6 @@ func WithRiver(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithDallas is a type description option to set Dallas definitions.
-//
-// Dallas is Holdem variant that forces the use of the 2 pocket cards and any 3
-// board cards. Essentially Omaha, but with 2 pocket cards instead of 4.
 func WithDallas(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
@@ -569,11 +657,6 @@ func WithDallas(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithHouston is a type description option to set Houston definitions.
-//
-// Houston is a Holdem variant with 3 pocket cards, 2 board cards dealt on the
-// Flop, and requires using 2 of the 3 pocket cards, and any 3 board cards to
-// make the best-5 cards. Essentially Omaha, but with 3 pocket cards instead of
-// 4.
 func WithHouston(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
@@ -586,11 +669,6 @@ func WithHouston(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithDraw is a type description option to set Draw definitions.
-//
-// Draw is a best-5 card game played with a standard (French) deck, comprising
-// a pocket of 5 cards, no community cards, with a Ante, 6th, and River streets.
-// 5 cards are dealt on the Ante, and up to 5 cards can be drawn (exchanged) on
-// the 6th street.
 func WithDraw(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
@@ -603,12 +681,6 @@ func WithDraw(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithStud is a type description option to set Stud definitions.
-//
-// Stud is a best-5 card game, played with a standard (French) deck, comprising
-// a pocket of 7 cards, no community cards, with Ante, 4th, 5th, 6th and River
-// streets. 3 pocket cards are dealt on the Ante, with 1 up, and 1 pocket card
-// is dealt up on the 4th, 5th, and 6th streets, with a final pocket card dealt
-// down on the 7th street.
 func WithStud(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 7
@@ -620,11 +692,6 @@ func WithStud(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithStudFive is a type description option to set StudFive definitions.
-//
-// StudFive is a best-5 card game palyed with a standard (French) deck,
-// comprising a pocket of 5 cards, no community cards, with Ante, 3rd, 4th, and
-// River streets. 2 pocket cards are dealt on the Ante, with 1 up, and 1 pocket
-// card dealt up on the 3rd, 4th, and 5th streets.
 func WithStudFive(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
@@ -636,11 +703,6 @@ func WithStudFive(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithVideo is a type description option to set Video definitions.
-//
-// Video is a best-5 card game, played with a standard (French) deck,
-// comprising a pocket of 5 cards, no community cards, with a Ante and River. 5
-// pocket cards are dealt on the Ante, all up. Up to 5 cards can be drawn
-// (exchanged) on the River.
 func WithVideo(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 1
@@ -655,9 +717,6 @@ func WithVideo(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithOmaha is a type description option to set Omaha definitions.
-//
-// Omaha is a Holdem variant with 4 pocket cards, requiring the use of 2 of the
-// pocket and 3 of the board to make the best-5 cards.
 func WithOmaha(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 9
@@ -670,9 +729,6 @@ func WithOmaha(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithOmahaDouble is a type description option to set OmahaDouble definitions.
-//
-// OmahaDouble is a Omaha variant where there are two community boards dealt in
-// tandem, comprising the Hi and Lo.
 func WithOmahaDouble(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 9
@@ -686,9 +742,6 @@ func WithOmahaDouble(opts ...StreetOption) TypeOption {
 }
 
 // WithOmahaFive is a type description option to set OmahaFive definitions.
-//
-// Omaha is a Holdem variant with 5 pocket cards, requiring the use of 2 of the
-// pocket and 3 of the board to make the best-5 cards.
 func WithOmahaFive(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8
@@ -701,9 +754,6 @@ func WithOmahaFive(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithOmahaSix is a type description option to set OmahaSix definitions.
-//
-// Omaha is a Holdem variant with 6 pocket cards, requiring the use of 2 of the
-// pocket and 3 of the board to make the best-5 cards.
 func WithOmahaSix(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 7
@@ -716,9 +766,6 @@ func WithOmahaSix(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithCourchevel is a type description option to set Courchevel definitions.
-//
-// Courchevel is a OmahaFive variant, where 1 board card is dealt on the
-// Pre-Flop, and 2 on the Flop.
 func WithCourchevel(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8
@@ -738,9 +785,6 @@ func WithCourchevel(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithFusion is a type description option to set Fusion definitions.
-//
-// Fusion is a Omaha variant where only 2 pocket cards are dealt on the
-// Pre-Flop, with 1 additional pocket card dealt on the Flop and Turn.
 func WithFusion(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 9
@@ -756,10 +800,6 @@ func WithFusion(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithSoko is a type description option to set Soko definitions.
-//
-// Soko is a Holdem variant with 2 additional ranks, a Four Flush (4 cards of
-// the same suit), and a Four Straight (4 cards in sequential rank, with no
-// wrapping straights), besting Pair and Nothing ranks.
 func WithSoko(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8
@@ -773,14 +813,6 @@ func WithSoko(low bool, opts ...StreetOption) TypeOption {
 }
 
 // WithLowball is a type description option to set Lowball definitions.
-//
-// Lowball is a best-5 low game played with a standard (French) deck,
-// comprising 5 pocket cards, no community cards, and a Ante, 6th, 7th, and
-// River streets using a 2-to-7 low ("Lowball") inverted ranking system, where
-// Aces always play high, and non-Flush, and non-Straight lows are best. For
-// multi variants, up to 5 cards can be drawn (exchanged) on the 6th, 7th, and
-// River streets. Non-multi variants may only exchange up to 5 cards only once
-// on either the 6th, 7th, or River streets.
 func WithLowball(multi bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8
@@ -797,9 +829,6 @@ func WithLowball(multi bool, opts ...StreetOption) TypeOption {
 }
 
 // WithRazz is a type description option to set Razz definitions.
-//
-// Razz is a Stud variant, using a A-to-5 low ranking, where Aces play low, and
-// Flushes and Straights do not affect ranking.
 func WithRazz(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 7
@@ -812,10 +841,6 @@ func WithRazz(opts ...StreetOption) TypeOption {
 }
 
 // WithBadugi is a type description option to set Badugi definitions.
-//
-// Badugi is a best-4, lowest non-matching-suit card game played with a
-// standard (French) deck, comprising a pocket of 4 cards, no community cards,
-// and Ante, 5th, 6th, and River streets.
 //
 //	4 cards, low evaluation of separate suits
 //	All 4 face down pre-flop
@@ -1030,7 +1055,7 @@ func (typ EvalType) New(low bool) EvalFunc {
 	return nil
 }
 
-// Format satisfies the fmt.Formatter interface.
+// Format satisfies the [fmt.Formatter] interface.
 func (typ EvalType) Format(f fmt.State, verb rune) {
 	var buf []byte
 	switch verb {
@@ -1117,7 +1142,7 @@ const (
 	DescRazz      DescType = 'r'
 )
 
-// Format satisfies the fmt.Formatter interface.
+// Format satisfies the [fmt.Formatter] interface.
 func (typ DescType) Format(f fmt.State, verb rune) {
 	var buf []byte
 	switch verb {

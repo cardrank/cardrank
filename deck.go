@@ -62,7 +62,7 @@ func (typ DeckType) Ordinal() int {
 	return int(typ + 2)
 }
 
-// Format satisfies the fmt.Formatter interface.
+// Format satisfies the [fmt.Formatter] interface.
 func (typ DeckType) Format(f fmt.State, verb rune) {
 	var buf []byte
 	switch verb {
@@ -276,7 +276,7 @@ func (d *Dealer) init() {
 	}
 }
 
-// Format satisfies the fmt.Formatter interface.
+// Format satisfies the [fmt.Formatter] interface.
 func (d *Dealer) Format(f fmt.State, verb rune) {
 	var buf []byte
 	switch verb {
@@ -670,7 +670,7 @@ func (win *Win) Invalid() bool {
 	return d == nil || d.Rank == 0 || d.Rank == Invalid
 }
 
-// Format satisfies the fmt.Formatter interface.
+// Format satisfies the [fmt.Formatter] interface.
 func (win *Win) Format(f fmt.State, verb rune) {
 	switch verb {
 	case 'd':

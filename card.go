@@ -30,7 +30,7 @@ const (
 )
 
 // InvalidRank is an invalid rank.
-const InvalidRank = Rank(^uint8(0))
+const InvalidRank = ^Rank(0)
 
 // RankFromRune returns the card rank for the rune.
 func RankFromRune(r rune) Rank {
@@ -65,7 +65,7 @@ func RankFromRune(r rune) Rank {
 	return InvalidRank
 }
 
-// String satisfies the fmt.Stringer interface.
+// String satisfies the [fmt.Stringer] interface.
 func (rank Rank) String() string {
 	return string(rank.Byte())
 }
@@ -187,8 +187,8 @@ const (
 	Club
 )
 
-// InvalidSuit is an invalid rank.
-const InvalidSuit = Suit(^uint8(0))
+// InvalidSuit is an invalid suit.
+const InvalidSuit = ^Suit(0)
 
 // SuitFromRune returns the card suit for the rune.
 func SuitFromRune(r rune) Suit {
@@ -205,7 +205,7 @@ func SuitFromRune(r rune) Suit {
 	return InvalidSuit
 }
 
-// String satisfies the fmt.Stringer interface.
+// String satisfies the [fmt.Stringer] interface.
 func (suit Suit) String() string {
 	return string(suit.Byte())
 }
@@ -349,7 +349,7 @@ func PlayingCardKnightRune(rank Rank, suit Suit) rune {
 type Card uint32
 
 // InvalidCard is an invalid card.
-const InvalidCard = Card(^uint32(0))
+const InvalidCard = ^Card(0)
 
 // New creates a card for the specified rank and suit.
 func New(rank Rank, suit Suit) Card {
@@ -502,7 +502,7 @@ func (c Card) AceRank() int {
 	return int(c>>8&0xf+1) % 13
 }
 
-// UnmarshalText satisfies the encoding.TextUnmarshaler interface.
+// UnmarshalText satisfies the [encoding.TextUnmarshaler] interface.
 func (c *Card) UnmarshalText(buf []byte) error {
 	if *c = FromString(string(buf)); *c == InvalidCard {
 		return ErrInvalidCard
@@ -510,7 +510,7 @@ func (c *Card) UnmarshalText(buf []byte) error {
 	return nil
 }
 
-// MarshalText satisfies the encoding.TextMarshaler interface.
+// MarshalText satisfies the [encoding.TextMarshaler] interface.
 func (c Card) MarshalText() ([]byte, error) {
 	if c != InvalidCard {
 		return []byte{c.RankByte(), c.SuitByte()}, nil
@@ -518,12 +518,12 @@ func (c Card) MarshalText() ([]byte, error) {
 	return nil, ErrInvalidCard
 }
 
-// String satisfies the fmt.Stringer interface.
+// String satisfies the [fmt.Stringer] interface.
 func (c Card) String() string {
 	return string(c.RankByte()) + string(c.SuitByte())
 }
 
-// Format satisfies the fmt.Formatter interface.
+// Format satisfies the [fmt.Formatter] interface.
 //
 // Supported verbs:
 //
@@ -610,7 +610,7 @@ func (c Card) Format(f fmt.State, verb rune) {
 // without disabling vet.
 type CardFormatter []Card
 
-// Format satisfies the fmt.Formatter interface.
+// Format satisfies the [fmt.Formatter] interface.
 func (v CardFormatter) Format(f fmt.State, verb rune) {
 	_, _ = f.Write([]byte{'['})
 	for i, c := range v {
@@ -630,12 +630,12 @@ type ParseError struct {
 	Err error
 }
 
-// Error satisfies the error interface.
+// Error satisfies the [error] interface.
 func (err *ParseError) Error() string {
 	return fmt.Sprintf("parse %q %d, %d: %v", err.S, err.N, err.I, err.Err)
 }
 
-// Unwrap satisfies the errors.Unwrap interface.
+// Unwrap satisfies the [errors.Unwrap] interface.
 func (err *ParseError) Unwrap() error {
 	return err.Err
 }

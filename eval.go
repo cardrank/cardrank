@@ -62,7 +62,7 @@ func (r EvalRank) Fixed() EvalRank {
 	return Invalid
 }
 
-// String satisfies the fmt.Stringer interface.
+// String satisfies the [fmt.Stringer] interface.
 func (r EvalRank) String() string {
 	switch r.Fixed() {
 	case StraightFlush:
@@ -170,7 +170,7 @@ func (r EvalRank) ToLowball() EvalRank {
 
 // FromLowball converts a Lowball rank to a Cactus rank.
 //
-// See [ToLowball] for a description of the operations performed.
+// See [EvalRank.ToLowball] for a description of the operations performed.
 func (r EvalRank) FromLowball() EvalRank {
 	r = Nothing - (r - 1)
 	switch {
@@ -364,8 +364,9 @@ func NewSplitEval(hi, lo RankFunc, max EvalRank) EvalFunc {
 }
 
 // NewHybridEval creates a hybrid Cactus and TwoPlusTwo eval rank func, using
-// the package RankCactus for 5 and 6 cards, and TwoPlusTwo for 7 cards. Yields
-// best performance for Cactus 5, 6, and 7 eval.
+// the package's RankCactus eval func for 5 and 6 cards, and a TwoPlusTwo eval
+// func for 7 cards. Gives optimal performance when evaluating best-5 of any 5,
+// 6, or 7 cards from a pocket and board.
 func NewHybridEval(low, normalize bool) EvalFunc {
 	var f EvalFunc
 	if low {
@@ -478,7 +479,7 @@ func NewSpanishEval() EvalFunc {
 
 // NewDallasEval creates a Dallas rank eval func.
 //
-// Uses pocket of 2 and 3 from a board of 3, 4, or 5.
+// Uses pocket of 2 and any 3 from a board of 3, 4, or 5 to make a best-5.
 func NewDallasEval(hi RankFunc, straightHigh Rank, low bool, inv func(EvalRank) EvalRank) EvalFunc {
 	lo, max := RankFunc(nil), Invalid
 	if low {
@@ -509,7 +510,8 @@ func NewDallasEval(hi RankFunc, straightHigh Rank, low bool, inv func(EvalRank) 
 
 // NewHoustonEval creates a Houston rank eval func.
 //
-// Uses pocket of 2 from 3 cards, and 3 from a board of 3, 4, or 5.
+// Uses pocket of any 2 from 3, and any 3 from a board of 3, 4, or 5 to make a
+// best-5.
 func NewHoustonEval(hi RankFunc, straightHigh Rank, inv func(EvalRank) EvalRank) EvalFunc {
 	f := NewDallasEval(hi, straightHigh, false, inv)
 	return func(ev *Eval, p, b []Card) {
@@ -797,7 +799,7 @@ func (ev *Eval) Desc(low bool) *Desc {
 	}
 }
 
-// Format satisfies the fmt.Formatter interface.
+// Format satisfies the [fmt.Formatter] interface.
 func (ev *Eval) Format(f fmt.State, verb rune) {
 	switch verb {
 	case 's', 'v':
@@ -1084,7 +1086,7 @@ type Desc struct {
 	Unused []Card
 }
 
-// Format satisfies the fmt.Stringer interface.
+// Format satisfies the [fmt.Stringer] interface.
 func (desc *Desc) Format(f fmt.State, verb rune) {
 	desc.Type.Desc(f, verb, desc.Rank, desc.Best, desc.Unused)
 }

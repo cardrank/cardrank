@@ -1,6 +1,8 @@
 // Package cardrank is a library of types, utilities, and interfaces for
 // working with playing cards, card decks, evaluating poker hand ranks,
 // managing deals and run outs for different game types.
+//
+// [noinit]: https://pkg.go.dev/github.com/cardrank/cardrank#readme-noinit
 package cardrank
 
 import (
@@ -25,7 +27,7 @@ var (
 )
 
 // Init inits the package level default variables. Must be manually called
-// prior to using this package when built with the [noinit][#noinit] build tag.
+// prior to using this package when built with the [noinit] build tag.
 func Init() {
 	if RankCactus == nil {
 		switch {
@@ -86,7 +88,7 @@ func Types() []Type {
 // Error is a error.
 type Error string
 
-// Error satisfies the error interface.
+// Error satisfies the [error] interface.
 func (err Error) Error() string {
 	return string(err)
 }
