@@ -29,10 +29,10 @@ const (
 	Two
 )
 
-// InvalidRank is an invalid rank.
+// InvalidRank is an invalid card rank.
 const InvalidRank = ^Rank(0)
 
-// RankFromRune returns the card rank for the rune.
+// RankFromRune returns a rune's card rank.
 func RankFromRune(r rune) Rank {
 	switch r {
 	case 'A', 'a':
@@ -70,7 +70,7 @@ func (rank Rank) String() string {
 	return string(rank.Byte())
 }
 
-// Byte returns the byte representation for the card rank.
+// Byte returns the card rank byte.
 func (rank Rank) Byte() byte {
 	switch rank {
 	case Ace:
@@ -103,12 +103,12 @@ func (rank Rank) Byte() byte {
 	return '0'
 }
 
-// Index the int index for the card rank (0-12 for Two-Ace).
+// Index the card rank int index (0-12 for [Two]-[Ace]).
 func (rank Rank) Index() int {
 	return int(rank)
 }
 
-// Name returns the name of the card rank.
+// Name returns the card rank name.
 func (rank Rank) Name() string {
 	switch rank {
 	case Ace:
@@ -141,7 +141,7 @@ func (rank Rank) Name() string {
 	return ""
 }
 
-// PluralName returns the plural name of the card rank.
+// PluralName returns the card rank plural name.
 func (rank Rank) PluralName() string {
 	if rank == Six {
 		return "Sixes"
@@ -149,7 +149,7 @@ func (rank Rank) PluralName() string {
 	return rank.Name() + "s"
 }
 
-// StraightFlushName returns the name for a Straight Flush of rank.
+// StraightFlushName returns the card rank [StraightFlush] name.
 func (rank Rank) StraightFlushName() string {
 	switch rank {
 	case Ace:
@@ -187,10 +187,10 @@ const (
 	Club
 )
 
-// InvalidSuit is an invalid suit.
+// InvalidSuit is an invalid card suit.
 const InvalidSuit = ^Suit(0)
 
-// SuitFromRune returns the card suit for the rune.
+// SuitFromRune returns a rune's card suit.
 func SuitFromRune(r rune) Suit {
 	switch r {
 	case 'S', 's', UnicodeSpadeBlack, UnicodeSpadeWhite:
@@ -210,7 +210,7 @@ func (suit Suit) String() string {
 	return string(suit.Byte())
 }
 
-// Byte returns the byte representation for the card suit.
+// Byte returns the card suit byte.
 func (suit Suit) Byte() byte {
 	switch suit {
 	case Spade:
@@ -225,8 +225,7 @@ func (suit Suit) Byte() byte {
 	return '0'
 }
 
-// Index returns the int index for the card suit (0-3 for Spade, Heart,
-// Diamond, Club).
+// Index returns the card suit int index (0-3 for Spade, Heart, Diamond, Club).
 func (suit Suit) Index() int {
 	switch suit {
 	case Spade:
@@ -241,7 +240,7 @@ func (suit Suit) Index() int {
 	return 0
 }
 
-// Name returns the name of the card suit.
+// Name returns the card suit name.
 func (suit Suit) Name() string {
 	switch suit {
 	case Spade:
@@ -256,12 +255,12 @@ func (suit Suit) Name() string {
 	return ""
 }
 
-// PluralName returns the plural name of the card suit.
+// PluralName returns the card suit plural name.
 func (suit Suit) PluralName() string {
 	return suit.Name() + "s"
 }
 
-// UnicodeBlack returns the black unicode pip rune for the card suit.
+// UnicodeBlack returns the card suit black unicode pip rune.
 func (suit Suit) UnicodeBlack() rune {
 	switch suit {
 	case Spade:
@@ -276,7 +275,7 @@ func (suit Suit) UnicodeBlack() rune {
 	return 0
 }
 
-// UnicodeWhite returns the white unicode pip rune for the card suit.
+// UnicodeWhite returns the card suit white unicode pip rune.
 func (suit Suit) UnicodeWhite() rune {
 	switch suit {
 	case Spade:
@@ -291,67 +290,13 @@ func (suit Suit) UnicodeWhite() rune {
 	return 0
 }
 
-// PlayingCardRune returns the unicode playing card rune for the card rank and
-// suit.
-func PlayingCardRune(rank Rank, suit Suit) rune {
-	var v rune
-	switch suit {
-	case Spade:
-		v = UnicodeSpadeAce
-	case Heart:
-		v = UnicodeHeartAce
-	case Diamond:
-		v = UnicodeDiamondAce
-	case Club:
-		v = UnicodeClubAce
-	}
-	switch rank {
-	case Ace:
-	case King:
-		v += 13
-	case Queen:
-		v += 12
-	default:
-		v += rune(rank + 1)
-	}
-	return v
-}
-
-// PlayingCardKnightRune returns the unicode playing card rune for the card
-// rank and suit, substituting knights for jacks.
-func PlayingCardKnightRune(rank Rank, suit Suit) rune {
-	var v rune
-	switch suit {
-	case Spade:
-		v = UnicodeSpadeAce
-	case Heart:
-		v = UnicodeHeartAce
-	case Diamond:
-		v = UnicodeDiamondAce
-	case Club:
-		v = UnicodeClubAce
-	}
-	switch rank {
-	case Ace:
-	case King:
-		v += 13
-	case Queen:
-		v += 12
-	case Jack:
-		v += 11
-	default:
-		v += rune(rank + 1)
-	}
-	return v
-}
-
-// Card is a card consisting of a rank (23456789TJQKA) and suit (shdc).
+// Card is a card consisting of a [Rank] (23456789TJQKA) and [Suit] (shdc).
 type Card uint32
 
 // InvalidCard is an invalid card.
 const InvalidCard = ^Card(0)
 
-// New creates a card for the specified rank and suit.
+// New creates a card for the rank and suit.
 func New(rank Rank, suit Suit) Card {
 	if Ace < rank || (suit != Spade && suit != Heart && suit != Diamond && suit != Club) {
 		return InvalidCard
@@ -396,13 +341,12 @@ func FromIndex(i int) Card {
 	return InvalidCard
 }
 
-// Parse parses strings of Card representations from v. Ignores whitespace
-// between cards and case. Combines all parsed representations into a single
-// Card slice.
+// Parse parses all string representations of [Card]'s in v, ignoring case and
+// whitespace.
 //
-// Cards can described using common text strings (such as "Ah", "ah", "aH", or
-// "AH"), or having a white or black unicode pip for the suit (such as "J♤" or
-// "K♠"), or single unicode playing card runes (such as "🃆" or "🂣").
+// Parses common strings ("Ah", "ah", "aH", or "AH"), strings using a white or
+// black unicode pip for the suit ("J♤" or "K♠"), and single unicode playing
+// card runes (such as "🃆" or "🂣").
 func Parse(strs ...string) ([]Card, error) {
 	var v []Card
 	for n, s := range strs {
@@ -451,9 +395,10 @@ func Parse(strs ...string) ([]Card, error) {
 	return v, nil
 }
 
-// Must creates a Card slice from v.
+// Must parses all string representations of [Card]'s in v, ignoring case and
+// whitespace and panicing on any error.
 //
-// See Parse for overview of accepted string representations of cards.
+// See [Parse] for overview of accepted string representations of cards.
 func Must(strs ...string) []Card {
 	v, err := Parse(strs...)
 	if err == nil {
@@ -462,44 +407,103 @@ func Must(strs ...string) []Card {
 	panic(err)
 }
 
-// Rank returns the rank of the card.
+// Rank returns the card rank.
 func (c Card) Rank() Rank {
 	return Rank(c >> 8 & 0xf)
 }
 
-// RankByte returns the rank byte of the card.
+// RankByte returns the card rank byte.
 func (c Card) RankByte() byte {
 	return c.Rank().Byte()
 }
 
-// RankIndex returns the rank index of the card.
+// RankIndex returns the card rank index.
 func (c Card) RankIndex() int {
 	return c.Rank().Index()
 }
 
-// Suit returns the suit of the card.
+// Suit returns the card suit.
 func (c Card) Suit() Suit {
 	return Suit(c >> 12 & 0xf)
 }
 
-// SuitByte returns the suit byte of the card.
+// SuitByte returns the card suit byte.
 func (c Card) SuitByte() byte {
 	return c.Suit().Byte()
 }
 
-// SuitIndex returns the suit index of the card.
+// SuitIndex returns the card suit index.
 func (c Card) SuitIndex() int {
 	return c.Suit().Index()
 }
 
-// Index returns the index of the card.
+// Index returns the card index.
 func (c Card) Index() int {
 	return c.SuitIndex()*13 + c.RankIndex()
 }
 
-// AceRank returns the Ace low index of the card.
+// AceRank returns the card [Ace]-low index.
 func (c Card) AceRank() int {
 	return int(c>>8&0xf+1) % 13
+}
+
+// Rune returns the card's unicode playing card rune.
+func (c Card) Rune() rune {
+	if c == InvalidCard {
+		return '0'
+	}
+	var v rune
+	switch c.Suit() {
+	case Spade:
+		v = UnicodeSpadeAce
+	case Heart:
+		v = UnicodeHeartAce
+	case Diamond:
+		v = UnicodeDiamondAce
+	case Club:
+		v = UnicodeClubAce
+	}
+	switch rank := c.Rank(); rank {
+	case Ace:
+	case King:
+		v += 13
+	case Queen:
+		v += 12
+	default:
+		v += rune(rank + 1)
+	}
+	return v
+}
+
+// KnightRune returns the card's unicode playing card rune, substituting
+// knights for [Jack]'s.
+func (c Card) KnightRune() rune {
+	if c == InvalidCard {
+		return '0'
+	}
+	var v rune
+	switch c.Suit() {
+	case Spade:
+		v = UnicodeSpadeAce
+	case Heart:
+		v = UnicodeHeartAce
+	case Diamond:
+		v = UnicodeDiamondAce
+	case Club:
+		v = UnicodeClubAce
+	}
+	switch rank := c.Rank(); rank {
+	case Ace:
+	case King:
+		v += 13
+	case Queen:
+		v += 12
+	case Jack:
+		v += 11
+	default:
+		v += rune(rank + 1)
+	}
+	return v
 }
 
 // UnmarshalText satisfies the [encoding.TextUnmarshaler] interface.
@@ -548,60 +552,63 @@ func (c Card) String() string {
 //	l - plural suit name, lower cased (spades hearts diamonds clubs)
 //	L - plural suit name, title cased (Spades Hearts Diamonds Clubs)
 //	d - base 10 integer value
-//	F - straight flush name for the rank
+//	F - straight flush rank name
 func (c Card) Format(f fmt.State, verb rune) {
-	r, s := c.Rank(), c.Suit()
 	var buf []byte
 	switch verb {
 	case 's', 'S', 'v':
-		buf = append(buf, r.Byte(), s.Byte())
+		buf = append(buf, c.RankByte(), c.SuitByte())
 		if verb == 'S' {
 			buf = bytes.ToUpper(buf)
 		}
 	case 'q':
-		buf = append(buf, '"', r.Byte(), s.Byte(), '"')
+		buf = append(buf, '"', c.RankByte(), c.SuitByte(), '"')
 	case 'r':
-		buf = append(buf, r.Byte())
+		buf = append(buf, c.RankByte())
 	case 'u':
-		buf = append(buf, s.Byte())
+		buf = append(buf, c.SuitByte())
 	case 'b':
-		buf = append(buf, (string(r.Byte()) + string(s.UnicodeBlack()))...)
+		buf = append(buf, (string(c.RankByte()) + string(c.Suit().UnicodeBlack()))...)
 	case 'B':
-		buf = append(buf, string(s.UnicodeBlack())...)
+		buf = append(buf, string(c.Suit().UnicodeBlack())...)
 	case 'h':
-		buf = append(buf, (string(r.Byte()) + string(s.UnicodeWhite()))...)
+		buf = append(buf, (string(c.RankByte()) + string(c.Suit().UnicodeWhite()))...)
 	case 'H':
-		buf = append(buf, string(s.UnicodeWhite())...)
+		buf = append(buf, string(c.Suit().UnicodeWhite())...)
 	case 'c':
-		buf = append(buf, string(PlayingCardRune(r, s))...)
+		buf = append(buf, string(c.Rune())...)
 	case 'C':
-		buf = append(buf, string(PlayingCardKnightRune(r, s))...)
+		buf = append(buf, string(c.KnightRune())...)
 	case 'n', 'N':
-		buf = append(buf, r.Name()...)
+		buf = append(buf, c.Rank().Name()...)
 		if verb == 'n' {
 			buf = bytes.ToLower(buf)
 		}
 	case 'p', 'P':
-		buf = append(buf, r.PluralName()...)
+		buf = append(buf, c.Rank().PluralName()...)
 		if verb == 'p' {
 			buf = bytes.ToLower(buf)
 		}
 	case 't', 'T':
-		buf = append(buf, s.Name()...)
+		buf = append(buf, c.Suit().Name()...)
 		if verb == 't' {
 			buf = bytes.ToLower(buf)
 		}
 	case 'l', 'L':
-		buf = append(buf, s.PluralName()...)
+		buf = append(buf, c.Suit().PluralName()...)
 		if verb == 'l' {
 			buf = bytes.ToLower(buf)
 		}
 	case 'F':
-		buf = append(buf, r.StraightFlushName()...)
+		buf = append(buf, c.Rank().StraightFlushName()...)
 	case 'd':
 		buf = append(buf, strconv.Itoa(int(c))...)
 	default:
-		buf = append(buf, fmt.Sprintf("%%!%c(ERROR=unknown verb, card: %s)", verb, string(r.Byte())+string(s.Byte()))...)
+		buf = append(buf, fmt.Sprintf(
+			"%%!%c(ERROR=unknown verb, card: %s)",
+			verb,
+			string(c.RankByte())+string(c.SuitByte()))...,
+		)
 	}
 	_, _ = f.Write(buf)
 }

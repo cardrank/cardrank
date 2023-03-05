@@ -37,6 +37,18 @@ func TestHoldem(t *testing.T) {
 		r EvalRank
 		s string
 	}{
+		{"5d 4d 3d 2d Ad Tc Jc", "5d 4d 3d 2d Ad", "Jc Tc", 10, "Straight Flush, Five-high, Steel Wheel [5♦ 4♦ 3♦ 2♦ A♦]"},
+		{"5c 4c 3c 2c Ac Th Qh", "5c 4c 3c 2c Ac", "Qh Th", 10, "Straight Flush, Five-high, Steel Wheel [5♣ 4♣ 3♣ 2♣ A♣]"},
+		{"5h 4h 3h 2h Ah Tc Kd", "5h 4h 3h 2h Ah", "Kd Tc", 10, "Straight Flush, Five-high, Steel Wheel [5♥ 4♥ 3♥ 2♥ A♥]"},
+		{"5s 4s 3s 2s As 9c 8c", "5s 4s 3s 2s As", "9c 8c", 10, "Straight Flush, Five-high, Steel Wheel [5♠ 4♠ 3♠ 2♠ A♠]"},
+		{"7d Jc 5d 4d 3d 2d Ad", "5d 4d 3d 2d Ad", "Jc 7d", 10, "Straight Flush, Five-high, Steel Wheel [5♦ 4♦ 3♦ 2♦ A♦]"},
+		{"7c Qh 5c 4c 3c 2c Ac", "5c 4c 3c 2c Ac", "Qh 7c", 10, "Straight Flush, Five-high, Steel Wheel [5♣ 4♣ 3♣ 2♣ A♣]"},
+		{"7h Kd 5h 4h 3h 2h Ah", "5h 4h 3h 2h Ah", "Kd 7h", 10, "Straight Flush, Five-high, Steel Wheel [5♥ 4♥ 3♥ 2♥ A♥]"},
+		{"7s 8c 5s 4s 3s 2s As", "5s 4s 3s 2s As", "8c 7s", 10, "Straight Flush, Five-high, Steel Wheel [5♠ 4♠ 3♠ 2♠ A♠]"},
+		{"5d 4d 3d 2d Ac 8h 8s", "5d 4d 3d 2d Ac", "8h 8s", 1609, "Straight, Five-high [5♦ 4♦ 3♦ 2♦ A♣]"},
+		{"5c 4c 3c 2c Ad Kh Jh", "5c 4c 3c 2c Ad", "Kh Jh", 1609, "Straight, Five-high [5♣ 4♣ 3♣ 2♣ A♦]"},
+		{"5h 4h 3h 2h As Kd Jd", "5h 4h 3h 2h As", "Kd Jd", 1609, "Straight, Five-high [5♥ 4♥ 3♥ 2♥ A♠]"},
+		{"5s 4s 3s 2s Ah Qh Jd", "5s 4s 3s 2s Ah", "Qh Jd", 1609, "Straight, Five-high [5♠ 4♠ 3♠ 2♠ A♥]"},
 		{"9d 8d 7d 6d Ad Tc Jc", "Ad 9d 8d 7d 6d", "Jc Tc", 747, "Flush, Ace-high, kickers Nine, Eight, Seven, Six [A♦ 9♦ 8♦ 7♦ 6♦]"},
 		{"9c 8c 7c 6c Ac Th Qh", "Ac 9c 8c 7c 6c", "Qh Th", 747, "Flush, Ace-high, kickers Nine, Eight, Seven, Six [A♣ 9♣ 8♣ 7♣ 6♣]"},
 		{"9h 8h 7h 6h Ah Tc Kd", "Ah 9h 8h 7h 6h", "Kd Tc", 747, "Flush, Ace-high, kickers Nine, Eight, Seven, Six [A♥ 9♥ 8♥ 7♥ 6♥]"},
@@ -73,7 +85,9 @@ func TestDallas(t *testing.T) {
 		r EvalRank
 		s string
 	}{
-		{"2d 2h 3c 5c 5s Jh 7c", "", "", 0, ""},
+		{"2d 2h 3c 5c 5s Jh 7c", "5c 5s 2d 2h Jh", "7c 3c", 3285, "Two Pair, Fives over Twos, kicker Jack [5♣ 5♠ 2♦ 2♥ J♥]"},
+		{"2d 3c 2h 5c 5s Jh 7c", "5c 5s 2d 2h 3c", "Jh 7c", 3292, "Two Pair, Fives over Twos, kicker Three [5♣ 5♠ 2♦ 2♥ 3♣]"},
+		{"Jh 7c 2d 3c 2h 5c 5s", "5c 5s Jh 7c 3c", "2d 2h", 5462, "Pair, Fives, kickers Jack, Seven, Three [5♣ 5♠ J♥ 7♣ 3♣]"},
 	}
 	for i, test := range tests {
 		pocket, best, unused := Must(test.v), Must(test.b), Must(test.u)

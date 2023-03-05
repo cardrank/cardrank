@@ -57,7 +57,7 @@ func (typ DeckType) Desc(short bool) string {
 	return typ.Name() + " (" + strconv.Itoa(int(typ+2)) + "+)"
 }
 
-// Ordinal returns the ordinal for the deck.
+// Ordinal returns the deck ordinal.
 func (typ DeckType) Ordinal() int {
 	return int(typ + 2)
 }
@@ -82,7 +82,7 @@ func (typ DeckType) Format(f fmt.State, verb rune) {
 	_, _ = f.Write(buf)
 }
 
-// Unshuffled returns a set of unshuffled cards for the deck type.
+// Unshuffled returns a set of the deck's unshuffled cards.
 func (typ DeckType) Unshuffled() []Card {
 	switch typ {
 	case DeckFrench, DeckShort, DeckManila, DeckSpanish, DeckRoyal:
@@ -206,19 +206,19 @@ func (d *Deck) Reset() {
 	d.i = 0
 }
 
-// Draw draws the next n cards from the top (front) of the deck.
-func (d *Deck) Draw(n int) []Card {
-	if n < 0 {
+// Draw draws count cards from the top (front) of the deck.
+func (d *Deck) Draw(count int) []Card {
+	if count < 0 {
 		return nil
 	}
 	var cards []Card
-	for l := min(d.i+n, d.l); d.i < l; d.i++ {
+	for l := min(d.i+count, d.l); d.i < l; d.i++ {
 		cards = append(cards, d.v[d.i])
 	}
 	return cards
 }
 
-// Shuffle shuffles the deck's cards using the shuffler multiple times.
+// Shuffle shuffles the deck's cards using the shuffler times.
 func (d *Deck) Shuffle(shuffler Shuffler, shuffles int) {
 	for m := 0; m < shuffles; m++ {
 		shuffler.Shuffle(len(d.v), func(i, j int) {
@@ -586,8 +586,8 @@ func NewRun(count int) *Run {
 	}
 }
 
-// Dupe creates a duplicate of the hi and lo portions of the board, excluding
-// any eval info collected.
+// Dupe creates a duplicate of run, with a copy of the pockets and Hi and Lo
+// board.
 func (run *Run) Dupe() *Run {
 	r := new(Run)
 	if run.Pockets != nil {
@@ -648,9 +648,9 @@ func NewWin(evs []*Eval, order []int, pivot int, low, scoop bool) *Win {
 	}
 }
 
-// Desc returns the win descriptions.
-func (win *Win) Desc() []*Desc {
-	var v []*Desc
+// Desc returns the eval descriptions.
+func (win *Win) Desc() []*EvalDesc {
+	var v []*EvalDesc
 	for i := 0; i < win.Pivot; i++ {
 		if d := win.Evals[win.Order[i]].Desc(win.Low); d != nil && d.Rank != 0 && d.Rank != Invalid {
 			v = append(v, d)

@@ -14,17 +14,19 @@ func init() {
 	}
 }
 
-// NewTwoPlusTwo creates a new Two-Plus-Two rank eval func, a version of the
-// 2+2 poker forum rank evaluator. Uses the embedded twoplustwo*.dat files to
-// provide extremely fast 7 card lookup.
+// NewTwoPlusTwoEval creates a new Two-Plus-Two rank eval func, a version of
+// the 2+2 poker forum rank evaluator. Uses the embedded twoplustwo*.dat files
+// to provide extremely fast 7 card lookup.
 //
-// The lookup table is contained in the 'twoplustwo*.dat' files, and were
+// The lookup table is contained in the embedded 'twoplustwo*.dat' files,
 // broken up from a single file to get around GitHub's size limitations. Files
-// were generated with 'internal/twoplustwogen.go', which is a pure-Go
-// port of the code generator available at: https://github.com/tangentforks/TwoPlusTwoHandEvaluator
+// were generated with 'internal/twoplustwogen.go', which is a pure-Go port of
+// the reference [TwoPlusTwoHandEvaluator].
 //
 // When recombined, the lookup table has the same hash as the original table
 // generated using the C code.
+//
+// [TwoPlusTwoHandEvaluator]: https://github.com/tangentforks/TwoPlusTwoHandEvaluator
 func NewTwoPlusTwoEval() func([]Card) EvalRank {
 	const total, chunk, last = 32487834, 2621440, 1030554
 	tbl, pos := make([]uint32, total), 0

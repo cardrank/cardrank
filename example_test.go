@@ -64,6 +64,17 @@ func ExampleHoldem_New() {
 	// Straight Flush, Five-high, Steel Wheel [5♣ 4♣ 3♣ 2♣ A♣]
 }
 
+func ExampleSpanish_New() {
+	d := cardrank.DeckSpanish.New()
+	// note: use a real random source
+	r := rand.New(rand.NewSource(2231))
+	d.Shuffle(r, 1)
+	ev := cardrank.Spanish.Eval(d.Draw(2), d.Draw(5))
+	fmt.Printf("%b\n", ev)
+	// Output:
+	// Straight Flush, Jack-high, Bronze Fist [J♦ T♦ 9♦ 8♦ A♦]
+}
+
 func Example_holdem() {
 	for i, game := range []struct {
 		seed    int64
@@ -153,7 +164,7 @@ func Example_holdem() {
 	// Result:   Player 2 wins with Four of a Kind, Aces, kicker Ten
 	// ------ Holdem 8 ------
 	// Board:    [Q♥ T♥ T♠ J♥ K♥]
-	// Player 1: [A♥ 8♥] Straight Flush, Ace-high, Royal [A♥ K♥ Q♥ J♥ T♥] [8♥ T♠]
+	// Player 1: [A♥ 8♥] Straight Flush, Ace-high, Royal [A♥ K♥ Q♥ J♥ T♥] [T♠ 8♥]
 	// Player 2: [9♠ 8♦] Straight, King-high [K♥ Q♥ J♥ T♥ 9♠] [T♠ 8♦]
 	// Player 3: [Q♣ 4♦] Two Pair, Queens over Tens, kicker King [Q♣ Q♥ T♥ T♠ K♥] [J♥ 4♦]
 	// Player 4: [2♠ Q♦] Two Pair, Queens over Tens, kicker King [Q♦ Q♥ T♥ T♠ K♥] [J♥ 2♠]
@@ -239,17 +250,17 @@ func Example_short() {
 	// ------ Short 3 ------
 	// Board:    [T♥ J♣ 7♥ 9♥ K♣]
 	// Player 1: [8♥ T♣] Straight, Jack-high [J♣ T♣ 9♥ 8♥ 7♥] [K♣ T♥]
-	// Player 2: [T♠ Q♠] Straight, King-high [K♣ Q♠ J♣ T♠ 9♥] [T♥ 7♥]
+	// Player 2: [T♠ Q♠] Straight, King-high [K♣ Q♠ J♣ T♥ 9♥] [T♠ 7♥]
 	// Player 3: [J♠ 7♣] Two Pair, Jacks over Sevens, kicker King [J♣ J♠ 7♣ 7♥ K♣] [T♥ 9♥]
 	// Player 4: [6♣ Q♦] Straight, King-high [K♣ Q♦ J♣ T♥ 9♥] [7♥ 6♣]
 	// Player 5: [7♦ 6♠] Pair, Sevens, kickers King, Jack, Ten [7♦ 7♥ K♣ J♣ T♥] [9♥ 6♠]
-	// Player 6: [8♠ 8♦] Straight, Jack-high [J♣ T♥ 9♥ 8♠ 7♥] [K♣ 8♦]
+	// Player 6: [8♠ 8♦] Straight, Jack-high [J♣ T♥ 9♥ 8♦ 7♥] [K♣ 8♠]
 	// Player 7: [9♣ K♥] Two Pair, Kings over Nines, kicker Jack [K♣ K♥ 9♣ 9♥ J♣] [T♥ 7♥]
 	// Player 8: [A♥ K♦] Pair, Kings, kickers Ace, Jack, Ten [K♣ K♦ A♥ J♣ T♥] [9♥ 7♥]
 	// Result:   Players 2, 4 push with Straight, King-high
 	// ------ Short 4 ------
 	// Board:    [T♦ 9♣ 9♦ Q♦ 8♦]
-	// Player 1: [J♠ 9♥] Straight, Queen-high [Q♦ J♠ T♦ 9♥ 8♦] [9♣ 9♦]
+	// Player 1: [J♠ 9♥] Straight, Queen-high [Q♦ J♠ T♦ 9♣ 8♦] [9♦ 9♥]
 	// Player 2: [T♥ 8♠] Two Pair, Tens over Nines, kicker Queen [T♦ T♥ 9♣ 9♦ Q♦] [8♦ 8♠]
 	// Player 3: [6♣ J♦] Straight Flush, Queen-high, Silver Tongue [Q♦ J♦ T♦ 9♦ 8♦] [9♣ 6♣]
 	// Player 4: [A♣ A♦] Flush, Ace-high, kickers Queen, Ten, Nine, Eight [A♦ Q♦ T♦ 9♦ 8♦] [A♣ 9♣]

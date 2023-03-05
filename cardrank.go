@@ -1,5 +1,5 @@
 // Package cardrank is a library of types, utilities, and interfaces for
-// working with playing cards, card decks, evaluating poker hand ranks,
+// working with playing cards, card decks, evaluating poker hand ranks, and
 // managing deals and run outs for different game types.
 //
 // [noinit]: https://pkg.go.dev/github.com/cardrank/cardrank#readme-noinit

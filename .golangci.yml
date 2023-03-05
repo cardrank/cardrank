@@ -30,6 +30,8 @@ linters:
     - varnamelen
     - wsl
 linters-settings:
+  goconst:
+    min-occurrences: 4
   gocritic:
     disabled-checks:
       - singleCaseSwitch

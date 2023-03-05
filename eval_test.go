@@ -142,13 +142,10 @@ func TestEval(t *testing.T) {
 		} {
 			r, tests := rr, f()
 			t.Run(fmt.Sprintf("%s/%d", r.name, i+5), func(t *testing.T) {
-				if r.name == "Cactus" || r.name == "CactusFast" {
-					t.Skip("skipping")
-				}
 				for j, test := range tests {
 					v := Must(test.v)
 					ev := EvalOf(0)
-					r.eval(ev, v[:5], v[5:])
+					r.eval(ev, v[:2], v[2:])
 					if r, exp := ev.HiRank, test.r; r != exp {
 						t.Errorf("test %d %d expected %d, got: %d", i, j, exp, r)
 					}
@@ -268,6 +265,7 @@ func TestLowballCards(t *testing.T) {
 	if s := os.Getenv("TESTS"); !strings.Contains(s, "lowball") && !strings.Contains(s, "all") {
 		t.Skip("skipping: $ENV{TESTS} does not contain 'lowball' or 'all'")
 	}
+	t.Parallel()
 	u, c, l, ev, uv := shuffled(DeckFrench), NewCactusEval(false), NewLowballEval(), EvalOf(Holdem), EvalOf(Lowball)
 	for c0 := 0; c0 < 52; c0++ {
 		for c1 := c0 + 1; c1 < 52; c1++ {
@@ -325,8 +323,7 @@ func wrapCactus(f RankFunc, normalize bool) EvalFunc {
 	g := NewEval(f)
 	return func(ev *Eval, p, b []Card) {
 		g(ev, p, b)
-		bestCactus(ev.HiRank, ev.HiBest, Five, nil)
-		bestAceHigh(ev.HiUnused)
+		bestCactus(ev.HiRank, ev.HiBest, ev.HiUnused, 0, nil)
 	}
 }
 
@@ -346,7 +343,7 @@ func wrapTwoPlusTwo(normalize bool) EvalFunc {
 		copy(v, p)
 		copy(v[n:], b)
 		ev.HiRank = twoPlusTwo(v)
-		ev.HiBest, ev.HiUnused = bestCactusAll(ev.HiRank, v, Five)
+		ev.HiBest, ev.HiUnused = bestCactusSplit(ev.HiRank, v, 0)
 	}
 }
 
@@ -413,6 +410,7 @@ func sevenCardTests() []cardTest {
 		{"9d Jd 6s 6c 5c 5d 4d", 0x0c93, TwoPair, "Two Pair, Sixes over Fives, kicker Jack [6♣ 6♠ 5♣ 5♦ J♦] [9♦ 4♦]"},
 		{"2d 3d 6s 6c Jc Jd 5d", 0x0b42, TwoPair, "Two Pair, Jacks over Sixes, kicker Five [J♣ J♦ 6♣ 6♠ 5♦] [3♦ 2♦]"},
 		{"2d 3d As Ac Jc Jd 5d", 0x09c1, TwoPair, "Two Pair, Aces over Jacks, kicker Five [A♣ A♠ J♣ J♦ 5♦] [3♦ 2♦]"},
+		{"9c 7d 4s 7c Js Qd 4d", 3185, TwoPair, "Two Pair, Sevens over Fours, kicker Queen [7♣ 7♦ 4♦ 4♠ Q♦] [J♠ 9♣]"},
 		{"2c 3d As Ac Ad Jd 5d", 0x0664, ThreeOfAKind, "Three of a Kind, Aces, kickers Jack, Five [A♣ A♦ A♠ J♦ 5♦] [3♦ 2♣]"},
 		{"4s 5s 2d 3h Ac Jd Qs", 0x0649, Straight, "Straight, Five-high [5♠ 4♠ 3♥ 2♦ A♣] [Q♠ J♦]"},
 		{"2d 3d 9s Ks Qd Jh Td", 0x0641, Straight, "Straight, King-high [K♠ Q♦ J♥ T♦ 9♠] [3♦ 2♦]"},

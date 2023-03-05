@@ -1,11 +1,12 @@
-//go:build !portable
-
 package cardrank
 
 import (
+	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestCactus(t *testing.T) {
@@ -15,7 +16,11 @@ func TestCactus(t *testing.T) {
 	if cactus == nil {
 		t.Skip("skipping: cactus is not available")
 	}
+	const total = 133784560
+	t.Parallel()
 	u, f, tests, exp, ev := shuffled(DeckFrench), NewEval(cactus), cactusTests(false, true), EvalOf(Holdem), EvalOf(Holdem)
+	v := make([]Card, 7)
+	var i int
 	for c0 := 0; c0 < 52; c0++ {
 		for c1 := c0 + 1; c1 < 52; c1++ {
 			for c2 := c1 + 1; c2 < 52; c2++ {
@@ -23,19 +28,30 @@ func TestCactus(t *testing.T) {
 					for c4 := c3 + 1; c4 < 52; c4++ {
 						for c5 := c4 + 1; c5 < 52; c5++ {
 							for c6 := c5 + 1; c6 < 52; c6++ {
-								v := []Card{u[c0], u[c1], u[c2], u[c3], u[c4], u[c5], u[c6]}
+								v[0], v[1], v[2], v[3], v[4], v[5], v[6] = u[c0], u[c1], u[c2], u[c3], u[c4], u[c5], u[c6]
+								exp.HiRank = Invalid
 								f(exp, v, nil)
 								if r := exp.HiRank; r == 0 || r == Invalid {
 									t.Fatalf("test cactus %v expected valid rank, got: %d", v, r)
 								}
+								bestCactus(exp.HiRank, exp.HiBest, exp.HiUnused, 0, nil)
+								expDesc := fmt.Sprintf("%s", exp.Desc(false))
 								for _, test := range tests {
+									ev.HiRank = Invalid
 									test.eval(ev, v, nil)
+									desc := fmt.Sprintf("%s", ev.Desc(false))
 									switch r, exp := ev.HiRank, exp.HiRank; {
 									case r == 0, r == Invalid:
 										t.Errorf("test %s %v expected valid rank, got: %d", test.name, v, r)
 									case r != exp:
 										t.Errorf("test %s %v expected %d, got: %d", test.name, v, exp, r)
+									case desc != expDesc:
+										t.Errorf("test %s %v expected %q, got: %q", test.name, v, expDesc, desc)
 									}
+								}
+								i++
+								if i%1000000 == 0 {
+									t.Logf("%.0f%%", float64(i)/total*100)
 								}
 							}
 						}
@@ -44,6 +60,7 @@ func TestCactus(t *testing.T) {
 			}
 		}
 	}
+	t.Logf("%d/%d", i, total)
 }
 
 func TestNextBitPermutation(t *testing.T) {
@@ -171,4 +188,105 @@ func TestCactusMaps(t *testing.T) {
 			t.Fatalf("test %d unique5[%d] to be %d, got: %d", i, test.r, exp, n)
 		}
 	}
+}
+
+func TestSokoCards(t *testing.T) {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	if s := os.Getenv("TESTS"); !strings.Contains(s, "soko") && !strings.Contains(s, "all") {
+		t.Skip("skipping: $ENV{TESTS} does not contain 'soko' or 'all'")
+	}
+	t.Parallel()
+	u, f, ev, uv := shuffled(DeckFrench), NewSokoEval(false), EvalOf(Soko), EvalOf(Soko)
+	for c0 := 0; c0 < 52; c0++ {
+		for c1 := c0 + 1; c1 < 52; c1++ {
+			for c2 := c1 + 1; c2 < 52; c2++ {
+				for c3 := c2 + 1; c3 < 52; c3++ {
+					for c4 := c3 + 1; c4 < 52; c4++ {
+						v := []Card{u[c0], u[c1], u[c2], u[c3], u[c4]}
+						f(ev, v, nil)
+						switch r := ev.HiRank; {
+						case r == 0, r == Invalid:
+							t.Fatalf("%v expected valid rank, got: %d", v, r)
+						case r <= TwoPair:
+						case hasFlush4(v):
+							if r <= TwoPair || sokoFlush < r {
+								t.Errorf("%v expected four flush %d < r <= %d, got: %d", v, TwoPair, sokoFlush, r)
+							}
+						case hasStraight4(v):
+							if r <= sokoFlush || sokoStraight < r {
+								t.Errorf("%v expected four straight %d < r <= %d, got: %d", v, sokoFlush, sokoStraight, r)
+							}
+						case sokoNothing < r:
+							t.Errorf("%v expected nothing r <= %d, got: %d", v, sokoNothing, r)
+						}
+						u := make([]Card, 5)
+						copy(u, v)
+						for k := 0; k < 3; k++ {
+							r.Shuffle(5, func(i, j int) {
+								u[i], u[j] = u[j], u[i]
+							})
+						}
+						f(uv, u, nil)
+						if ev.HiRank != uv.HiRank {
+							t.Fatalf("expected equal ranks for %v %v, got: %d", v, u, uv.HiRank)
+						}
+						if s, z := fmt.Sprintf("%s", ev), fmt.Sprintf("%s", uv); s != z {
+							t.Errorf("expected %q == %q %v %v", s, z, v, u)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func TestRankSoko(t *testing.T) {
+	t.Logf("flush4: %d straight4: %d", len(sokoFlush4), len(sokoStraight4))
+	tests := []struct {
+		a   string
+		b   string
+		exp EvalRank
+	}{
+		{"Ah Kh Ks Qh Jh", "Ad Kd Kh Qd Jd", 3327},
+		{"Ah Qd Ks Jh As", "Ad Qh Kh Jd Ac", 12621},
+		{"Ah Qd Jh Th 8c", "8d Ac Qh Jc Tc", 15777},
+	}
+	for i, test := range tests {
+		a, b := Must(test.a), Must(test.b)
+		if r, exp := RankSoko(a[0], a[1], a[2], a[3], a[4]), test.exp; r != exp {
+			t.Errorf("test %d expected %d, got: %d", i, exp, r)
+		}
+		if r, exp := RankSoko(b[0], b[1], b[2], b[3], b[4]), test.exp; r != exp {
+			t.Errorf("test %d expected %d, got: %d", i, exp, r)
+		}
+	}
+}
+
+func hasFlush4(v []Card) bool {
+	for i := 0; i < 5; i++ {
+		c0, c1, c2, c3 := v[i%5], v[(i+1)%5], v[(i+2)%5], v[(i+3)%5]
+		if c0&c1&c2&c3&0xf000 != 0 {
+			return true
+		}
+	}
+	return false
+}
+
+var straight4 map[Card]bool
+
+func init() {
+	straight4 = make(map[Card]bool)
+	for i, r := 0, 9; r >= 0; i, r = i+1, r-1 {
+		straight4[0xf<<r] = true
+	}
+}
+
+func hasStraight4(v []Card) bool {
+	for i := 0; i < 5; i++ {
+		c0, c1, c2, c3 := v[i%5], v[(i+1)%5], v[(i+2)%5], v[(i+3)%5]
+		if straight4[(c0|c1|c2|c3)>>16] {
+			return true
+		}
+	}
+	return false
 }

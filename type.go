@@ -7,9 +7,12 @@ import (
 	"unicode"
 )
 
-// Type is a game eval type, providing a standard interface wrapping a
-// [TypeDesc]. [DefaultType]'s are registered by default unless using the
-// [noinit] build tag.
+// Type wraps a registered type description (see [TypeDesc]), providing a
+// standard way to use the [DefaultTypes], or a custom type registered with
+// [RegisterType]. [DefaultTypes] are registered by default unless using the
+// `noinit` build tag.
+//
+// # Standard Types
 //
 // [Holdem] is a best-5 card game using a standard deck of 52 cards (see
 // [DeckFrench]), having a pocket of 2 cards, 5 community board cards, and a
@@ -18,50 +21,53 @@ import (
 // on the River. 1 card is discarded on the Flop, Turn, and River, prior to the
 // board cards being dealt.
 //
-// [Split] is the Hi/Lo variant of [Holdem], using a [RankEightOrBetter] as the
-// Lo eval.
+// [Split] is the Hi/Lo variant of [Holdem], using a [Eight]-or-better
+// qualifier (see [RankEightOrBetter]) for the Lo.
 //
-// [Short] is a [Holdem] variant using a Short deck (a 6+ only card deck, see
-// [DeckShort]). [Flush] ranks over [FullHouse].
+// [Short] is a [Holdem] variant using a Short deck of 36 cards, having only
+// cards with ranks of 6+ (see [DeckShort]). [Flush] ranks over [FullHouse].
 //
-// [Manila] is a [Holdem] variant using a Manila deck (a 7+ only card deck, see
-// [DeckManila]), forcing the use of 2 pocket cards, adding a Drop street before
-// the Flop, and with all 5 streets (instead of 4) receiving 1 board card each.
-// [Flush] ranks over [FullHouse].
+// [Manila] is a [Holdem] variant using a Manila deck of 32 cards, having only
+// cards with ranks of 7+ (see [DeckManila]), forcing the use of 2 pocket
+// cards, adding a Drop street before the Flop, and with all 5 streets (instead
+// of 4) receiving 1 board card each. [Flush] ranks over [FullHouse].
 //
-// [Spanish] is a [Holdem]/[Manila] variant, using a Spanish deck (a 8+ only
-// card deck, see [DeckSpanish]).
+// [Spanish] is a [Holdem]/[Manila] variant, using a Spanish deck of 28 cards,
+// having only cards with ranks of 8+ (see [DeckSpanish]).
 //
-// [Royal] is a [Holdem] variant using a Royal deck (a 10+ only card deck, see
-// [DeckRoyal]).
+// [Royal] is a [Holdem] variant using a Royal deck of 20 cards, having only
+// cards with ranks of 10+ (see [DeckRoyal]).
 //
-// [Double] is a [Holdem] variant where there are two community boards,
-// comprising the Hi and Lo.
+// [Double] is a [Holdem] variant having two separate Hi and Lo community
+// boards.
 //
 // [Showtime] is a [Holdem] variant where folded cards are shown.
 //
-// [Swap] is a [Holdem] variant where up to 2 cards may be drawn (exchanged)
-// once.
+// [Swap] is a [Holdem] variant where up to 2 pocket cards may be drawn
+// (exchanged) exactly once on the Flop, Turn, or River.
 //
-// [River] is a [Holdem] variant that deals 1 pocket card on the river instead
-// of a shared community board card on the river, resulting in a pocket of 3
-// and a community board of 4.
+// [River] is a [Holdem] variant that deals 1 pocket card on the River instead
+// of to the community board, resulting in a total pocket of 3 cards and a
+// community board of 4 cards. Any of the 3 pocket cards or 4 board cards may
+// be used to create the best-5.
 //
 // [Dallas] is [Holdem] variant that forces the use of the 2 pocket cards and
-// any 3 board cards. Similar to [Omaha], but with 2 pocket cards instead of 4.
+// any 3 of the 5 board cards to make the best-5. Comparable to [Omaha], but
+// with 2 pocket cards instead of 4.
 //
-// [Houston] is a [Holdem] variant with 3 pocket cards, 2 board cards dealt on
-// the Flop (instead of 3), and requires using 2 of the 3 pocket cards, and any
-// 3 board cards to make the best-5. Essentially Omaha, but with 3 pocket cards
-// instead of 4, and a community board of 4.
+// [Houston] is a [Holdem]/[Dallas] variant with 3 pocket cards, instead of 2,
+// where only 2 board cards are dealt on the Flop, instead of 3. Requires using
+// 2 of the 3 pocket cards and any 3 of the 4 board cards to make the best-5.
+// Comparable to [Omaha], but with 3 pocket cards instead of 4, and a community
+// board of 4.
 //
 // [Draw] is a best-5 card game using a standard deck of 52 cards (see
 // [DeckFrench]), comprising a pocket of 5 cards, no community cards, with a
 // Ante, 6th, and River streets. 5 cards are dealt on the Ante, and up to 5
-// cards can be drawn (exchanged) on the 6th street.
+// pocket cards can be drawn (exchanged) on the 6th street.
 //
-// [DrawHiLo] is the Hi/Lo variant of [Draw], using a [RankEightOrBetter] as
-// the Lo eval.
+// [DrawHiLo] is the Hi/Lo variant of [Draw], using a [Eight]-or-better
+// qualifier (see [RankEightOrBetter]) for the Lo.
 //
 // [Stud] is a best-5 card game, using a standard deck of 52 cards (see
 // [DeckFrench]), comprising a pocket of 7 cards, no community cards, with
@@ -70,36 +76,39 @@ import (
 // 4th, 5th, and 6th streets, with a final pocket card dealt down on the 7th
 // street for a total of 7 pocket cards.
 //
-// [StudHiLo] is the Hi/Lo variant of [Stud], using a [RankEightOrBetter] as
-// the Lo eval.
+// [StudHiLo] is the Hi/Lo variant of [Stud], using a [Eight]-or-better
+// qualifier (see [RankEightOrBetter]) for the Lo.
 //
 // [StudFive] is a best-5 card game using a standard deck of 52 cards (see
 // [DeckFrench]), comprising a pocket of 5 cards, no community cards, with
 // Ante, 3rd, 4th, and River streets. 2 pocket cards are dealt on the Ante,
 // with 1 pocket card dealt up, and an additional pocket card dealt up on the
-// 3rd, 4th, and 5th streets. It is similar to [Stud], but without 5th and 6th
+// 3rd, 4th, and 5th streets. Similar to [Stud], but without 5th and 6th
 // streets.
 //
 // [Video] is a best-5 card game, using a standard deck of 52 cards (see
 // [DeckFrench]), comprising a pocket of 5 cards, no community cards, with a
-// Ante and River. 5 pocket cards are dealt on the Ante, all up. Up to 5 cards
-// can be drawn (exchanged) on the River. Uses a qualifier of a Jacks-or-better
-// for Hi eval (see [NewJacksOrBetterEval]).
+// Ante and River. 5 pocket cards are dealt on the Ante, all up. Up to 5 pocket
+// cards can be drawn (exchanged) on the River. Uses a qualifier of a
+// [Jack]'s-or-better for Hi eval (see [NewJacksOrBetterEval]).
 //
-// [Omaha] is a [Holdem] variant with 4 pocket cards, requiring use of 2 of the
-// pocket and 3 of the board to make the best-5.
+// [Omaha] is a [Holdem] variant with 4 pocket cards instead of 2, requiring
+// use of 2 of 4 the pocket cards and any 3 of the 5 board cards to make the
+// best-5.
 //
-// [OmahaHiLo] is the Hi/Lo variant of [Omaha], using a [RankEightOrBetter] as
-// the Lo eval.
+// [OmahaHiLo] is the Hi/Lo variant of [Omaha], using a [Eight]-or-better
+// qualifier (see [RankEightOrBetter]) for the Lo.
 //
-// [OmahaDouble] is a [Omaha] variant where there are two community boards
-// comprising the Hi and Lo.
+// [OmahaDouble] is a [Omaha] variant having two separate Hi and Lo community
+// boards.
 //
 // [OmahaFive] is a [Holdem]/[Omaha] variant with 5 pocket cards, requiring the
-// use of 2 of the pocket and 3 of the board to make the best-5.
+// use of 2 of the 5 pocket cards and any 3 of the 5 board cards to make the
+// best-5.
 //
 // [OmahaSix] is a [Holdem]/[Omaha] variant with 6 pocket cards, requiring the
-// use of 2 of the pocket and 3 of the board to make the best-5 cards.
+// use of 2 of the 6 pocket cards and any 3 of the 5 board cards to make the
+// best-5.
 //
 // [Courchevel] is a [OmahaFive] variant, where 1 board card is dealt on the
 // Pre-Flop, and only 2 board cards dealt on the Flop.
@@ -107,35 +116,35 @@ import (
 // [Fusion] is a [Holdem]/[Omaha] variant where only 2 pocket cards are dealt
 // on the Pre-Flop, with 1 additional pocket card dealt on the Flop and Turn.
 //
-// [FusionHiLo] is the Hi/Lo variant of [Fusion], using a [RankEightOrBetter] as
-// the Lo eval.
+// [FusionHiLo] is the Hi/Lo variant of [Fusion], using a [Eight]-or-better
+// qualifier (see [RankEightOrBetter]) for the Lo.
 //
 // [Soko] is a [Holdem] variant with 2 additional ranks, a Four Flush (4 cards
 // of the same suit), and a Four Straight (4 cards in sequential rank, with no
 // wrapping straights), besting [Pair] and [Nothing].
 //
-// [SokoHiLo] is the Hi/Lo variant of [Soko], using a [RankEightOrBetter] as
-// the Lo eval.
+// [SokoHiLo] is the Hi/Lo variant of [Soko], using a [Eight]-or-better
+// qualifier (see [RankEightOrBetter]) for the Lo.
 //
 // [Lowball] is a best-5 low card game using a standard deck of 52 cards (see
 // [DeckFrench]), comprising 5 pocket cards, no community cards, and a Ante,
-// 6th, 7th, and River streets using a 2-to-7 low ("Lowball") inverted ranking
-// system, where [Ace]'s always play high, and non-[Flush], and non-[Straight]
-// lows are best. Up to 5 cards may be drawn (exchanged) once on either the
-// 6th, 7th, or River streets.
+// 6th, 7th, and River streets using a [Two]-to-[Seven] low inverted ranking
+// system, where [Ace]'s are always high, and non-[Flush], and non-[Straight]
+// lows are best. Up to 5 pocket cards may be drawn (exchanged) exactly once on
+// either the 6th, 7th, or River streets.
 //
-// [LowballTriple] is a [Lowball] multi variant that allows any 5 cards to be
-// drawn (exchanged) on the 6th, 7th, or River streets.
+// [LowballTriple] is a [Lowball] variant, where up to 5 pocket cards to be
+// drawn (exchanged) on any of the 6th, 7th, or River streets.
 //
-// [Razz] is a [Stud] variant, using a Ace-to-5 low ranking (see
-// [RankRazz]/[RankAceFiveLow]), where [Ace]'s play low, and [Flush]'s and
-// [Straight]'s do not affect ranking.
+// [Razz] is a [Stud] low variant, using a [Ace]-to-[Five] ranking (see
+// [RankRazz]), where [Ace]'s play low, and [Flush]'s and [Straight]'s do not
+// affect ranking.
 //
-// [Badugi] is a unique, best-4, lowest non-matching-suit card game (see
-// [NewBadugiEval]), using a standard deck of 52 cards (see [DeckFrench]),
-// comprising 4 pocket cards, no community cards, and Ante, 5th, 6th, and River
-// streets. Up to 4 cards can be drawn (exchanged) on the 5th, 6th, or River
-// streets.
+// [Badugi] is a best-4 low non-matching-suit card game, using a standard deck
+// of 52 cards (see [DeckFrench]), comprising 4 pocket cards, no community
+// cards, and Ante, 5th, 6th, and River streets. Up to 4 cards can be drawn
+// (exchanged) multiple times on the 5th, 6th, or River streets. See
+// [NewBadugiEval] and [WithBadugi] for more details.
 type Type uint16
 
 // Types.
@@ -295,12 +304,12 @@ func (typ Type) Format(f fmt.State, verb rune) {
 	_, _ = f.Write(buf)
 }
 
-// Desc returns the type's description.
+// Desc returns the type description.
 func (typ Type) Desc() TypeDesc {
 	return descs[typ]
 }
 
-// Name returns the type's name.
+// Name returns the type name.
 func (typ Type) Name() string {
 	return descs[typ].Name
 }
@@ -408,8 +417,8 @@ func (typ Type) Deck() *Deck {
 	return descs[typ].Deck.New()
 }
 
-// Dealer creates a new dealer with a deck shuffled by shuffles, for the pocket
-// count.
+// Dealer creates a new dealer with a deck shuffled by shuffles, with specified
+// pocket count.
 func (typ Type) Dealer(shuffler Shuffler, shuffles, count int) *Dealer {
 	if desc, ok := descs[typ]; ok {
 		return NewShuffledDealer(desc, shuffler, shuffles, count)
@@ -417,8 +426,8 @@ func (typ Type) Dealer(shuffler Shuffler, shuffles, count int) *Dealer {
 	return nil
 }
 
-// Deal creates a new dealer for the type, shuffling the deck by shuffles and
-// returning the count dealt pockets and hi board.
+// Deal creates a new dealer for the type, shuffling the deck by shuffles,
+// returning the specified pocket count and Hi board.
 func (typ Type) Deal(shuffler Shuffler, shuffles, count int) ([][]Card, []Card) {
 	if d := typ.Dealer(shuffler, shuffles, count); d != nil {
 		for d.Next() {
@@ -428,19 +437,19 @@ func (typ Type) Deal(shuffler Shuffler, shuffles, count int) ([][]Card, []Card) 
 	return nil, nil
 }
 
-// New creates a new eval for the type and pocket.
+// New creates a new eval for the type.
 func (typ Type) New() *Eval {
 	return EvalOf(typ)
 }
 
-// Eval creates a new eval, and evaluates the type and pocket.
+// Eval creates a new eval, and evaluates the pocket and board.
 func (typ Type) Eval(pocket, board []Card) *Eval {
 	ev := EvalOf(typ)
 	ev.Eval(pocket, board)
 	return ev
 }
 
-// EvalPockets creates new evals and evaluates each of the pockets and board.
+// EvalPockets creates a new eval for each of the pockets and board.
 func (typ Type) EvalPockets(pockets [][]Card, board []Card) []*Eval {
 	evs := make([]*Eval, len(pockets))
 	for i := 0; i < len(pockets); i++ {
@@ -517,10 +526,13 @@ func (desc *TypeDesc) Apply(opts ...StreetOption) {
 	}
 }
 
+// StreetOption is a street option.
+type StreetOption func(int, *StreetDesc)
+
 // TypeOption is a type description option.
 type TypeOption func(*TypeDesc)
 
-// WithHoldem is a type description option to set Holdem definitions.
+// WithHoldem is a type description option to set [Holdem] definitions.
 func WithHoldem(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
@@ -531,7 +543,7 @@ func WithHoldem(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithShort is a type description option to set Short definitions.
+// WithShort is a type description option to set [Short] definitions.
 func WithShort(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 6
@@ -544,7 +556,7 @@ func WithShort(opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithManila is a type description option to set Manila definitions.
+// WithManila is a type description option to set [Manila] definitions.
 func WithManila(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 6
@@ -563,7 +575,7 @@ func WithManila(opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithSpanish is a type description option to set Spanish definitions.
+// WithSpanish is a type description option to set [Spanish] definitions.
 func WithSpanish(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 6
@@ -582,7 +594,7 @@ func WithSpanish(opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithRoyal is a type description option to set Royal definitions.
+// WithRoyal is a type description option to set [Royal] definitions.
 func WithRoyal(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 5
@@ -593,7 +605,7 @@ func WithRoyal(opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithDouble is a type description option to set Double definitions.
+// WithDouble is a type description option to set [Double] definitions.
 func WithDouble(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
@@ -605,7 +617,7 @@ func WithDouble(opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithShowtime is a type description option to set Showtime definitions.
+// WithShowtime is a type description option to set [Showtime] definitions.
 func WithShowtime(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
@@ -617,7 +629,7 @@ func WithShowtime(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithSwap is a type description option to set Swap definitions.
+// WithSwap is a type description option to set [Swap] definitions.
 func WithSwap(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
@@ -632,7 +644,7 @@ func WithSwap(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithRiver is a type description option to set River definitions.
+// WithRiver is a type description option to set [River] definitions.
 func WithRiver(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
@@ -644,7 +656,7 @@ func WithRiver(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithDallas is a type description option to set Dallas definitions.
+// WithDallas is a type description option to set [Dallas] definitions.
 func WithDallas(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
@@ -656,7 +668,7 @@ func WithDallas(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithHouston is a type description option to set Houston definitions.
+// WithHouston is a type description option to set [Houston] definitions.
 func WithHouston(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
@@ -668,7 +680,7 @@ func WithHouston(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithDraw is a type description option to set Draw definitions.
+// WithDraw is a type description option to set [Draw] definitions.
 func WithDraw(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
@@ -680,7 +692,7 @@ func WithDraw(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithStud is a type description option to set Stud definitions.
+// WithStud is a type description option to set [Stud] definitions.
 func WithStud(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 7
@@ -691,18 +703,21 @@ func WithStud(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithStudFive is a type description option to set StudFive definitions.
+// WithStudFive is a type description option to set [StudFive] definitions.
 func WithStudFive(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 10
 		desc.Low = low
 		desc.Blinds = StudBlinds()
-		desc.Streets = StudFiveStreets()
+		desc.Streets = NumberedStreets(2, 1, 1, 1)
+		for i := 0; i < 4; i++ {
+			desc.Streets[i].PocketUp = 1
+		}
 		desc.Apply(opts...)
 	}
 }
 
-// WithVideo is a type description option to set Video definitions.
+// WithVideo is a type description option to set [Video] definitions.
 func WithVideo(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 1
@@ -716,7 +731,7 @@ func WithVideo(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithOmaha is a type description option to set Omaha definitions.
+// WithOmaha is a type description option to set [Omaha] definitions.
 func WithOmaha(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 9
@@ -728,7 +743,7 @@ func WithOmaha(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithOmahaDouble is a type description option to set OmahaDouble definitions.
+// WithOmahaDouble is a type description option to set [OmahaDouble] definitions.
 func WithOmahaDouble(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 9
@@ -741,7 +756,7 @@ func WithOmahaDouble(opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithOmahaFive is a type description option to set OmahaFive definitions.
+// WithOmahaFive is a type description option to set [OmahaFive] definitions.
 func WithOmahaFive(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8
@@ -753,7 +768,7 @@ func WithOmahaFive(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithOmahaSix is a type description option to set OmahaSix definitions.
+// WithOmahaSix is a type description option to set [OmahaSix] definitions.
 func WithOmahaSix(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 7
@@ -765,7 +780,7 @@ func WithOmahaSix(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithCourchevel is a type description option to set Courchevel definitions.
+// WithCourchevel is a type description option to set [Courchevel] definitions.
 func WithCourchevel(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8
@@ -784,7 +799,7 @@ func WithCourchevel(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithFusion is a type description option to set Fusion definitions.
+// WithFusion is a type description option to set [Fusion] definitions.
 func WithFusion(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 9
@@ -799,7 +814,7 @@ func WithFusion(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithSoko is a type description option to set Soko definitions.
+// WithSoko is a type description option to set [Soko] definitions.
 func WithSoko(low bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8
@@ -812,7 +827,7 @@ func WithSoko(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithLowball is a type description option to set Lowball definitions.
+// WithLowball is a type description option to set [Lowball] definitions.
 func WithLowball(multi bool, opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8
@@ -828,7 +843,7 @@ func WithLowball(multi bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithRazz is a type description option to set Razz definitions.
+// WithRazz is a type description option to set [Razz] definitions.
 func WithRazz(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 7
@@ -840,7 +855,7 @@ func WithRazz(opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithBadugi is a type description option to set Badugi definitions.
+// WithBadugi is a type description option to set [Badugi] definitions.
 //
 //	4 cards, low evaluation of separate suits
 //	All 4 face down pre-flop
@@ -907,7 +922,7 @@ func (desc StreetDesc) Desc() string {
 	return fmt.Sprintf("%c: %s%s", desc.Id, desc.Name, s)
 }
 
-// HoldemBlinds returns the Holdem blind names.
+// HoldemBlinds returns the [Holdem] blind names.
 func HoldemBlinds() []string {
 	return []string{
 		"Small Blind",
@@ -916,7 +931,7 @@ func HoldemBlinds() []string {
 	}
 }
 
-// StudBlinds returns the Stud blind names.
+// StudBlinds returns the [Stud] blind names.
 func StudBlinds() []string {
 	return []string{
 		"Ante",
@@ -924,8 +939,7 @@ func StudBlinds() []string {
 	}
 }
 
-// HoldemStreets creates Holdem streets for the pre-flop, flop, turn, and
-// river.
+// HoldemStreets creates [Holdem] streets (Pre-Flop, Flop, Turn, and River).
 func HoldemStreets(pocket, discard, flop, turn, river int) []StreetDesc {
 	d := func(id byte, name string, pocket int, board int) StreetDesc {
 		n := discard
@@ -948,8 +962,7 @@ func HoldemStreets(pocket, discard, flop, turn, river int) []StreetDesc {
 	}
 }
 
-// StudStreets creates Stud streets for the ante, third street, fourth street,
-// fifth street, sixth street and river.
+// StudStreets creates [Stud] streets (Ante, 3rd, 4th, 5th, 6th, and River).
 func StudStreets() []StreetDesc {
 	v := NumberedStreets(3, 1, 1, 1, 1)
 	for i := 0; i < 4; i++ {
@@ -958,17 +971,8 @@ func StudStreets() []StreetDesc {
 	return v
 }
 
-// StudFiveStreets creates Stud streets for the ante, third street, fourth
-// street, and river.
-func StudFiveStreets() []StreetDesc {
-	v := NumberedStreets(2, 1, 1, 1)
-	for i := 0; i < 4; i++ {
-		v[i].PocketUp = 1
-	}
-	return v
-}
-
-// NumberedStreets returns numbered streets (ante, first, second, ...).
+// NumberedStreets creates numbered streets (Ante, 1st, 2nd, ..., River) for
+// each of the pockets.
 func NumberedStreets(pockets ...int) []StreetDesc {
 	var v []StreetDesc
 	var count, total int
@@ -1020,7 +1024,7 @@ const (
 	EvalBadugi        EvalType = 'b'
 )
 
-// New creates the eval type.
+// New creates a eval func for the type.
 func (typ EvalType) New(low bool) EvalFunc {
 	switch typ {
 	case EvalCactus:
@@ -1071,7 +1075,7 @@ func (typ EvalType) Format(f fmt.State, verb rune) {
 	_, _ = f.Write(buf)
 }
 
-// Byte returns the eval type as a byte.
+// Byte returns the eval type byte.
 func (typ EvalType) Byte() byte {
 	switch typ {
 	case EvalCactus:
@@ -1094,7 +1098,7 @@ func (typ EvalType) Byte() byte {
 	return ' '
 }
 
-// Name returns the eval type's name.
+// Name returns the eval type name.
 func (typ EvalType) Name() string {
 	switch typ {
 	case EvalCactus:
@@ -1132,7 +1136,7 @@ func (typ EvalType) Name() string {
 // DescType is a description type.
 type DescType uint8
 
-// Desc types.
+// Description types.
 const (
 	DescCactus    DescType = 0
 	DescFlushOver DescType = 'f'
@@ -1158,7 +1162,7 @@ func (typ DescType) Format(f fmt.State, verb rune) {
 	_, _ = f.Write(buf)
 }
 
-// Byte returns the desc type as a byte.
+// Byte returns the description type byte.
 func (typ DescType) Byte() byte {
 	switch typ {
 	case DescCactus:
@@ -1173,7 +1177,7 @@ func (typ DescType) Byte() byte {
 	return ' '
 }
 
-// Name returns the desc type's name.
+// Name returns the description type name.
 func (typ DescType) Name() string {
 	switch typ {
 	case DescCactus:
@@ -1192,7 +1196,7 @@ func (typ DescType) Name() string {
 	return ""
 }
 
-// Desc writes a description for the verb to f.
+// Desc writes a description to f for the rank, best, and unused cards.
 func (typ DescType) Desc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	switch verb {
 	case 'd':
@@ -1216,18 +1220,6 @@ func (typ DescType) Desc(f fmt.State, verb rune, rank EvalRank, best, unused []C
 		}
 	default:
 		fmt.Fprintf(f, "%%!%c(ERROR=unknown verb, desc: %d)", verb, int(typ))
-	}
-}
-
-// StreetOption is a street option.
-type StreetOption func(int, *StreetDesc)
-
-// WithStreetPocket is a street option to set the pocket for a street.
-func WithStreetPocket(street, pocket int) StreetOption {
-	return func(n int, desc *StreetDesc) {
-		if n == street {
-			desc.Pocket = pocket
-		}
 	}
 }
 
@@ -1278,7 +1270,7 @@ func FlushOverDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	CactusDesc(f, verb, rank.FromFlushOver(), best, unused)
 }
 
-// SokoDesc writes a Soko description to f for the rank, best, and unused cards.
+// SokoDesc writes a [Soko] description to f for the rank, best, and unused cards.
 func SokoDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	switch {
 	case rank <= TwoPair:
@@ -1308,8 +1300,8 @@ func LowDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	}
 }
 
-// LowballDesc writes a Lowball description to f for the rank, best, and unused
-// cards.
+// LowballDesc writes a [Lowball] description to f for the rank, best, and
+// unused cards.
 func LowballDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	switch r := rank.FromLowball(); {
 	case rank <= StraightFlush:
@@ -1324,7 +1316,7 @@ func LowballDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	}
 }
 
-// RazzDesc writes a Razz description to f for the rank, best, and unused
+// RazzDesc writes a [Razz] description to f for the rank, best, and unused
 // cards.
 func RazzDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	switch {
