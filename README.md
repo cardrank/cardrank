@@ -17,7 +17,7 @@ ranks][eval], and [managing deals and run outs][dealer].
 
 In most cases, using [the high-level `Dealer`][dealer] with any [registered
 `Type`][type] should be sufficient for most purposes. An in-depth example is
-provided in the [package documentation][dealer-example].
+provided [in the package documentation][pkg-example].
 
 A [`Type`][type] wraps a [type description][type-desc] defining a type's [deal
 streets][street-desc], [deck][deck-type], [eval][eval-type], [Hi/Lo
@@ -346,4 +346,4 @@ GOOS=js GOARCH=wasm go build -tags 'forcefat' -o cardrank.wasm
 [cactus-fast]: https://pkg.go.dev/github.com/cardrank/cardrank#CactusFast
 [two-plus-two]: https://pkg.go.dev/github.com/cardrank/cardrank#NewTwoPlusTwoEval
 
-[dealer-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-DealerFusionHiLo
+[pkg-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package
