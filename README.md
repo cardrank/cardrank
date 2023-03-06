@@ -61,7 +61,7 @@ APIs.
 
 ### Quickstart
 
-Various examples are available in the [Go package documentation][pkg]. showing
+Various examples are available in the [Go package documentation][pkg] showing
 use of various types, utilities, and interfaces.
 
 Additional examples for a [`Dealer`][dealer] and the [`Holdem`][type] and
@@ -317,7 +317,6 @@ GOOS=js GOARCH=wasm go build -tags 'forcefat' -o cardrank.wasm
 [tangentforks]: https://github.com/tangentforks/TwoPlusTwoHandEvaluator
 
 [pkg]: https://pkg.go.dev/github.com/cardrank/cardrank
-[pkg-examples]: https://pkg.go.dev/github.com/cardrank/cardrank#pkg-examples
 [eval-ranking]: #eval-ranking
 [build-tags]: #build-tags
 [winners]: #winner-determination
@@ -347,4 +346,4 @@ GOOS=js GOARCH=wasm go build -tags 'forcefat' -o cardrank.wasm
 [cactus-fast]: https://pkg.go.dev/github.com/cardrank/cardrank#CactusFast
 [two-plus-two]: https://pkg.go.dev/github.com/cardrank/cardrank#NewTwoPlusTwoEval
 
-[dealer-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-Dealer-FusionHiLo
+[dealer-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package-DealerFusionHiLo

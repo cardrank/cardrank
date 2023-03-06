@@ -964,7 +964,7 @@ func Example_badugi() {
 	// Result:   Player 4 wins with Eight, Seven, Three-low
 }
 
-func ExampleDealer_fusionHiLo() {
+func Example_dealerFusionHiLo() {
 	for i, game := range []struct {
 		seed     int64
 		players  int
