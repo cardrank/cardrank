@@ -10,7 +10,7 @@ import (
 // Type wraps a registered type description (see [TypeDesc]), providing a
 // standard way to use the [DefaultTypes], or a custom type registered with
 // [RegisterType]. [DefaultTypes] are registered by default unless using the
-// `noinit` build tag.
+// [noinit] build tag.
 //
 // # Standard Types
 //
@@ -133,7 +133,7 @@ import (
 // lows are best. Up to 5 pocket cards may be drawn (exchanged) exactly once on
 // either the 6th, 7th, or River streets.
 //
-// [LowballTriple] is a [Lowball] variant, where up to 5 pocket cards to be
+// [LowballTriple] is a [Lowball] variant, where up to 5 pocket cards may be
 // drawn (exchanged) on any of the 6th, 7th, or River streets.
 //
 // [Razz] is a [Stud] low variant, using a [Ace]-to-[Five] ranking (see
@@ -144,7 +144,9 @@ import (
 // of 52 cards (see [DeckFrench]), comprising 4 pocket cards, no community
 // cards, and Ante, 5th, 6th, and River streets. Up to 4 cards can be drawn
 // (exchanged) multiple times on the 5th, 6th, or River streets. See
-// [NewBadugiEval] and [WithBadugi] for more details.
+// [NewBadugiEval] for more details.
+//
+// [noinit]: https://pkg.go.dev/github.com/cardrank/cardrank#readme-noinit
 type Type uint16
 
 // Types.
@@ -187,6 +189,8 @@ const (
 // DefaultTypes returns the default type descriptions. The returned
 // [TypeDesc]'s will be automatically registered, unless using the [noinit]
 // tag.
+//
+// [noinit]: https://pkg.go.dev/github.com/cardrank/cardrank#readme-noinit
 func DefaultTypes() []TypeDesc {
 	var v []TypeDesc
 	for _, d := range []struct {
@@ -856,10 +860,6 @@ func WithRazz(opts ...StreetOption) TypeOption {
 }
 
 // WithBadugi is a type description option to set [Badugi] definitions.
-//
-//	4 cards, low evaluation of separate suits
-//	All 4 face down pre-flop
-//	3 rounds of player discards (up to 4)
 func WithBadugi(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 8

@@ -673,6 +673,10 @@ func NewRazzEval() EvalFunc {
 }
 
 // NewBadugiEval creates a [Badugi] eval func.
+//
+//	4 cards, low evaluation of separate suits
+//	All 4 face down pre-flop
+//	3 rounds of player discards (up to 4)
 func NewBadugiEval() EvalFunc {
 	return func(ev *Eval, p, _ []Card) {
 		s := make([][]Card, 4)
