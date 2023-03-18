@@ -468,10 +468,11 @@ type TypeDesc struct {
 	Name string
 	// Max is the max number of players.
 	Max int
-	// Low is true when the type's Cactus or Omaha eval is the Hi/Lo variant,
-	// enabling 8-or-better on the lo eval.
+	// Low is true when the enabling the Hi/Lo variant, with an 8-or-better
+	// evaluated Lo.
 	Low bool
-	// Double is true when there are double the number boards.
+	// Double is true when there are double community boards where the first
+	// and second board is evaluated as the Hi and Lo, respectively.
 	Double bool
 	// Show is true when folded cards are shown.
 	Show bool

@@ -94,7 +94,7 @@ func Example() {
 		d := cardrank.FusionHiLo.Dealer(r, 1, game.players)
 		// display deck
 		deck := d.Deck.All()
-		fmt.Printf("Deck:\n")
+		fmt.Println("Deck:")
 		for i := 0; i < len(deck); i += 8 {
 			n := i + 8
 			if n > len(deck) {
@@ -134,7 +134,7 @@ func Example() {
 				}
 			}
 		}
-		fmt.Printf("Showdown:\n")
+		fmt.Println("Showdown:")
 		for d.NextResult() {
 			n, res := d.Result()
 			fmt.Printf("  Run %d:\n", n)
