@@ -139,7 +139,7 @@ func (r EvalRank) FromFlushOver() EvalRank {
 	return r
 }
 
-// ToLowball converts a Cactus rank to a Lowball rank, by inverting the rank
+// ToLowball converts a Cactus rank to a [Lowball] rank, by inverting the rank
 // and converting the lowest Straight and Straight Flushes (5-4-3-2-A) to
 // different ranks.
 //
@@ -168,7 +168,7 @@ func (r EvalRank) ToLowball() EvalRank {
 	return Nothing - r + 1
 }
 
-// FromLowball converts a Lowball rank to a Cactus rank.
+// FromLowball converts a [Lowball] rank to a Cactus rank.
 //
 // See [EvalRank.ToLowball] for a description of the operations performed.
 func (r EvalRank) FromLowball() EvalRank {
@@ -193,8 +193,8 @@ func (r EvalRank) FromLowball() EvalRank {
 // RankFunc returns the eval rank of 5 cards.
 type RankFunc func(c0, c1, c2, c3, c4 Card) EvalRank
 
-// RankAceFiveLow is a A-to-5 low rank eval func. Aces are low, straights and
-// flushes do not count.
+// RankAceFiveLow is a A-to-5 low rank eval func. [Ace]'s are low, [Straight]'s
+// and [Flush]'s do not count.
 func RankAceFiveLow(mask EvalRank, c0, c1, c2, c3, c4 Card) EvalRank {
 	var rank EvalRank
 	// c0
@@ -219,8 +219,8 @@ func RankAceFiveLow(mask EvalRank, c0, c1, c2, c3, c4 Card) EvalRank {
 	return rank
 }
 
-// RankEightOrBetter is a 8-or-better low rank eval func. Aces are low,
-// straights and flushes do not count.
+// RankEightOrBetter is a 8-or-better low rank eval func. [Ace]'s are low,
+// [Straight]'s and [Flush]'s do not count.
 func RankEightOrBetter(c0, c1, c2, c3, c4 Card) EvalRank {
 	return RankAceFiveLow(0xff00, c0, c1, c2, c3, c4)
 }
@@ -267,10 +267,10 @@ func RankSpanish(c0, c1, c2, c3, c4 Card) EvalRank {
 	return r.ToFlushOver()
 }
 
-// RankRazz is a [Razz] (A-to-5) low rank eval func. Aces are low, straights
-// and flushes do not count.
+// RankRazz is a [Razz] (A-to-5) low rank eval func. [Ace]'s are low,
+// [Straight]'s and [Flush]'s do not count.
 //
-// When there is a pair (or higher) of matching ranks, will be the inverted
+// When there is a [Pair] (or higher) of matching ranks, will be the inverted
 // Cactus value.
 func RankRazz(c0, c1, c2, c3, c4 Card) EvalRank {
 	if r := RankAceFiveLow(0, c0, c1, c2, c3, c4); r < aceFiveMax {
@@ -279,11 +279,11 @@ func RankRazz(c0, c1, c2, c3, c4 Card) EvalRank {
 	return Invalid - RankCactus(c0, c1, c2, c3, c4)
 }
 
-// RankLowball is a [Lowball] (2-to-7) low rank eval func. Aces are high,
-// straights and flushes count.
+// RankLowball is a [Lowball] (2-to-7) low rank eval func. [Ace]'s are high,
+// [Straight]'s and [Flush]'s count.
 //
-// Works by adding 2 additional ranks for Ace-high straight flushes and
-// straights.
+// Works by adding 2 additional ranks for [Ace]-high [StraightFlush]'s and
+// [Straight]'s.
 //
 // See [EvalRank.ToLowball].
 func RankLowball(c0, c1, c2, c3, c4 Card) EvalRank {
@@ -294,7 +294,7 @@ func RankLowball(c0, c1, c2, c3, c4 Card) EvalRank {
 type EvalFunc func(*Eval, []Card, []Card)
 
 // NewEval returns a eval func that ranks 5, 6, or 7 cards using f. The
-// returned eval func will store the results on an eval's hi.
+// returned eval func will store the results on an eval's Hi.
 func NewEval(f RankFunc) EvalFunc {
 	return func(ev *Eval, p, b []Card) {
 		var eval func(RankFunc, []Card)
@@ -317,7 +317,8 @@ func NewEval(f RankFunc) EvalFunc {
 }
 
 // NewMaxEval returns a eval func that ranks 5, 6, or 7 cards using f and max.
-// The returned eval func will store results on an eval's hi only when lower
+//
+// The returned eval func will store results on an eval's Hi only when lower
 // than max.
 func NewMaxEval(f RankFunc, max EvalRank, low bool) EvalFunc {
 	return func(ev *Eval, p, b []Card) {
@@ -341,9 +342,11 @@ func NewMaxEval(f RankFunc, max EvalRank, low bool) EvalFunc {
 }
 
 // NewSplitEval returns a eval func that ranks 5, 6, or 7 cards using hi, lo
-// and max. The returned eval func will store results on an eval's hi and lo
-// depending on the result of hi and lo, respectively. Will store the lo value
-// only when lower than max.
+// and max.
+//
+// The returned eval func will store results on an eval's Hi and Lo depending
+// on the result of hi and lo, respectively. Will store the Lo value only when
+// lower than max.
 func NewSplitEval(hi, lo RankFunc, max EvalRank) EvalFunc {
 	return func(ev *Eval, p, b []Card) {
 		var eval func(RankFunc, RankFunc, []Card, EvalRank)
@@ -1093,12 +1096,13 @@ func (desc *EvalDesc) Format(f fmt.State, verb rune) {
 	desc.Type.Desc(f, verb, desc.Rank, desc.Best, desc.Unused)
 }
 
-// Order determines the Hi or Lo order for the provided evals, using the the
-// first eval type's Comp. Returns a slice of indices, and a pivot into the
-// indices indicating the winning vs losing position.
+// Order builds an ordered slice of indices for the provided evals, ordered by
+// either Hi or Lo (per [Eval.Comp]), returning the slice of indices and a
+// pivot into the indices indicating the winning vs losing position.
 //
-// Pivot will always be 1 or higher for Hi evals. When ordering Lo evals, if
-// there are no valid (ie, qualified) evals, the returned pivot will be 0.
+// Pivot will always be 1 or higher when ordering by Hi's. When ordering by
+// Lo's, if there are no valid (ie, qualified) evals, the returned pivot will
+// be 0.
 func Order(evs []*Eval, low bool) ([]int, int) {
 	if len(evs) == 0 {
 		return nil, 0

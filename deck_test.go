@@ -19,8 +19,8 @@ func TestDeck(t *testing.T) {
 		{28, DeckSpanish, "89TJQKA"},
 		{20, DeckRoyal, "TJQKA"},
 	}
-	for _, v := range tests {
-		test := v
+	for _, tt := range tests {
+		test := tt
 		t.Run(test.typ.Name(), func(t *testing.T) {
 			testDeckNew(t, test.exp, test.typ, test.r)
 			testDeckDraw(t, test.exp, test.typ)
@@ -190,15 +190,18 @@ func TestDealerRuns(t *testing.T) {
 		{OmahaDouble, 4, 182},
 		{OmahaHiLo, 4, 72},
 		{FusionHiLo, 5, 256},
+		{Manila, 3, 768},
 	}
 	for _, tt := range tests {
 		test := tt
 		t.Run(test.typ.Name(), func(t *testing.T) {
 			testDealer(t, test.typ, test.count, test.seed, func(r *rand.Rand, d *Dealer) {
-				switch rn, _ := d.Run(); {
-				case d.Id() == 'f' && rn == 0:
-					d.Deactivate(3, 4)
+				switch run, _ := d.Run(); {
+				case d.Id() == 'f' && run == 0:
 					if b, exp := d.ChangeRuns(3), true; b != exp {
+						t.Fatalf("expected %t, got: %t", exp, b)
+					}
+					if b, exp := d.Deactivate(3, 4), true; b != exp {
 						t.Fatalf("expected %t, got: %t", exp, b)
 					}
 				}
@@ -245,29 +248,44 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 	}
 	t.Logf("Showdown:")
 	for d.NextResult() {
-		n, res := d.Result()
-		t.Logf("  Run %d:", n)
+		run, res := d.Result()
+		t.Logf("  Run %d:", run)
+		if d.Type.Board() != 0 {
+			t.Logf("    Board: %v", d.Runs[run].Hi)
+			if d.Low || d.Double {
+				t.Logf("           %v", d.Runs[run].Lo)
+			}
+		}
+		if d.Type.Pocket() != 0 {
+			t.Log("    Pockets:")
+			for i := 0; i < count; i++ {
+				t.Logf("      %d: %v", i, d.Runs[run].Pockets[i])
+			}
+		}
+		t.Log("    Evals:")
 		for i := 0; i < count; i++ {
 			if d.Active[i] {
 				hi := res.Evals[i].Desc(false)
-				t.Logf("    %d: %v %v %s", i, hi.Best, hi.Unused, hi)
+				t.Logf("      %d: %v %v %s", i, hi.Best, hi.Unused, hi)
 				if d.Low || d.Double {
 					lo := res.Evals[i].Desc(true)
-					t.Logf("       %v %v %s", lo.Best, lo.Unused, lo)
+					t.Logf("         %v %v %s", lo.Best, lo.Unused, lo)
 				}
 			} else {
-				t.Logf("    %d: inactive", i)
+				t.Logf("      %d: inactive", i)
 			}
 		}
 		hi, lo := res.Win()
-		t.Logf("    Result: %S", hi)
+		t.Log("    Result:")
+		t.Logf("      %S", hi)
 		if lo != nil {
-			t.Logf("            %S", lo)
+			t.Logf("      %S", lo)
 		}
 	}
 }
 
 func TestHasNext(t *testing.T) {
+	t.Parallel()
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for _, typ := range Types() {
 		exp := len(typ.Streets())
@@ -325,4 +343,7 @@ func TestHasNext(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestRunOut(t *testing.T) {
 }

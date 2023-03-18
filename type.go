@@ -441,19 +441,15 @@ func (typ Type) Deal(shuffler Shuffler, shuffles, count int) ([][]Card, []Card) 
 	return nil, nil
 }
 
-// New creates a new eval for the type.
-func (typ Type) New() *Eval {
-	return EvalOf(typ)
-}
-
-// Eval creates a new eval, and evaluates the pocket and board.
+// Eval creates a new eval for the type, evaluating the pocket and board.
 func (typ Type) Eval(pocket, board []Card) *Eval {
 	ev := EvalOf(typ)
 	ev.Eval(pocket, board)
 	return ev
 }
 
-// EvalPockets creates a new eval for each of the pockets and board.
+// EvalPockets creates new evals for the type, evaluating each of the pockets
+// and board.
 func (typ Type) EvalPockets(pockets [][]Card, board []Card) []*Eval {
 	evs := make([]*Eval, len(pockets))
 	for i := 0; i < len(pockets); i++ {
@@ -489,9 +485,9 @@ type TypeDesc struct {
 	Deck DeckType
 	// Eval is the eval type.
 	Eval EvalType
-	// HiDesc is the hi desc type.
+	// HiDesc is the Hi description type.
 	HiDesc DescType
-	// LoDesc is the lo desc type.
+	// LoDesc is the Lo description type.
 	LoDesc DescType
 }
 

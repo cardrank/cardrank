@@ -27,7 +27,7 @@ var (
 )
 
 // Init inits the package level default variables. Must be manually called
-// prior to using this package when built with the [noinit] build tag.
+// prior to using the package when built with the [noinit] build tag.
 func Init() {
 	if RankCactus == nil {
 		switch {

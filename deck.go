@@ -17,15 +17,15 @@ type DeckType uint8
 
 // Deck types.
 const (
-	// DeckFrench is a standard deck of 52 cards (aka "French" deck).
+	// DeckFrench is a standard deck of 52 playing cards.
 	DeckFrench = DeckType(Two)
-	// DeckShort is a deck of Short (6+) cards.
+	// DeckShort is a deck of 36 playing cards of rank 6+ (see [Short]).
 	DeckShort = DeckType(Six)
-	// DeckManila is a deck of Manila (7+) cards.
+	// DeckManila is a deck of 32 playing cards of rank 7+ (see [Manila]).
 	DeckManila = DeckType(Seven)
-	// DeckSpanish is a deck of Spanish (8+) cards.
+	// DeckSpanish is a deck of 28 playing cards of rank 8+ (see [Spanish]).
 	DeckSpanish = DeckType(Eight)
-	// DeckRoyal is a deck of Royal (10+) cards.
+	// DeckRoyal is a deck of 20 playing cards of rank 10+ (see [Royal]).
 	DeckRoyal = DeckType(Ten)
 )
 
@@ -145,9 +145,16 @@ func (typ DeckType) Shoe(count int) *Deck {
 	return d
 }
 
-// New returns a new deck for the deck type.
+// New returns a new deck.
 func (typ DeckType) New() *Deck {
 	return typ.Shoe(1)
+}
+
+// Shuffle returns a new deck, shuffled by the shuffler.
+func (typ DeckType) Shuffle(shuffler Shuffler, shuffles int) *Deck {
+	d := typ.Shoe(1)
+	d.Shuffle(shuffler, shuffles)
+	return d
 }
 
 // Deck is a set of playing cards.
@@ -218,7 +225,7 @@ func (d *Deck) Draw(count int) []Card {
 	return cards
 }
 
-// Shuffle shuffles the deck's cards using the shuffler times.
+// Shuffle shuffles the deck's cards using the shuffler.
 func (d *Deck) Shuffle(shuffler Shuffler, shuffles int) {
 	for m := 0; m < shuffles; m++ {
 		shuffler.Shuffle(len(d.v), func(i, j int) {
@@ -228,7 +235,7 @@ func (d *Deck) Shuffle(shuffler Shuffler, shuffles int) {
 }
 
 // Dealer maintains deal state for a type, streets, deck, positions, runs,
-// results, and wins.
+// results, and wins. Use as a street iterator for a type.
 type Dealer struct {
 	TypeDesc
 	Count   int
@@ -238,9 +245,10 @@ type Dealer struct {
 	Runs    []*Run
 	Results []*Result
 	runs    int
-	d       int
+	discard int
 	i       int
 	r       int
+	s       int
 }
 
 // NewDealer creates a new dealer for a provided deck and pocket count.
@@ -257,9 +265,7 @@ func NewDealer(desc TypeDesc, deck *Deck, count int) *Dealer {
 // NewShuffledDealer creates a new deck and dealer, shuffling the deck multiple
 // times and returning the dealer with the created deck and pocket count.
 func NewShuffledDealer(desc TypeDesc, shuffler Shuffler, shuffles, count int) *Dealer {
-	d := desc.Type.Deck()
-	d.Shuffle(shuffler, shuffles)
-	return NewDealer(desc, d, count)
+	return NewDealer(desc, desc.Deck.Shuffle(shuffler, shuffles), count)
 }
 
 // init inits the street position and active positions.
@@ -268,7 +274,7 @@ func (d *Dealer) init() {
 	d.Runs = []*Run{NewRun(d.Count)}
 	d.Results = nil
 	d.runs = 1
-	d.d = 0
+	d.discard = 0
 	d.i = -1
 	d.r = -1
 	for i := 0; i < d.Count; i++ {
@@ -384,7 +390,7 @@ func (d *Dealer) BoardDiscard() int {
 // Discarded returns the number of pocket ard board cards discarded on the
 // current street.
 func (d *Dealer) Discarded() []Card {
-	if v := d.Discard[d.d:]; len(v) != 0 {
+	if v := d.Discard[d.discard:]; len(v) != 0 {
 		return v
 	}
 	return nil
@@ -403,10 +409,14 @@ func (d *Dealer) Inactive() []int {
 
 // Deactivate deactivates positions, which will not be dealt further cards and
 // will not be included during eval.
-func (d *Dealer) Deactivate(positions ...int) {
+func (d *Dealer) Deactivate(positions ...int) bool {
+	if d.r != -1 && d.r != 0 {
+		return false
+	}
 	for _, position := range positions {
 		delete(d.Active, position)
 	}
+	return true
 }
 
 // Reset resets the iterator to i.
@@ -444,7 +454,7 @@ func (d *Dealer) Next() bool {
 	default:
 		d.r++
 	}
-	d.d = len(d.Discard)
+	d.discard = len(d.Discard)
 	if len(d.Streets) <= d.i || !d.HasActive() {
 		d.r = -1
 		return false
@@ -453,7 +463,7 @@ func (d *Dealer) Next() bool {
 	return d.i < len(d.Streets)
 }
 
-// Run returns the current street and run.
+// Run returns the current run.
 func (d *Dealer) Run() (int, *Run) {
 	if 0 <= d.r && d.r < d.runs {
 		return d.r, d.Runs[d.r]
@@ -554,7 +564,7 @@ func (d *Dealer) Eval(run int) *Result {
 	}
 }
 
-// Run holds pockets, and a hi/lo board for a deal.
+// Run holds pockets, and a Hi/Lo board for a deal.
 type Run struct {
 	Pockets [][]Card
 	Hi      []Card
@@ -567,11 +577,9 @@ func (run *Run) Eval(typ Type, active map[int]bool, double bool) []*Eval {
 	evs := make([]*Eval, n)
 	for i := 0; i < n; i++ {
 		if active[i] {
-			evs[i] = typ.New()
-			evs[i].Eval(run.Pockets[i], run.Hi)
+			evs[i] = typ.Eval(run.Pockets[i], run.Hi)
 			if double {
-				ev := EvalOf(typ)
-				ev.Eval(run.Pockets[i], run.Lo)
+				ev := typ.Eval(run.Pockets[i], run.Lo)
 				evs[i].LoRank, evs[i].LoBest, evs[i].LoUnused = ev.HiRank, ev.HiBest, ev.HiUnused
 			}
 		}
@@ -617,7 +625,7 @@ type Result struct {
 	LoPivot int
 }
 
-// Win returns the hi and lo win.
+// Win returns the Hi and Lo win.
 func (res *Result) Win() (*Win, *Win) {
 	low := res.Evals[res.HiOrder[0]].Type.Low()
 	var lo *Win

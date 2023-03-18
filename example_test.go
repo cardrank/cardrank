@@ -104,12 +104,12 @@ func Example() {
 		}
 		for d.Next() {
 			fmt.Printf("%s\n", d)
-			rn, run := d.Run()
-			fmt.Printf("  Run %d:\n", rn)
+			run, r := d.Run()
+			fmt.Printf("  Run %d:\n", run)
 			// display pockets
 			if d.HasPocket() {
 				for i := 0; i < game.players; i++ {
-					fmt.Printf("    %d: %v\n", i, run.Pockets[i])
+					fmt.Printf("    %d: %v\n", i, r.Pockets[i])
 				}
 			}
 			// display discarded cards
@@ -118,18 +118,20 @@ func Example() {
 			}
 			// display board
 			if d.HasBoard() {
-				fmt.Printf("    Board: %v\n", run.Hi)
+				fmt.Printf("    Board: %v\n", r.Hi)
 				if d.Double {
-					fmt.Printf("           %v\n", run.Lo)
+					fmt.Printf("           %v\n", r.Lo)
 				}
 			}
 			// change runs, deactivate positions
-			if d.Id() == game.change {
-				if valid := d.ChangeRuns(game.runs); !valid {
+			if d.Id() == game.change && run == 0 {
+				if success := d.ChangeRuns(game.runs); !success {
 					panic("unable to change runs")
 				}
 				// deactivate
-				d.Deactivate(game.inactive...)
+				if success := d.Deactivate(game.inactive...); !success {
+					panic("unable to deactivate positions")
+				}
 			}
 		}
 		fmt.Printf("Showdown:\n")

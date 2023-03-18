@@ -341,15 +341,18 @@ func FromIndex(i int) Card {
 	return InvalidCard
 }
 
-// Parse parses all string representations of [Card]'s in v, ignoring case and
-// whitespace.
+// Parse parses common string representations of [Card]'s contained in v,
+// ignoring case and whitespace.
 //
-// Parses common strings ("Ah", "ah", "aH", or "AH"), strings using a white or
-// black unicode pip for the suit ("J♤" or "K♠"), and single unicode playing
-// card runes (such as "🃆" or "🂣").
-func Parse(strs ...string) ([]Card, error) {
-	var v []Card
-	for n, s := range strs {
+// Accepts the following:
+//   - a rank followed by a suit (ex: "Ah", "ks", "10s", "Tc", "8d", "6c")
+//   - a rank followed by a white or black unicode suit pip (ex: "J♤", "K♠")
+//   - unicode playing card runes (ex: "🃆", "🂣").
+//
+// Returns a single slice of all cards from all strings in v.
+func Parse(v ...string) ([]Card, error) {
+	var cards []Card
+	for n, s := range v {
 		for i, r := 0, []rune(s); i < len(r); i++ {
 			switch {
 			case unicode.IsSpace(r[i]):
@@ -364,7 +367,7 @@ func Parse(strs ...string) ([]Card, error) {
 						Err: ErrInvalidCard,
 					}
 				}
-				v = append(v, c)
+				cards = append(cards, c)
 				continue
 			case len(r)-i < 2:
 				return nil, &ParseError{
@@ -388,21 +391,23 @@ func Parse(strs ...string) ([]Card, error) {
 					Err: ErrInvalidCard,
 				}
 			}
-			v = append(v, card)
+			cards = append(cards, card)
 			i++
 		}
 	}
-	return v, nil
+	return cards, nil
 }
 
-// Must parses all string representations of [Card]'s in v, ignoring case and
-// whitespace and panicing on any error.
+// Must parses common string representations of [Card]'s contained in v,
+// ignoring case and whitespace and panicing on any error.
 //
-// See [Parse] for overview of accepted string representations of cards.
-func Must(strs ...string) []Card {
-	v, err := Parse(strs...)
+// Returns a single slice of all cards from all strings in v.
+//
+// See [Parse] for overview of accepted string representations.
+func Must(v ...string) []Card {
+	cards, err := Parse(v...)
 	if err == nil {
-		return v
+		return cards
 	}
 	panic(err)
 }
@@ -704,6 +709,7 @@ var (
 	rangeA *unicode.RangeTable // all
 )
 
+// newRangeTable creates a range table for the passed runes.
 func newRangeTable(r ...rune) *unicode.RangeTable {
 	if len(r) == 0 {
 		return &unicode.RangeTable{}
