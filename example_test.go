@@ -53,7 +53,7 @@ func ExampleDeck_Draw() {
 	// [9♣ 6♥ Q♠ 3♠ J♠ 9♥ K♣]
 }
 
-func ExampleHoldem_New() {
+func ExampleHoldem_Eval() {
 	d := cardrank.NewDeck()
 	// note: use a real random source
 	r := rand.New(rand.NewSource(26076))
@@ -64,7 +64,7 @@ func ExampleHoldem_New() {
 	// Straight Flush, Five-high, Steel Wheel [5♣ 4♣ 3♣ 2♣ A♣]
 }
 
-func ExampleSpanish_New() {
+func ExampleSpanish_Eval() {
 	d := cardrank.DeckSpanish.New()
 	// note: use a real random source
 	r := rand.New(rand.NewSource(2231))

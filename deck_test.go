@@ -286,62 +286,45 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 
 func TestHasNext(t *testing.T) {
 	t.Parallel()
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for _, typ := range Types() {
 		exp := len(typ.Streets())
 		if max := typ.Max(); max != 1 {
 			for i := 2; i <= max; i++ {
-				d := typ.Dealer(r, 1, i)
-				if !d.HasNext() {
-					t.Fatalf("%s expected to have next", typ)
-				}
-				var count int
-				if d.HasNext() {
-					count++
-				}
-				var streets int
-				for d.Next() {
-					if d.HasNext() {
-						count++
-					}
-					streets++
-				}
-				switch {
-				case streets != exp:
-					t.Errorf("%s expected %d, got: %d", typ, exp, streets)
-				case count != exp:
-					t.Errorf("%s expected %d, got: %d", typ, exp, count)
-				case d.HasNext():
-					t.Errorf("%s expecte to not have next", typ)
-				}
+				testHasNext(t, typ, exp, i)
 			}
 		} else {
 			for i := 1; i <= 8; i++ {
-				d := typ.Dealer(r, 1, i)
-				if !d.HasNext() {
-					t.Fatalf("%s expected to have next", typ)
-				}
-				var count int
-				if d.HasNext() {
-					count++
-				}
-				var streets int
-				for d.Next() {
-					if d.HasNext() {
-						count++
-					}
-					streets++
-				}
-				switch {
-				case streets != exp:
-					t.Errorf("%s expected %d, got: %d", typ, exp, streets)
-				case count != exp:
-					t.Errorf("%s expected %d, got: %d", typ, exp, count)
-				case d.HasNext():
-					t.Errorf("%s expecte to not have next", typ)
-				}
+				testHasNext(t, typ, exp, 1)
 			}
 		}
+	}
+}
+
+func testHasNext(t *testing.T, typ Type, exp, count int) {
+	t.Helper()
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	d := typ.Dealer(r, 1, count)
+	if !d.HasNext() {
+		t.Fatalf("%s expected to have next", typ)
+	}
+	var next int
+	if d.HasNext() {
+		next++
+	}
+	var streets int
+	for d.Next() {
+		if d.HasNext() {
+			next++
+		}
+		streets++
+	}
+	switch {
+	case streets != exp:
+		t.Errorf("%s expected %d, got: %d", typ, exp, streets)
+	case next != exp:
+		t.Errorf("%s expected %d, got: %d", typ, exp, next)
+	case d.HasNext():
+		t.Errorf("%s expected to not have next", typ)
 	}
 }
 
