@@ -1,8 +1,11 @@
 package cardrank
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -45,10 +48,10 @@ func testDeckNew(t *testing.T, exp int, typ DeckType, r string) {
 				if c == InvalidCard {
 					t.Fatalf("expected valid card for %c%c", r, s)
 				}
-				if !contains(v, c) {
+				if !contains(c, v...) {
 					t.Errorf("v does not contain %s", c)
 				}
-				if !contains(d.v, c) {
+				if !contains(c, d.v...) {
 					t.Errorf("d.v does not contain %s", c)
 				}
 			}
@@ -71,10 +74,10 @@ func testDeckNew(t *testing.T, exp int, typ DeckType, r string) {
 		t.Fatalf("expected len(d2.v) == %d, got: %d", exp, n)
 	}
 	for i := 0; i < exp; i++ {
-		if !contains(d1.v, v[i]) {
+		if !contains(v[i], d1.v...) {
 			t.Errorf("d1.v does not contain %s", v[i])
 		}
-		if !contains(d2.v, v[i]) {
+		if !contains(v[i], d2.v...) {
 			t.Errorf("d2.v does not contain %s", v[i])
 		}
 	}
@@ -224,10 +227,14 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 	for i := 0; i < len(deck); i += 8 {
 		t.Logf("  %v", deck[i:min(i+8, len(deck))])
 	}
+	last := -1
 	for d.Next() {
-		t.Logf("%s", d)
-		rn, run := d.Run()
-		t.Logf("  Run %d:", rn)
+		i, run := d.Run()
+		if last != i {
+			t.Logf("Run %d:", i)
+		}
+		last = i
+		t.Logf("  %s", d)
 		if d.HasPocket() {
 			for i := 0; i < count; i++ {
 				t.Logf("    %d: %v", i, run.Pockets[i])
@@ -252,7 +259,7 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 		t.Logf("  Run %d:", run)
 		if d.Type.Board() != 0 {
 			t.Logf("    Board: %v", d.Runs[run].Hi)
-			if d.Low || d.Double {
+			if d.Double {
 				t.Logf("           %v", d.Runs[run].Lo)
 			}
 		}
@@ -285,16 +292,19 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 }
 
 func TestHasNext(t *testing.T) {
-	t.Parallel()
-	for _, typ := range Types() {
-		exp := len(typ.Streets())
+	for _, tt := range Types() {
+		typ := tt
 		if max := typ.Max(); max != 1 {
 			for i := 2; i <= max; i++ {
-				testHasNext(t, typ, exp, i)
+				t.Run(fmt.Sprintf("%s/%d", typ, i), func(t *testing.T) {
+					testHasNext(t, typ, len(typ.Streets()), i)
+				})
 			}
 		} else {
 			for i := 1; i <= 8; i++ {
-				testHasNext(t, typ, exp, 1)
+				t.Run(fmt.Sprintf("%s/%d", typ, i), func(t *testing.T) {
+					testHasNext(t, typ, len(typ.Streets()), 1)
+				})
 			}
 		}
 	}
@@ -305,7 +315,7 @@ func testHasNext(t *testing.T, typ Type, exp, count int) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	d := typ.Dealer(r, 1, count)
 	if !d.HasNext() {
-		t.Fatalf("%s expected to have next", typ)
+		t.Fatal("expected to have next")
 	}
 	var next int
 	if d.HasNext() {
@@ -320,13 +330,139 @@ func testHasNext(t *testing.T, typ Type, exp, count int) {
 	}
 	switch {
 	case streets != exp:
-		t.Errorf("%s expected %d, got: %d", typ, exp, streets)
+		t.Errorf("expected %d, got: %d", exp, streets)
 	case next != exp:
-		t.Errorf("%s expected %d, got: %d", typ, exp, next)
+		t.Errorf("expected %d, got: %d", exp, next)
 	case d.HasNext():
-		t.Errorf("%s expected to not have next", typ)
+		t.Error("expected to not have next")
 	}
 }
 
 func TestRunOut(t *testing.T) {
+	// seed := time.Now().UnixNano()
+	const seed = 1679273183508957122
+	t.Logf("seed: %d", seed)
+	for _, tt := range Types() {
+		if tt.Board() == 0 || tt.Draw() {
+			continue
+		}
+		for n := 2; n <= tt.Max()-6; n++ {
+			typ, count := tt, n
+			t.Run(fmt.Sprintf("%s/%d", typ, count), func(t *testing.T) {
+				testRunOut(t, seed, typ, count)
+			})
+		}
+	}
+}
+
+func testRunOut(t *testing.T, seed int64, typ Type, count int) {
+	t.Helper()
+	const runOuts = 4
+	var deck []Card
+	runs, results := make([][]*Run, runOuts), make([][]*Result, runOuts)
+	r := rand.New(rand.NewSource(seed))
+	d := typ.Dealer(r, 3, count)
+	deck = d.Deck.All()
+	for i := 0; i < len(deck); i += 8 {
+		t.Logf("%v", deck[i:min(i+8, len(deck))])
+	}
+	v := make([]string, runOuts)
+	for i := 0; i < runOuts; i++ {
+		buf := new(bytes.Buffer)
+		fmt.Fprintf(buf, "-- %d --\n", i)
+		d.Reset()
+		for d.Next() {
+			// change run on the flop
+			run, _ := d.Run()
+			fmt.Fprintf(buf, "%s\n", d)
+			if i != 0 && run == 0 && d.Id() == 'f' {
+				if !d.ChangeRuns(i + 1) {
+					t.Fatalf("unable to change runs to %d", i+1)
+				} else {
+					fmt.Fprintf(buf, "runs changed to %d\n", i+1)
+				}
+			} else if i == 0 && run == 0 && d.Id() == 'f' {
+				fmt.Fprintln(buf)
+			}
+		}
+		for d.NextResult() {
+		}
+		v[i], runs[i], results[i] = buf.String(), d.Runs, d.Results
+	}
+	t.Log("")
+	sidebyside(t, "", "  ", v...)
+	for i := 0; i < runOuts-1; i++ {
+		t.Log("")
+		for j := i + 1; j < runOuts; j++ {
+			t.Logf("--- %d :: %d ---", i, j)
+			/*
+				if n := len(discard[j-1]); reflect.DeepEqual(discard[j-1], discard[j][:n]) {
+					t.Logf("  discard: %v / %v", discard[j-1], discard[j][n:])
+				} else {
+					t.Errorf("  expected discard prefix %v, got: %v / %v", discard[j-1], discard[j][:n], discard[j][n:])
+				}
+			*/
+			for k := 0; k < len(runs[i]); k++ {
+				t.Logf("%d:", k)
+				dumpRuns(t, runs[i][k], runs[j][k])
+				if !reflect.DeepEqual(runs[i][k], runs[j][k]) {
+					t.Errorf("  run out %d and %d are incongruent for run %d", i, j, k)
+				} else {
+					t.Logf("  run out %d and %d are congruent for run %d", i, j, k)
+				}
+				if !reflect.DeepEqual(results[i][k], results[j][k]) {
+					t.Errorf("  run out %d and %d are incongruent for result %d", i, j, k)
+				} else {
+					t.Logf("  run out %d and %d are congruent for result %d", i, j, k)
+				}
+			}
+		}
+	}
+}
+
+func dumpRuns(t *testing.T, runs ...*Run) {
+	t.Helper()
+	v := make([]string, len(runs))
+	for i, run := range runs {
+		buf := new(bytes.Buffer)
+		fmt.Fprintf(buf, "d: %v\n", run.Discard)
+		fmt.Fprintf(buf, "b: %v\n", run.Hi)
+		if len(run.Lo) != 0 {
+			fmt.Fprintf(buf, "%v\n", run.Lo)
+		}
+		for i, pocket := range run.Pockets {
+			fmt.Fprintf(buf, "%d: %v\n", i, pocket)
+		}
+		v[i] = buf.String()
+	}
+	sidebyside(t, "  ", "  ", v...)
+}
+
+func sidebyside(t *testing.T, pad, gap string, v ...string) {
+	t.Helper()
+	if len(v) == 0 {
+		return
+	}
+	n, lines, widths := 0, make([][]string, len(v)), make([]int, len(v))
+	for i := 0; i < len(v); i++ {
+		lines[i] = strings.Split(strings.TrimSuffix(v[i], "\n"), "\n")
+		for j := 0; j < len(lines[i]); j++ {
+			widths[i] = max(widths[i], len(lines[i][j]))
+		}
+		n = max(n, len(lines[i]))
+	}
+	var x string
+	for i := 0; i < n; i++ {
+		s := pad
+		for j := 0; j < len(v); j++ {
+			if j != 0 {
+				s += gap
+			}
+			if x = ""; i < len(lines[j]) {
+				x = lines[j][i]
+			}
+			s += fmt.Sprintf("%-*s", widths[j], x)
+		}
+		t.Log(s)
+	}
 }

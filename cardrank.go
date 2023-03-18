@@ -118,6 +118,14 @@ func min[T ordered](a, b T) T {
 	return b
 }
 
+// max returns the max of a, b.
+func max[T ordered](a, b T) T {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 // insert inserts a at i in v.
 func insert[T any](v []T, i int, a ...T) []T {
 	return append(v[:i], append(a, v[i:]...)...)
@@ -138,7 +146,7 @@ func equals[T comparable](a, b []T) bool {
 }
 
 // contains returns true when v contains a.
-func contains[T comparable](v []T, a T) bool {
+func contains[T comparable](a T, v ...T) bool {
 	for i := 0; i < len(v); i++ {
 		if v[i] == a {
 			return true

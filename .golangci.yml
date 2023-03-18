@@ -28,6 +28,7 @@ linters:
     - testpackage
     - varcheck
     - varnamelen
+    - wastedassign
     - wsl
 linters-settings:
   goconst:
@@ -35,6 +36,8 @@ linters-settings:
   gocritic:
     disabled-checks:
       - singleCaseSwitch
+  maintidx:
+    under: 15
   revive:
     rules:
       - name: var-naming

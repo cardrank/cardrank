@@ -35,14 +35,18 @@ func main() {
 			fmt.Printf("  %v\n", deck[i:min(i+8, len(deck))])
 		}
 		// iterate deal streets
+		last := -1
 		for d.Next() {
-			fmt.Printf("%s\n", d)
-			run, r := d.Run()
-			fmt.Printf("  Run %d:\n", run)
+			i, run := d.Run()
+			if last != i {
+				fmt.Printf("Run %d:\n", i)
+			}
+			last = i
+			fmt.Printf("  %s\n", d)
 			// display pockets
 			if d.HasPocket() {
 				for i := 0; i < players; i++ {
-					fmt.Printf("    %d: %v\n", i, r.Pockets[i])
+					fmt.Printf("    %d: %v\n", i, run.Pockets[i])
 				}
 			}
 			// display discarded cards
@@ -51,13 +55,13 @@ func main() {
 			}
 			// display board
 			if d.HasBoard() {
-				fmt.Printf("    Board: %v\n", r.Hi)
+				fmt.Printf("    Board: %v\n", run.Hi)
 				if d.Double {
-					fmt.Printf("           %v\n", r.Lo)
+					fmt.Printf("           %v\n", run.Lo)
 				}
 			}
 			// change runs to 3, after the flop
-			if d.Id() == 'f' && run == 0 {
+			if d.Id() == 'f' && i == 0 {
 				if success := d.ChangeRuns(3); !success {
 					fmt.Println("unable to change runs")
 					return

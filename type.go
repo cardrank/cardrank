@@ -411,6 +411,18 @@ func (typ Type) BoardDiscard() int {
 	return 0
 }
 
+// Draw returns true when one or more streets allows draws.
+func (typ Type) Draw() bool {
+	if desc, ok := descs[typ]; ok {
+		for i := 0; i < len(desc.Streets); i++ {
+			if desc.Streets[i].PocketDraw != 0 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // DeckType returns the type's deck type.
 func (typ Type) DeckType() DeckType {
 	return descs[typ].Deck
@@ -492,8 +504,8 @@ type TypeDesc struct {
 	LoDesc DescType
 }
 
-// NewType creates a new type description. Any created type must be registered
-// by calling [RegisterType] before it can be used for eval.
+// NewType creates a new type description. Created type descriptions must be
+// registered with [RegisterType] before being used for eval.
 func NewType(id string, typ Type, name string, opts ...TypeOption) (*TypeDesc, error) {
 	switch id, err := IdToType(id); {
 	case err != nil:

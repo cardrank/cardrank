@@ -86,6 +86,7 @@ func Example() {
 		{566, 2, 't', 3, nil},
 		{1039, 5, 'f', 2, []int{0, 3, 4}},
 		{2087, 6, 't', 2, []int{0, 5}},
+		{4022, 6, 'p', 2, []int{0, 1, 4}},
 	} {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
@@ -102,14 +103,18 @@ func Example() {
 			}
 			fmt.Printf("  %v\n", deck[i:n])
 		}
+		last := -1
 		for d.Next() {
-			fmt.Printf("%s\n", d)
-			run, r := d.Run()
-			fmt.Printf("  Run %d:\n", run)
+			i, run := d.Run()
+			if last != i {
+				fmt.Printf("Run %d:\n", i)
+			}
+			last = i
+			fmt.Printf("  %s\n", d)
 			// display pockets
 			if d.HasPocket() {
 				for i := 0; i < game.players; i++ {
-					fmt.Printf("    %d: %v\n", i, r.Pockets[i])
+					fmt.Printf("    %d: %v\n", i, run.Pockets[i])
 				}
 			}
 			// display discarded cards
@@ -118,13 +123,13 @@ func Example() {
 			}
 			// display board
 			if d.HasBoard() {
-				fmt.Printf("    Board: %v\n", r.Hi)
+				fmt.Printf("    Board: %v\n", run.Hi)
 				if d.Double {
-					fmt.Printf("           %v\n", r.Lo)
+					fmt.Printf("           %v\n", run.Lo)
 				}
 			}
 			// change runs, deactivate positions
-			if d.Id() == game.change && run == 0 {
+			if d.Id() == game.change && i == 0 {
 				if success := d.ChangeRuns(game.runs); !success {
 					panic("unable to change runs")
 				}
@@ -167,32 +172,29 @@ func Example() {
 	//   [3s Ah Kh 5s Jd Jc 2c Td]
 	//   [3c Jh 8h 4d Th 7c 7h 3d]
 	//   [6d Tc Kc Qd]
-	// p: Pre-Flop (p: 2)
-	//   Run 0:
+	// Run 0:
+	//   p: Pre-Flop (p: 2)
 	//     0: [4h 5c]
 	//     1: [Qs 4c]
-	// f: Flop (p: 1, d: 1, b: 3)
-	//   Run 0:
+	//   f: Flop (p: 1, d: 1, b: 3)
 	//     0: [4h 5c 5d]
 	//     1: [Qs 4c 8d]
 	//     Discard: [8c]
 	//     Board: [As Ks 6h]
-	// t: Turn (p: 1, d: 1, b: 1)
-	//   Run 0:
+	//   t: Turn (p: 1, d: 1, b: 1)
 	//     0: [4h 5c 5d 7s]
 	//     1: [Qs 4c 8d 9s]
-	//     Discard: [3h]
+	//     Discard: [8c 3h]
 	//     Board: [As Ks 6h Ac]
-	// r: River (d: 1, b: 1)
-	//   Run 0:
-	//     Discard: [Js]
+	//   r: River (d: 1, b: 1)
+	//     Discard: [8c 3h Js]
 	//     Board: [As Ks 6h Ac 9h]
-	// r: River (d: 1, b: 1)
-	//   Run 1:
+	// Run 1:
+	//   r: River (d: 1, b: 1)
 	//     Discard: [4s]
 	//     Board: [As Ks 6h Ac 7d]
-	// r: River (d: 1, b: 1)
-	//   Run 2:
+	// Run 2:
+	//   r: River (d: 1, b: 1)
 	//     Discard: [2h]
 	//     Board: [As Ks 6h Ac 8s]
 	// Showdown:
@@ -225,15 +227,14 @@ func Example() {
 	//   [Jc Jh 6c 3s Qd 9c 4s 3d]
 	//   [Ks Ad Qc Td Tc Qh Js 6h]
 	//   [2d 9s Jd Kh]
-	// p: Pre-Flop (p: 2)
-	//   Run 0:
+	// Run 0:
+	//   p: Pre-Flop (p: 2)
 	//     0: [2h 5h]
 	//     1: [5s 6d]
 	//     2: [Ac Th]
 	//     3: [Ts 2s]
 	//     4: [Kd 6s]
-	// f: Flop (p: 1, d: 1, b: 3)
-	//   Run 0:
+	//   f: Flop (p: 1, d: 1, b: 3)
 	//     0: [2h 5h 7c]
 	//     1: [5s 6d 4h]
 	//     2: [Ac Th 8c]
@@ -241,52 +242,49 @@ func Example() {
 	//     4: [Kd 6s Ah]
 	//     Discard: [8s]
 	//     Board: [Kc 9d 5c]
-	// t: Turn (p: 1, d: 1, b: 1)
-	//   Run 0:
+	//   t: Turn (p: 1, d: 1, b: 1)
 	//     0: [2h 5h 7c 5d]
 	//     1: [5s 6d 4h As]
 	//     2: [Ac Th 8c 4d]
 	//     3: [Ts 2s 9h 3h]
 	//     4: [Kd 6s Ah 2c]
-	//     Discard: [7s]
+	//     Discard: [8s 7s]
 	//     Board: [Kc 9d 5c 8h]
-	// t: Turn (p: 1, d: 1, b: 1)
-	//   Run 1:
-	//     0: [2h 5h 7c 4c]
-	//     1: [5s 6d 4h 7d]
-	//     2: [Ac Th 8c 8d]
-	//     3: [Ts 2s 9h Qs]
-	//     4: [Kd 6s Ah 3c]
-	//     Discard: [7h]
-	//     Board: [Kc 9d 5c Jc]
-	// r: River (d: 1, b: 1)
-	//   Run 0:
+	//   r: River (d: 1, b: 1)
+	//     Discard: [8s 7s 4c]
+	//     Board: [Kc 9d 5c 8h 7d]
+	// Run 1:
+	//   t: Turn (p: 1, d: 1, b: 1)
+	//     0: [2h 5h 7c 8d]
+	//     1: [5s 6d 4h Qs]
+	//     2: [Ac Th 8c 3c]
+	//     3: [Ts 2s 9h 7h]
+	//     4: [Kd 6s Ah Jc]
 	//     Discard: [Jh]
-	//     Board: [Kc 9d 5c 8h 6c]
-	// r: River (d: 1, b: 1)
-	//   Run 1:
-	//     Discard: [3s]
-	//     Board: [Kc 9d 5c Jc Qd]
+	//     Board: [Kc 9d 5c 6c]
+	//   r: River (d: 1, b: 1)
+	//     Discard: [Jh 3s]
+	//     Board: [Kc 9d 5c 6c Qd]
 	// Showdown:
 	//   Run 0:
 	//     0: inactive
-	//     1: [6c 6d 5c 5s Kc] [As 9d 8h 4h] Two Pair, Sixes over Fives, kicker King
-	//        [8h 6c 5c 4h As] [Kc 9d 6d 5s] Eight, Six, Five, Four, Ace-low
-	//     2: [Ac Kc 8c 6c 5c] [Th 9d 8h 4d] Flush, Ace-high, kickers King, Eight, Six, Five
-	//        [8h 6c 5c 4d Ac] [Kc Th 9d 8c] Eight, Six, Five, Four, Ace-low
+	//     1: [9d 8h 7d 6d 5s] [As Kc 5c 4h] Straight, Nine-high
+	//        [8h 7d 5c 4h As] [Kc 9d 6d 5s] Eight, Seven, Five, Four, Ace-low
+	//     2: [8c 8h Ac Kc 9d] [Th 7d 5c 4d] Pair, Eights, kickers Ace, King, Nine
+	//        [8h 7d 5c 4d Ac] [Kc Th 9d 8c] Eight, Seven, Five, Four, Ace-low
 	//     3: inactive
 	//     4: inactive
-	//     Result: 2 wins with Flush, Ace-high, kickers King, Eight, Six, Five
-	//             1, 2 split with Eight, Six, Five, Four, Ace-low
+	//     Result: 1 wins with Straight, Nine-high
+	//             1, 2 split with Eight, Seven, Five, Four, Ace-low
 	//   Run 1:
 	//     0: inactive
-	//     1: [5c 5s Kc Qd 7d] [Jc 9d 6d 4h] Pair, Fives, kickers King, Queen, Seven
+	//     1: [Qd Qs 6c 6d Kc] [9d 5c 5s 4h] Two Pair, Queens over Sixes, kicker King
 	//        [] [] None
-	//     2: [Ac Kc Jc 8c 5c] [Qd Th 9d 8d] Flush, Ace-high, kickers King, Jack, Eight, Five
+	//     2: [Ac Kc 8c 6c 5c] [Qd Th 9d 3c] Flush, Ace-high, kickers King, Eight, Six, Five
 	//        [] [] None
 	//     3: inactive
 	//     4: inactive
-	//     Result: 2 scoops with Flush, Ace-high, kickers King, Jack, Eight, Five
+	//     Result: 2 scoops with Flush, Ace-high, kickers King, Eight, Six, Five
 	// ------ FusionHiLo 3 ------
 	// Deck:
 	//   [8h 5d 5c 3h Jc 6h Kd Td]
@@ -296,16 +294,15 @@ func Example() {
 	//   [Ah 2d Ts 7h 4c Qs Kh 6d]
 	//   [9d 2s Js 3d 5h 2h Ac Ad]
 	//   [3c 8s 4d 9c]
-	// p: Pre-Flop (p: 2)
-	//   Run 0:
+	// Run 0:
+	//   p: Pre-Flop (p: 2)
 	//     0: [8h Kd]
 	//     1: [5d Td]
 	//     2: [5c 6s]
 	//     3: [3h As]
 	//     4: [Jc 7c]
 	//     5: [6h 6c]
-	// f: Flop (p: 1, d: 1, b: 3)
-	//   Run 0:
+	//   f: Flop (p: 1, d: 1, b: 3)
 	//     0: [8h Kd 2c]
 	//     1: [5d Td Jd]
 	//     2: [5c 6s 9h]
@@ -314,22 +311,20 @@ func Example() {
 	//     5: [6h 6c 5s]
 	//     Discard: [8d]
 	//     Board: [Tc 3s Kc]
-	// t: Turn (p: 1, d: 1, b: 1)
-	//   Run 0:
+	//   t: Turn (p: 1, d: 1, b: 1)
 	//     0: [8h Kd 2c Qh]
 	//     1: [5d Td Jd Qd]
 	//     2: [5c 6s 9h 7d]
 	//     3: [3h As 8c Ks]
 	//     4: [Jc 7c 7s Jh]
 	//     5: [6h 6c 5s 4s]
-	//     Discard: [9s]
+	//     Discard: [8d 9s]
 	//     Board: [Tc 3s Kc 4h]
-	// r: River (d: 1, b: 1)
-	//   Run 0:
-	//     Discard: [Th]
+	//   r: River (d: 1, b: 1)
+	//     Discard: [8d 9s Th]
 	//     Board: [Tc 3s Kc 4h Qc]
-	// r: River (d: 1, b: 1)
-	//   Run 1:
+	// Run 1:
+	//   r: River (d: 1, b: 1)
 	//     Discard: [Ah]
 	//     Board: [Tc 3s Kc 4h 2d]
 	// Showdown:
@@ -358,6 +353,90 @@ func Example() {
 	//     5: inactive
 	//     Result: 2 wins with Straight, Six-high
 	//             2 wins with Six, Five, Four, Three, Two-low
+	// ------ FusionHiLo 4 ------
+	// Deck:
+	//   [Qc 4h 2c 7c Kc 5c 9d 5h]
+	//   [3c Tc 9c Qd As 4s 5d Jc]
+	//   [4c Ad 9s 8s Qh 3h Td 7h]
+	//   [7s Ks 6d Kd 7d Jh 2d Js]
+	//   [4d 6h Th Ah Ac Ts 3d 6c]
+	//   [Jd 2s 2h 9h 3s 5s 8d 8c]
+	//   [Qs 8h Kh 6s]
+	// Run 0:
+	//   p: Pre-Flop (p: 2)
+	//     0: [Qc 9d]
+	//     1: [4h 5h]
+	//     2: [2c 3c]
+	//     3: [7c Tc]
+	//     4: [Kc 9c]
+	//     5: [5c Qd]
+	//   f: Flop (p: 1, d: 1, b: 3)
+	//     0: [Qc 9d As]
+	//     1: [4h 5h 4s]
+	//     2: [2c 3c 5d]
+	//     3: [7c Tc Jc]
+	//     4: [Kc 9c 4c]
+	//     5: [5c Qd Ad]
+	//     Discard: [9s]
+	//     Board: [8s Qh 3h]
+	//   t: Turn (p: 1, d: 1, b: 1)
+	//     0: [Qc 9d As Td]
+	//     1: [4h 5h 4s 7h]
+	//     2: [2c 3c 5d 7s]
+	//     3: [7c Tc Jc Ks]
+	//     4: [Kc 9c 4c 6d]
+	//     5: [5c Qd Ad Kd]
+	//     Discard: [9s 7d]
+	//     Board: [8s Qh 3h Jh]
+	//   r: River (d: 1, b: 1)
+	//     Discard: [9s 7d 2d]
+	//     Board: [8s Qh 3h Jh Js]
+	// Run 1:
+	//   f: Flop (p: 1, d: 1, b: 3)
+	//     0: [Qc 9d 4d]
+	//     1: [4h 5h 6h]
+	//     2: [2c 3c Th]
+	//     3: [7c Tc Ah]
+	//     4: [Kc 9c Ac]
+	//     5: [5c Qd Ts]
+	//     Discard: [3d]
+	//     Board: [6c Jd 2s]
+	//   t: Turn (p: 1, d: 1, b: 1)
+	//     0: [Qc 9d 4d 2h]
+	//     1: [4h 5h 6h 9h]
+	//     2: [2c 3c Th 3s]
+	//     3: [7c Tc Ah 5s]
+	//     4: [Kc 9c Ac 8d]
+	//     5: [5c Qd Ts 8c]
+	//     Discard: [3d Qs]
+	//     Board: [6c Jd 2s 8h]
+	//   r: River (d: 1, b: 1)
+	//     Discard: [3d Qs Kh]
+	//     Board: [6c Jd 2s 8h 6s]
+	// Showdown:
+	//   Run 0:
+	//     0: inactive
+	//     1: inactive
+	//     2: [Jh Js 3c 3h 7s] [Qh 8s 5d 2c] Two Pair, Jacks over Threes, kicker Seven
+	//        [] [] None
+	//     3: [Jc Jh Js Ks Qh] [Tc 8s 7c 3h] Three of a Kind, Jacks, kickers King, Queen
+	//        [] [] None
+	//     4: inactive
+	//     5: [Qd Qh Jh Js Ad] [Kd 8s 5c 3h] Two Pair, Queens over Jacks, kicker Ace
+	//        [] [] None
+	//     Result: 3 scoops with Three of a Kind, Jacks, kickers King, Queen
+	//   Run 1:
+	//     0: inactive
+	//     1: inactive
+	//     2: [6c 6s 3c 3s Jd] [Th 8h 2c 2s] Two Pair, Sixes over Threes, kicker Jack
+	//        [] [] None
+	//     3: [6c 6s Ah Jd Tc] [8h 7c 5s 2s] Pair, Sixes, kickers Ace, Jack, Ten
+	//        [8h 6c 5s 2s Ah] [Jd Tc 7c 6s] Eight, Six, Five, Two, Ace-low
+	//     4: inactive
+	//     5: [8c 8h 6c 6s Qd] [Jd Ts 5c 2s] Two Pair, Eights over Sixes, kicker Queen
+	//        [] [] None
+	//     Result: 5 wins with Two Pair, Eights over Sixes, kicker Queen
+	//             3 wins with Eight, Six, Five, Two, Ace-low
 }
 
 func ExampleType_holdem() {

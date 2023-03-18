@@ -61,7 +61,7 @@ func TestCardUnmarshal(t *testing.T) {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 	for i, c := range Must("Ah Kh Qh Jh Th") {
-		if !contains(v, c) {
+		if !contains(c, v...) {
 			t.Errorf("test %d v does not contain %s", i, c)
 		}
 	}
