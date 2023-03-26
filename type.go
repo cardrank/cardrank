@@ -366,11 +366,7 @@ func (typ Type) Streets() []StreetDesc {
 // Pocket returns the type's total dealt pocket cards.
 func (typ Type) Pocket() int {
 	if desc, ok := descs[typ]; ok {
-		var count int
-		for i := 0; i < len(desc.Streets); i++ {
-			count += desc.Streets[i].Pocket
-		}
-		return count
+		return desc.pocket
 	}
 	return 0
 }
@@ -378,11 +374,7 @@ func (typ Type) Pocket() int {
 // PocketDiscard returns the type's total pocket discard.
 func (typ Type) PocketDiscard() int {
 	if desc, ok := descs[typ]; ok {
-		var count int
-		for i := 0; i < len(desc.Streets); i++ {
-			count += desc.Streets[i].PocketDiscard
-		}
-		return count
+		return desc.pocketDiscard
 	}
 	return 0
 }
@@ -390,11 +382,7 @@ func (typ Type) PocketDiscard() int {
 // Board returns the type's total dealt board cards.
 func (typ Type) Board() int {
 	if desc, ok := descs[typ]; ok {
-		var count int
-		for i := 0; i < len(desc.Streets); i++ {
-			count += desc.Streets[i].Board
-		}
-		return count
+		return desc.board
 	}
 	return 0
 }
@@ -402,11 +390,7 @@ func (typ Type) Board() int {
 // BoardDiscard returns the type's total board discard.
 func (typ Type) BoardDiscard() int {
 	if desc, ok := descs[typ]; ok {
-		var count int
-		for i := 0; i < len(desc.Streets); i++ {
-			count += desc.Streets[i].BoardDiscard
-		}
-		return count
+		return desc.boardDiscard
 	}
 	return 0
 }
@@ -414,11 +398,7 @@ func (typ Type) BoardDiscard() int {
 // Draw returns true when one or more streets allows draws.
 func (typ Type) Draw() bool {
 	if desc, ok := descs[typ]; ok {
-		for i := 0; i < len(desc.Streets); i++ {
-			if desc.Streets[i].PocketDraw != 0 {
-				return true
-			}
-		}
+		return desc.draw
 	}
 	return false
 }
@@ -453,10 +433,15 @@ func (typ Type) Deal(shuffler Shuffler, shuffles, count int) ([][]Card, []Card) 
 	return nil, nil
 }
 
+// Cactus returns true when the type's eval is a Cactus eval.
+func (typ Type) Cactus() bool {
+	return descs[typ].Eval.Cactus()
+}
+
 // Eval creates a new eval for the type, evaluating the pocket and board.
 func (typ Type) Eval(pocket, board []Card) *Eval {
 	ev := EvalOf(typ)
-	ev.Eval(pocket, board)
+	evals[typ](ev, pocket, board)
 	return ev
 }
 
@@ -502,6 +487,12 @@ type TypeDesc struct {
 	HiDesc DescType
 	// LoDesc is the Lo description type.
 	LoDesc DescType
+
+	pocket        int
+	pocketDiscard int
+	board         int
+	boardDiscard  int
+	draw          bool
 }
 
 // NewType creates a new type description. Created type descriptions must be
@@ -523,6 +514,13 @@ func NewType(id string, typ Type, name string, opts ...TypeOption) (*TypeDesc, e
 	}
 	for _, o := range opts {
 		o(desc)
+	}
+	for _, street := range desc.Streets {
+		desc.pocket += street.Pocket
+		desc.pocketDiscard += street.PocketDiscard
+		desc.board += street.Board
+		desc.boardDiscard += street.BoardDiscard
+		desc.draw = desc.draw || street.PocketDraw != 0
 	}
 	return desc, nil
 }
@@ -1034,38 +1032,56 @@ const (
 )
 
 // New creates a eval func for the type.
-func (typ EvalType) New(low bool) EvalFunc {
+func (typ EvalType) New(normalize, low bool) EvalFunc {
 	switch typ {
 	case EvalCactus:
-		return NewCactusEval(low)
+		return NewCactusEval(normalize, low)
 	case EvalJacksOrBetter:
-		return NewJacksOrBetterEval(low)
+		return NewJacksOrBetterEval(normalize)
 	case EvalShort:
-		return NewShortEval()
+		return NewShortEval(normalize)
 	case EvalManila:
-		return NewManilaEval()
+		return NewManilaEval(normalize)
 	case EvalSpanish:
-		return NewSpanishEval()
+		return NewSpanishEval(normalize)
 	case EvalDallas:
-		return NewDallasEval(RankCactus, Five, low, nil)
+		return NewDallasEval(RankCactus, Five, nil, normalize, low)
 	case EvalHouston:
-		return NewHoustonEval(RankCactus, Five, nil)
+		return NewHoustonEval(RankCactus, Five, nil, normalize, low)
 	case EvalOmaha:
-		return NewOmahaEval(low)
+		return NewOmahaEval(normalize, low)
 	case EvalOmahaFive:
-		return NewOmahaFiveEval(low)
+		return NewOmahaFiveEval(normalize, low)
 	case EvalOmahaSix:
-		return NewOmahaSixEval(low)
+		return NewOmahaSixEval(normalize, low)
 	case EvalSoko:
-		return NewSokoEval(low)
+		return NewSokoEval(normalize, low)
 	case EvalLowball:
-		return NewLowballEval()
+		return NewLowballEval(normalize)
 	case EvalRazz:
-		return NewRazzEval()
+		return NewRazzEval(normalize)
 	case EvalBadugi:
-		return NewBadugiEval()
+		return NewBadugiEval(normalize)
 	}
 	return nil
+}
+
+// Cactus returns true when the eval is a Cactus eval.
+func (typ EvalType) Cactus() bool {
+	switch typ {
+	case EvalCactus,
+		EvalShort,
+		EvalManila,
+		EvalSpanish,
+		EvalDallas,
+		EvalHouston,
+		EvalOmaha,
+		EvalOmahaFive,
+		EvalOmahaSix,
+		EvalSoko:
+		return true
+	}
+	return false
 }
 
 // Format satisfies the [fmt.Formatter] interface.

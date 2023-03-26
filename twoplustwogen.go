@@ -118,6 +118,8 @@ func run(verbose bool, out, sum string) error {
 const TenMiB = 10 * (1 << 20)
 
 type TwoPlusTwoGenerator struct {
+	f     cardrank.EvalFunc
+	ev    *cardrank.Eval
 	ids   []int64
 	tbl   []uint32
 	count uint32
@@ -126,6 +128,8 @@ type TwoPlusTwoGenerator struct {
 
 func NewTwoPlusTwoGenerator(logf func(string, ...interface{})) []uint32 {
 	g := &TwoPlusTwoGenerator{
+		f:     cardrank.NewEval(cardrank.RankCactus),
+		ev:    cardrank.EvalOf(cardrank.Holdem),
 		ids:   make([]int64, 612978),
 		tbl:   make([]uint32, 32487834),
 		count: 1,
@@ -324,7 +328,7 @@ func (g *TwoPlusTwoGenerator) eval(id int64) cardrank.EvalRank {
 		}
 	}
 	// intentionally keeping one with a 0 end
-	ev := make([]cardrank.Card, 8)
+	p := make([]cardrank.Card, 8)
 	// changed as per Ray Wotton's comment at http://archives1.twoplustwo.com/showflat.php?Cat=0&Number=8513906&page=0&fpart=18&vc=1
 	for i, j := 0, uint32(1); i < n; i++ {
 		// convert to cactus kev way
@@ -355,7 +359,7 @@ func (g *TwoPlusTwoGenerator) eval(id int64) cardrank.EvalRank {
 			}
 		}
 		// Cactus Kev's value
-		ev[i] = cardrank.Card(primes[r] | (r << 8) | (1 << (s + 11)) | (1 << (16 + r)))
+		p[i] = cardrank.Card(primes[r] | (r << 8) | (1 << (s + 11)) | (1 << (16 + r)))
 	}
 
 	if n != 5 && n != 6 && n != 7 {
@@ -368,7 +372,8 @@ func (g *TwoPlusTwoGenerator) eval(id int64) cardrank.EvalRank {
 	// hhhhrrrrrrrrrrrr   hhhh = 1 high card -> 9 straight flush
 	// r..r = rank within the above  1 to max of 2861
 	// now the worst hand = 1
-	result := cardrank.Nothing - cardrank.DefaultEval(ev[:n]) + 1
+	g.f(g.ev, p[:n], nil)
+	result := cardrank.Nothing - g.ev.HiRank + 1
 	switch {
 	case result < 1278:
 		// 1277 high card

@@ -2,6 +2,7 @@ package cardrank
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -217,6 +218,8 @@ type dealFunc func(r *rand.Rand, d *Dealer)
 
 func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	r := rand.New(rand.NewSource(seed))
 	d := typ.Dealer(r, 1, count)
 	desc := typ.Desc()
@@ -247,6 +250,17 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 			t.Logf("    Board: %v", run.Hi)
 			if d.Double {
 				t.Logf("           %v", run.Lo)
+			}
+		}
+		if d.HasCalc() {
+			if hi, lo := d.Calc(ctx); hi != nil {
+				t.Log("    Calc:")
+				for i := 0; i < len(hi.V); i++ {
+					t.Logf("      %d: %*s outs: %v", i, i, hi, hi.Outs(i))
+					if lo != nil {
+						t.Logf("         %*s outs: %v", i, lo, lo.Outs(i))
+					}
+				}
 			}
 		}
 		if f != nil {

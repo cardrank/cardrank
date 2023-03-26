@@ -22,6 +22,9 @@ var (
 	// descs are the registered type descriptions.
 	descs = make(map[Type]TypeDesc)
 
+	// calcs are calc funcs.
+	calcs = make(map[Type]EvalFunc)
+
 	// evals are eval funcs.
 	evals = make(map[Type]EvalFunc)
 )
@@ -65,7 +68,8 @@ func RegisterType(desc TypeDesc) error {
 	}
 	desc.Num = len(descs)
 	descs[desc.Type] = desc
-	evals[desc.Type] = desc.Eval.New(desc.Low)
+	calcs[desc.Type] = desc.Eval.New(false, desc.Low)
+	evals[desc.Type] = desc.Eval.New(true, desc.Low)
 	return nil
 }
 

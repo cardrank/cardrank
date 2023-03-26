@@ -1,6 +1,7 @@
 package cardrank
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -116,24 +117,27 @@ func init() {
 	deckRoyal = DeckRoyal.Unshuffled()
 }
 
+// v returns the cards for the type.
+func (typ DeckType) v() []Card {
+	switch typ {
+	case DeckFrench:
+		return deckFrench
+	case DeckShort:
+		return deckShort
+	case DeckManila:
+		return deckManila
+	case DeckSpanish:
+		return deckSpanish
+	case DeckRoyal:
+		return deckRoyal
+	}
+	return nil
+}
+
 // Shoe creates a card shoe composed of count number of decks of unshuffled
 // cards.
 func (typ DeckType) Shoe(count int) *Deck {
-	var v []Card
-	switch typ {
-	case DeckFrench:
-		v = deckFrench
-	case DeckShort:
-		v = deckShort
-	case DeckManila:
-		v = deckManila
-	case DeckSpanish:
-		v = deckSpanish
-	case DeckRoyal:
-		v = deckRoyal
-	default:
-		return nil
-	}
+	v := typ.v()
 	n := len(v)
 	d := &Deck{
 		v: make([]Card, n*count),
@@ -155,6 +159,23 @@ func (typ DeckType) Shuffle(shuffler Shuffler, shuffles int) *Deck {
 	d := typ.Shoe(1)
 	d.Shuffle(shuffler, shuffles)
 	return d
+}
+
+// Exclude returns a set of unshuffled cards excluding any supplied cards.
+func (typ DeckType) Exclude(ex ...[]Card) []Card {
+	m := make(map[Card]bool)
+	for _, v := range ex {
+		for _, c := range v {
+			m[c] = true
+		}
+	}
+	var v []Card
+	for _, c := range typ.v() {
+		if !m[c] {
+			v = append(v, c)
+		}
+	}
+	return v
 }
 
 // Deck is a set of playing cards.
@@ -369,6 +390,18 @@ func (d *Dealer) HasActive() bool {
 	return 0 <= d.s && (d.Type.Max() == 1 || 1 < len(d.Active))
 }
 
+// HasCalc returns true when odds are available for calculation.
+func (d *Dealer) HasCalc() bool {
+	if d.Count != 0 && 0 <= d.r && d.r < d.runs && d.Type.Cactus() {
+		p, b := d.Type.Pocket(), d.Type.Board()
+		if p != 2 && d.s == 0 {
+			return false
+		}
+		return b != 0 && len(d.Runs[d.r].Pockets[0]) >= p
+	}
+	return false
+}
+
 // Pocket returns the number of pocket cards to be dealt on the current street.
 func (d *Dealer) Pocket() int {
 	if 0 <= d.s && d.s < len(d.Streets) {
@@ -440,6 +473,21 @@ func (d *Dealer) Run() (int, *Run) {
 		return d.r, d.Runs[d.r]
 	}
 	return -1, nil
+}
+
+// Calc calculates the run odds.
+func (d *Dealer) Calc(ctx context.Context, opts ...CalcOption) (*Odds, *Odds) {
+	if 0 <= d.r && d.r < d.runs {
+		return NewCalc(
+			d.Type,
+			append(
+				opts,
+				WithCalcRuns(d.Runs[:d.r+1]),
+				WithCalcActive(d.Active),
+			)...,
+		).Calc(ctx)
+	}
+	return nil, nil
 }
 
 // Result returns the current result.
@@ -518,7 +566,7 @@ func (d *Dealer) NextResult() bool {
 		case n > 1 || d.Max == 1:
 			d.Results = make([]*Result, d.runs)
 			for run := 0; run < d.runs; run++ {
-				d.Results[run] = d.Eval(run)
+				d.Results[run] = NewResult(d.Type, d.Runs[run], d.Active, false)
 			}
 		}
 	}
@@ -562,46 +610,12 @@ func (d *Dealer) Deal(street int, run *Run) {
 	}
 }
 
-// Eval evals the run, returning the result.
-func (d *Dealer) Eval(run int) *Result {
-	evs := d.Runs[run].Eval(d.Type, d.Active, d.Double)
-	hiOrder, hiPivot := Order(evs, false)
-	var loOrder []int
-	var loPivot int
-	if d.Low || d.Double {
-		loOrder, loPivot = Order(evs, true)
-	}
-	return &Result{
-		Evals:   evs,
-		HiOrder: hiOrder,
-		HiPivot: hiPivot,
-		LoOrder: loOrder,
-		LoPivot: loPivot,
-	}
-}
-
 // Run holds pockets, and a Hi/Lo board for a deal.
 type Run struct {
 	Discard []Card
 	Pockets [][]Card
 	Hi      []Card
 	Lo      []Card
-}
-
-// Eval returns the evals for the run.
-func (run *Run) Eval(typ Type, active map[int]bool, double bool) []*Eval {
-	n := len(run.Pockets)
-	evs := make([]*Eval, n)
-	for i := 0; i < n; i++ {
-		if active[i] {
-			evs[i] = typ.Eval(run.Pockets[i], run.Hi)
-			if double {
-				ev := typ.Eval(run.Pockets[i], run.Lo)
-				evs[i].LoRank, evs[i].LoBest, evs[i].LoUnused = ev.HiRank, ev.HiBest, ev.HiUnused
-			}
-		}
-	}
-	return evs
 }
 
 // NewRun creates a new run for the pocket count.
@@ -633,6 +647,50 @@ func (run *Run) Dupe() *Run {
 	return r
 }
 
+// Eval returns the evals for the run.
+func (run *Run) Eval(typ Type, active map[int]bool, calc bool) []*Eval {
+	n := len(run.Pockets)
+	evs := make([]*Eval, n)
+	var f EvalFunc
+	if calc {
+		f = calcs[typ]
+	} else {
+		f = evals[typ]
+	}
+	for i, double := 0, typ.Double(); i < n; i++ {
+		if active == nil || active[i] {
+			evs[i] = EvalOf(typ)
+			f(evs[i], run.Pockets[i], run.Hi)
+			if double {
+				ev := EvalOf(typ)
+				f(ev, run.Pockets[i], run.Lo)
+				evs[i].LoRank, evs[i].LoBest, evs[i].LoUnused = ev.HiRank, ev.HiBest, ev.HiUnused
+			}
+		}
+	}
+	return evs
+}
+
+// CalcStart returns the run's starting odds.
+func (run *Run) CalcStart(n int, low bool) (*Odds, *Odds) {
+	count := len(run.Pockets)
+	hi := NewOdds(count)
+	hi.N = n
+	var lo *Odds
+	if low {
+		lo = NewOdds(count)
+		lo.N = n
+	}
+	for i, pocket := range run.Pockets {
+		f, _ := CalcStart(pocket)
+		hi.V[i] = int(float32(n) * f)
+		if low {
+			lo.V[i] = int(float32(n) * (1.0 - f))
+		}
+	}
+	return hi, lo
+}
+
 // Result contains dealer eval results.
 type Result struct {
 	Evals   []*Eval
@@ -640,6 +698,25 @@ type Result struct {
 	HiPivot int
 	LoOrder []int
 	LoPivot int
+}
+
+// NewResult creates a result for the run, storing the calculated or evaluated
+// result.
+func NewResult(typ Type, run *Run, active map[int]bool, calc bool) *Result {
+	evs := run.Eval(typ, active, calc)
+	hiOrder, hiPivot := Order(evs, false)
+	var loOrder []int
+	var loPivot int
+	if typ.Low() || typ.Double() {
+		loOrder, loPivot = Order(evs, true)
+	}
+	return &Result{
+		Evals:   evs,
+		HiOrder: hiOrder,
+		HiPivot: hiPivot,
+		LoOrder: loOrder,
+		LoPivot: loPivot,
+	}
 }
 
 // Win returns the Hi and Lo win.
