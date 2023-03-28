@@ -1,6 +1,7 @@
 package cardrank
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -119,9 +120,11 @@ import (
 // [FusionHiLo] is the Hi/Lo variant of [Fusion], using a [Eight]-or-better
 // qualifier (see [RankEightOrBetter]) for the Lo.
 //
-// [Soko] is a [Holdem] variant with 2 additional ranks, a Four Flush (4 cards
-// of the same suit), and a Four Straight (4 cards in sequential rank, with no
-// wrapping straights), besting [Pair] and [Nothing].
+// [Soko] is a [Stud]/[StudFive] variant with 2 additional ranks, a Four Flush
+// (4 cards of the same suit), and a Four Straight (4 cards in sequential rank,
+// with no wrapping straights), besting [Pair] and [Nothing], with only a Ante
+// and River streets where 2 pocket cards are dealt on the Ante, and 3 pocket
+// cards are dealt, up, on the River.
 //
 // [SokoHiLo] is the Hi/Lo variant of [Soko], using a [Eight]-or-better
 // qualifier (see [RankEightOrBetter]) for the Lo.
@@ -453,6 +456,11 @@ func (typ Type) EvalPockets(pockets [][]Card, board []Card) []*Eval {
 		evs[i] = typ.Eval(pockets[i], board)
 	}
 	return evs
+}
+
+// CalcPockets returns the calculated odds for the pockets, board.
+func (typ Type) CalcPockets(ctx context.Context, pockets [][]Card, board []Card, opts ...CalcOption) (*Odds, *Odds) {
+	return NewCalc(typ, append(opts, WithCalcPockets(pockets, board))...).Calc(ctx)
 }
 
 // TypeDesc is a type description.

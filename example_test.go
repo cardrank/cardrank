@@ -1,6 +1,7 @@
 package cardrank_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -1326,4 +1327,21 @@ func ExampleType_badugi() {
 	// Player 5: [5♣ Q♠ J♥ 2♠] Jack, Five, Two-low [J♥ 5♣ 2♠] [Q♠]
 	// Player 6: [6♠ 7♠ 7♥ 2♥] Six, Two-low [6♠ 2♥] [7♥ 7♠]
 	// Result:   Player 4 wins with Eight, Seven, Three-low
+}
+
+func ExampleType_calc() {
+	board := cardrank.Must("Ah Ks 3c")
+	pockets := [][]cardrank.Card{
+		cardrank.Must("Ac As"),
+		cardrank.Must("Kh Kc"),
+		cardrank.Must("3h Kd"),
+	}
+	odds, _ := cardrank.Holdem.CalcPockets(context.Background(), pockets, board)
+	for i := 0; i < len(pockets); i++ {
+		fmt.Printf("%d: %*s - %v\n", i, i, odds, odds.Outs(i))
+	}
+	// Output:
+	// 0: 99.9% (902/903) - [Qs Js Ts 9s 8s 7s 6s 5s 4s 3s 2s Qh Jh Th 9h 8h 7h 6h 5h 4h 2h Ad Qd Jd Td 9d 8d 7d 6d 5d 4d 3d 2d Qc Jc Tc 9c 8c 7c 6c 5c 4c 2c]
+	// 1: 0.0% (0/903) - []
+	// 2: 0.1% (1/903) - [3s 3d]
 }
