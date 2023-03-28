@@ -38,6 +38,42 @@ func TestCalc(t *testing.T) {
 			914,
 		},
 		{
+			Holdem,
+			[]string{
+				"Jc 9c",
+				"Ac 4h",
+			},
+			"7d 4c Qc",
+			[]int{
+				483, 507,
+			},
+			990,
+		},
+		{
+			Holdem,
+			[]string{
+				"Jc 9c",
+				"Ac 4h",
+			},
+			"7d 4c Qc Kh",
+			[]int{
+				17, 27,
+			},
+			44,
+		},
+		{
+			Holdem,
+			[]string{
+				"Jc 9c",
+				"Ac 4h",
+			},
+			"7d 4c Qc Kh 8h",
+			[]int{
+				0, 1,
+			},
+			1,
+		},
+		{
 			Omaha,
 			[]string{
 				"Ah Qc 7s 7h",
