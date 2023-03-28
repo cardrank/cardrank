@@ -196,7 +196,7 @@ func TestSokoCards(t *testing.T) {
 		t.Skip("skipping: $ENV{TESTS} does not contain 'soko' or 'all'")
 	}
 	t.Parallel()
-	u, f, ev, uv := shuffled(DeckFrench), NewSokoEval(false, false), EvalOf(Soko), EvalOf(Soko)
+	u, f, ev, uv := shuffled(DeckFrench), NewSokoEval(true, false), EvalOf(Soko), EvalOf(Soko)
 	for c0 := 0; c0 < 52; c0++ {
 		for c1 := c0 + 1; c1 < 52; c1++ {
 			for c2 := c1 + 1; c2 < 52; c2++ {
