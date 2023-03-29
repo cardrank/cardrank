@@ -476,7 +476,7 @@ func (d *Dealer) Run() (int, *Run) {
 }
 
 // Calc calculates the run odds.
-func (d *Dealer) Calc(ctx context.Context, opts ...CalcOption) (*Odds, *Odds) {
+func (d *Dealer) Calc(ctx context.Context, opts ...CalcOption) (*Odds, *Odds, bool) {
 	if 0 <= d.r && d.r < d.runs {
 		return NewCalc(
 			d.Type,
@@ -487,7 +487,7 @@ func (d *Dealer) Calc(ctx context.Context, opts ...CalcOption) (*Odds, *Odds) {
 			)...,
 		).Calc(ctx)
 	}
-	return nil, nil
+	return nil, nil, false
 }
 
 // Result returns the current result.
@@ -674,11 +674,11 @@ func (run *Run) Eval(typ Type, active map[int]bool, calc bool) []*Eval {
 // CalcStart returns the run's starting odds.
 func (run *Run) CalcStart(n int, low bool) (*Odds, *Odds) {
 	count := len(run.Pockets)
-	hi := NewOdds(count)
+	hi := NewOdds(count, nil)
 	hi.N = n
 	var lo *Odds
 	if low {
-		lo = NewOdds(count)
+		lo = NewOdds(count, nil)
 		lo.N = n
 	}
 	for i, pocket := range run.Pockets {

@@ -12,6 +12,7 @@ type Calc struct {
 	runs    []*Run
 	active  map[int]bool
 	discard bool
+	deep    bool
 }
 
 // NewCalc creates a new run odds calc.
@@ -47,23 +48,24 @@ func (c *Calc) u() []Card {
 }
 
 // Calc calculates odds.
-func (c *Calc) Calc(ctx context.Context) (*Odds, *Odds) {
+func (c *Calc) Calc(ctx context.Context) (*Odds, *Odds, bool) {
 	// check runs and pocket count
 	n := len(c.runs)
 	if n == 0 {
-		return nil, nil
+		return nil, nil, false
 	}
 	// ensure at least 1 pocket pair has been dealt
 	count := len(c.runs[n-1].Pockets)
 	if count == 0 {
-		return nil, nil
+		return nil, nil, false
 	}
 	b, low, double := c.typ.Board(), c.typ.Low(), c.typ.Double()
 	run := c.runs[n-1].Dupe()
 	k, u := b-len(run.Hi), c.u()
 	// if pocket == 2, board == 0, use lookup
-	if b == k {
-		return run.CalcStart(100, low || double)
+	if !c.deep && b == k {
+		hi, lo := run.CalcStart(100, low || double)
+		return hi, lo, true
 	}
 	// expand hi + lo boards
 	run.Hi = append(run.Hi, make([]Card, k)...)
@@ -71,87 +73,80 @@ func (c *Calc) Calc(ctx context.Context) (*Odds, *Odds) {
 		run.Lo = append(run.Lo, make([]Card, k)...)
 	}
 	// setup odds
-	i, g, v := 0, NewBinGen(len(u), k), make([]int, k)
-	hi := NewOdds(count)
+	i, g, v, hi := 0, NewBinGen(len(u), k), make([]int, k), NewOdds(count, u)
 	var lo *Odds
 	if low || double {
-		lo = NewOdds(count)
+		lo = NewOdds(count, u)
 	}
-	// iterate all available card combinations
+	hiSuits, loSuits := countRunSuits(run, double)
+	// iterate combinations
 	for g.Next(v) {
 		// check context
 		select {
 		case <-ctx.Done():
-			return nil, nil
+			return hi, lo, false
 		default:
 		}
-		// populate remaining hi + lo boards
+		// populate hi + lo boards
 		for i = 0; i < k; i++ {
 			run.Hi[b-k+i] = u[v[i]]
 		}
 		if double {
 			copy(run.Lo[b-k:], run.Hi[b-k:])
 		}
-		// eval and add to odds
+		// eval
 		evs := run.Eval(c.typ, c.active, true)
-		hi.Add(evs, false, run.Hi[b-k:])
+		// add to odds
+		hi.Add(evs, hiSuits, run.Hi[b-k:], false)
 		switch {
 		case low:
-			lo.Add(evs, true, run.Hi[b-k:])
+			lo.Add(evs, loSuits, run.Hi[b-k:], true)
 		case double:
-			lo.Add(evs, true, run.Lo[b-k:])
+			lo.Add(evs, loSuits, run.Lo[b-k:], true)
 		}
 	}
-	return hi, lo
+	return hi, lo, true
 }
 
 // Odds are calculated run odds.
 type Odds struct {
 	N int
 	V []int
-	M []map[Card]bool
+	O []map[Card]bool
+	S [][]Suit
+	U map[Card]bool
+	D bool
 }
 
 // NewOdds creates a new odds.
-func NewOdds(count int) *Odds {
+func NewOdds(count int, u []Card) *Odds {
 	odds := &Odds{
 		V: make([]int, count),
-		M: make([]map[Card]bool, count),
+		O: make([]map[Card]bool, count),
+		S: make([][]Suit, count),
+		U: make(map[Card]bool),
 	}
 	for i := 0; i < count; i++ {
-		odds.M[i] = make(map[Card]bool)
+		odds.O[i] = make(map[Card]bool)
+	}
+	for _, c := range u {
+		odds.U[c] = true
 	}
 	return odds
 }
 
-// add adds the eval results to the odds.
-func (odds *Odds) Add(evs []*Eval, low bool, v []Card) {
+// Add adds the eval results to the odds.
+func (odds *Odds) Add(evs []*Eval, suits [][4]int, v []Card, low bool) {
 	indices, pivot := Order(evs, low)
+	s := make([][4]int, len(suits))
+	copy(s, suits)
 	for i := 0; i < pivot; i++ {
 		odds.V[indices[i]]++
 		for j := 0; j < len(v); j++ {
-			odds.M[indices[i]][v[j]] = true
+			odds.O[indices[i]][v[j]] = true
 		}
 	}
 	odds.N += pivot
-}
-
-// Outs returns the outs for a position.
-func (odds *Odds) Outs(i int) []Card {
-	v := make([]Card, len(odds.M[i]))
-	var j int
-	for c := range odds.M[i] {
-		v[j] = c
-		j++
-	}
-	sort.Slice(v, func(i, j int) bool {
-		m, n := v[i].Suit(), v[j].Suit()
-		if m == n {
-			return v[j].Rank() < v[i].Rank()
-		}
-		return m < n
-	})
-	return v
 }
 
 // Float32 returns the odds as a slice of float32.
@@ -164,9 +159,39 @@ func (odds *Odds) Float32() []float32 {
 	return v
 }
 
-// Percent returns the odds for i as calculated as a percent.
-func (odds *Odds) Percent(i int) float32 {
-	return float32(odds.V[i]) / float32(max(odds.N, 1)) * 100
+// Percent returns the odds for pos calculated as a percent.
+func (odds *Odds) Percent(pos int) float32 {
+	return float32(odds.V[pos]) / float32(max(odds.N, 1)) * 100
+}
+
+// Outs returns the out cards and suits for pos.
+func (odds *Odds) Outs(pos int, distinct bool) ([]Card, []Suit) {
+	v, s := odds.outs(pos, distinct)
+	sort.Slice(v, func(i, j int) bool {
+		m, n := v[i].Suit(), v[j].Suit()
+		if m == n {
+			return v[j].Rank() < v[i].Rank()
+		}
+		return m < n
+	})
+	sort.Slice(s, func(i, j int) bool {
+		return s[i] > s[j]
+	})
+	return v, s
+}
+
+// outs returns the out cards and suits for pos.
+func (odds *Odds) outs(pos int, distinct bool) ([]Card, []Suit) {
+	v := make([]Card, len(odds.O[pos]))
+	var j int
+	for c := range odds.O[pos] {
+		v[j] = c
+		j++
+	}
+	if !distinct {
+		return v, odds.S[pos]
+	}
+	return nil, nil
 }
 
 // Format satisfies the [fmt.Formatter] interface.
@@ -176,8 +201,49 @@ func (odds *Odds) Format(f fmt.State, verb rune) {
 		if i, ok := f.Width(); ok {
 			fmt.Fprintf(f, "%0.1f%% (%d/%d)", odds.Percent(i), odds.V[i], odds.N)
 		}
+	case 'o', 'O':
+		odds.formatOuts(f, 's', verb == 'O')
+	case 'b', 'B':
+		odds.formatOuts(f, 'b', verb == 'B')
 	default:
 		fmt.Fprintf(f, "%%!%c(ERROR=unknown verb, odds)", verb)
+	}
+}
+
+// formatOuts formats outs to f.
+func (odds *Odds) formatOuts(f fmt.State, verb rune, distinct bool) {
+	if i, ok := f.Width(); ok {
+		v, s := odds.Outs(i, distinct)
+		switch n, m := len(v), len(s); {
+		case n == 0 && m == 0:
+			if odds.D {
+				f.Write([]byte("drawing dead"))
+			} else {
+				f.Write([]byte("none"))
+			}
+		default:
+			if n != 0 {
+				CardFormatter(v).Format(f, verb)
+				if m != 0 {
+					f.Write([]byte(", "))
+				}
+			}
+			if m != 0 {
+				f.Write([]byte("any ["))
+				for i := 0; i < m; i++ {
+					if i != 0 {
+						f.Write([]byte(", "))
+					}
+					switch verb {
+					case 'b':
+						f.Write([]byte(string(s[i].UnicodeBlack())))
+					default:
+						f.Write([]byte(s[i].Name()))
+					}
+				}
+				f.Write([]byte{']'})
+			}
+		}
 	}
 }
 
@@ -212,6 +278,14 @@ func WithCalcActive(active map[int]bool) CalcOption {
 func WithCalcDiscard(discard bool) CalcOption {
 	return func(c *Calc) {
 		c.discard = discard
+	}
+}
+
+// WithCalcDeep is a run odds calc option to set whether the run should run
+// deep calculations.
+func WithCalcDeep(deep bool) CalcOption {
+	return func(c *Calc) {
+		c.deep = deep
 	}
 }
 
@@ -285,6 +359,38 @@ func CalcStart(pocket []Card) (float32, bool) {
 		i = 1
 	}
 	return 1.0 - float32(starting[string([]byte{r0.Byte(), r1.Byte()})][i])/169.0, true
+}
+
+// countRunSuits returns the suit counts for each of the run's pockets.
+func countRunSuits(run *Run, double bool) ([][4]int, [][4]int) {
+	hi := countCardSuits(run.Pockets, run.Hi)
+	var lo [][4]int
+	if double {
+		lo = countCardSuits(run.Pockets, run.Lo)
+	}
+	return hi, lo
+}
+
+// countCardSuits returns suit counts.
+func countCardSuits(pockets [][]Card, board []Card) [][4]int {
+	count := len(pockets)
+	if count == 0 {
+		return nil
+	}
+	base := make([]int, 4)
+	countSuits(base, board)
+	v := make([][4]int, count)
+	for i := 0; i < count; i++ {
+		copy(v[i][:], base)
+	}
+	return v
+}
+
+// countSuits counts the suits in v, adding to d.
+func countSuits(d []int, v []Card) {
+	for _, c := range v {
+		d[c.SuitIndex()]++
+	}
 }
 
 // starting are starting pockets.

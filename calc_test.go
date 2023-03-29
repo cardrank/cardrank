@@ -74,6 +74,36 @@ func TestCalc(t *testing.T) {
 			1,
 		},
 		{
+			Holdem,
+			[]string{
+				"Ad 6c",
+				"As 4h",
+			},
+			"Qh Ah 5s 9h",
+			[]int{
+				32, 36,
+			},
+			68,
+		},
+		{
+			Holdem,
+			[]string{
+				"Ah Jc",
+				"Qh Jh",
+				"Qs 9c",
+				"6h 4s",
+				"3s 3d",
+				"Jd 8h",
+				"Kc Td",
+				"Js 4h",
+			},
+			"",
+			[]int{
+				65642, 47822, 40591, 50138, 73099, 36467, 69067, 9447,
+			},
+			392273,
+		},
+		{
 			Omaha,
 			[]string{
 				"Ah Qc 7s 7h",
@@ -85,6 +115,33 @@ func TestCalc(t *testing.T) {
 				64, 96, 506,
 			},
 			666,
+		},
+		{
+			Omaha,
+			[]string{
+				"Ah Kh Jd 6c",
+				"Qh Tc 6s 6h",
+			},
+			"9h Jh 6d",
+			[]int{
+				295, 525,
+			},
+			820,
+		},
+		{
+			Omaha,
+			[]string{
+				"Kh Qh 2c 2h",
+				"Ac Jc Kd 4h",
+				"Qd Qs Jh Jd",
+				"8h 7c Td 3h",
+				"6d 5d Th Qc",
+			},
+			"",
+			[]int{
+				32924, 45033, 35036, 53714, 37559,
+			},
+			204266,
 		},
 	}
 	for i, tt := range tests {
@@ -104,8 +161,10 @@ func testCalc(t *testing.T, ctx context.Context, typ Type, pockets [][]Card, boa
 	t.Helper()
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	odds, _ := NewCalc(typ, WithCalcPockets(pockets, board)).Calc(ctx)
+	odds, _, ok := NewCalc(typ, WithCalcPockets(pockets, board), WithCalcDeep(true)).Calc(ctx)
 	switch {
+	case !ok:
+		t.Fatalf("expected ok")
 	case odds == nil:
 		t.Fatalf("expected non-nil odds")
 	case !reflect.DeepEqual(odds.V, v):
@@ -117,7 +176,7 @@ func testCalc(t *testing.T, ctx context.Context, typ Type, pockets [][]Card, boa
 	total := 0
 	for i := 0; i < len(pockets); i++ {
 		total += odds.V[i]
-		t.Logf("%d: %v %*s", i, pockets[i], i, odds)
+		t.Logf("%d: %v %*s - %*o", i, pockets[i], i, odds, i, odds)
 	}
 	if total != n {
 		t.Errorf("expected %d, got: %d", n, total)
