@@ -63,7 +63,7 @@ func ExampleHoldem_Eval() {
 	fmt.Printf("%S\n", ev)
 	// Output:
 	// Straight Flush, Five-high, Steel Wheel [5♣ 4♣ 3♣ 2♣ A♣]
-	// Straight Five Flush
+	// Straight Flush, Five-high
 }
 
 func ExampleSpanish_Eval() {

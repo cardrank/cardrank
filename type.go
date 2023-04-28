@@ -1275,58 +1275,43 @@ func (typ DescType) Desc(f fmt.State, verb rune, rank EvalRank, best, unused []C
 func CactusDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, short bool) {
 	switch rank.Fixed() {
 	case StraightFlush:
-		if short {
-			fmt.Fprintf(f, "Straight %N Flush", best[0])
-		} else {
-			fmt.Fprintf(f, "Straight Flush, %N-high, %F", best[0], best[0])
+		fmt.Fprintf(f, "Straight Flush, %N-high", best[0])
+		if !short {
+			fmt.Fprintf(f, ", %F", best[0])
 		}
 	case FourOfAKind:
-		if short {
-			fmt.Fprintf(f, "Quad %P", best[0])
-		} else {
-			fmt.Fprintf(f, "Four of a Kind, %P, kicker %N", best[0], best[4])
+		fmt.Fprintf(f, "Four of a Kind, %P", best[0])
+		if !short {
+			fmt.Fprintf(f, ", kicker %N", best[4])
 		}
 	case FullHouse:
-		if short {
-			fmt.Fprintf(f, "%P full of %P", best[0], best[3])
-		} else {
-			fmt.Fprintf(f, "Full House, %P full of %P", best[0], best[3])
-		}
+		fmt.Fprintf(f, "Full House, %P full of %P", best[0], best[3])
 	case Flush:
-		if short {
-			fmt.Fprintf(f, "%N-high Flush", best[0])
-		} else {
-			fmt.Fprintf(f, "Flush, %N-high, kickers %N, %N, %N, %N", best[0], best[1], best[2], best[3], best[4])
+		fmt.Fprintf(f, "Flush, %N-high", best[0])
+		if !short {
+			fmt.Fprintf(f, ", kickers %N, %N, %N, %N", best[1], best[2], best[3], best[4])
 		}
 	case Straight:
-		if short {
-			fmt.Fprintf(f, "%N-high Straight", best[0])
-		} else {
-			fmt.Fprintf(f, "Straight, %N-high", best[0])
-		}
+		fmt.Fprintf(f, "Straight, %N-high", best[0])
 	case ThreeOfAKind:
-		if short {
-			fmt.Fprintf(f, "Set of %P", best[0])
-		} else {
-			fmt.Fprintf(f, "Three of a Kind, %P, kickers %N, %N", best[0], best[3], best[4])
+		fmt.Fprintf(f, "Three of a Kind, %P", best[0])
+		if !short {
+			fmt.Fprintf(f, ", kickers %N, %N", best[3], best[4])
 		}
 	case TwoPair:
-		if short {
-			fmt.Fprintf(f, "%P over %P", best[0], best[2])
-		} else {
-			fmt.Fprintf(f, "Two Pair, %P over %P, kicker %N", best[0], best[2], best[4])
+		fmt.Fprintf(f, "Two Pair, %P over %P", best[0], best[2])
+		if !short {
+			fmt.Fprintf(f, ", kicker %N", best[4])
 		}
 	case Pair:
-		if short {
-			fmt.Fprintf(f, "Pair of %P", best[0])
-		} else {
-			fmt.Fprintf(f, "Pair, %P, kickers %N, %N, %N", best[0], best[2], best[3], best[4])
+		fmt.Fprintf(f, "Pair, %P", best[0])
+		if !short {
+			fmt.Fprintf(f, ", kickers %N, %N, %N", best[2], best[3], best[4])
 		}
 	case Nothing:
-		if short {
-			fmt.Fprintf(f, "%N-high", best[0])
-		} else {
-			fmt.Fprintf(f, "%N-high, kickers %N, %N, %N, %N", best[0], best[1], best[2], best[3], best[4])
+		fmt.Fprintf(f, "%N-high", best[0])
+		if !short {
+			fmt.Fprintf(f, ", kickers %N, %N, %N, %N", best[1], best[2], best[3], best[4])
 		}
 	default:
 		fmt.Fprint(f, "None")
