@@ -824,7 +824,7 @@ func (ev *Eval) Format(f fmt.State, verb rune) {
 	case 'q':
 		fmt.Fprintf(f, "\"%s %s\"", ev.Desc(false), ev.HiBest)
 	case 'S':
-		fmt.Fprintf(f, "%s %S", ev.Desc(false), CardFormatter(ev.HiBest))
+		fmt.Fprintf(f, "%S", ev.Desc(false))
 	case 'b':
 		fmt.Fprintf(f, "%s %b", ev.Desc(false), ev.HiBest)
 	case 'h':

@@ -60,8 +60,10 @@ func ExampleHoldem_Eval() {
 	d.Shuffle(r, 1)
 	ev := cardrank.Holdem.Eval(d.Draw(2), d.Draw(5))
 	fmt.Printf("%b\n", ev)
+	fmt.Printf("%S\n", ev)
 	// Output:
 	// Straight Flush, Five-high, Steel Wheel [5♣ 4♣ 3♣ 2♣ A♣]
+	// Straight Five Flush
 }
 
 func ExampleSpanish_Eval() {

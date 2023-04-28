@@ -1236,20 +1236,20 @@ func (typ DescType) Desc(f fmt.State, verb rune, rank EvalRank, best, unused []C
 		fmt.Fprintf(f, "%d", int(rank))
 	case 'u':
 		CardFormatter(unused).Format(f, 's')
-	case 'v', 's':
+	case 'v', 's', 'S':
 		switch typ {
 		case DescCactus:
-			CactusDesc(f, verb, rank, best, unused)
+			CactusDesc(f, verb, rank, best, unused, verb == 'S')
 		case DescLow:
-			LowDesc(f, verb, rank, best, unused)
+			LowDesc(f, verb, rank, best, unused, verb == 'S')
 		case DescFlushOver:
-			FlushOverDesc(f, verb, rank, best, unused)
+			FlushOverDesc(f, verb, rank, best, unused, verb == 'S')
 		case DescRazz:
-			RazzDesc(f, verb, rank, best, unused)
+			RazzDesc(f, verb, rank, best, unused, verb == 'S')
 		case DescLowball:
-			LowballDesc(f, verb, rank, best, unused)
+			LowballDesc(f, verb, rank, best, unused, verb == 'S')
 		case DescSoko:
-			SokoDesc(f, verb, rank, best, unused)
+			SokoDesc(f, verb, rank, best, unused, verb == 'S')
 		}
 	default:
 		fmt.Fprintf(f, "%%!%c(ERROR=unknown verb, desc: %d)", verb, int(typ))
@@ -1272,26 +1272,62 @@ func (typ DescType) Desc(f fmt.State, verb rune, rank EvalRank, best, unused []C
 //	Two Pair, Nines over Sixes, kicker Jack
 //	Pair, Aces, kickers King, Queen, Nine
 //	Seven-high, kickers Six, Five, Three, Two
-func CactusDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+func CactusDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, short bool) {
 	switch rank.Fixed() {
 	case StraightFlush:
-		fmt.Fprintf(f, "Straight Flush, %N-high, %F", best[0], best[0])
+		if short {
+			fmt.Fprintf(f, "Straight %N Flush", best[0])
+		} else {
+			fmt.Fprintf(f, "Straight Flush, %N-high, %F", best[0], best[0])
+		}
 	case FourOfAKind:
-		fmt.Fprintf(f, "Four of a Kind, %P, kicker %N", best[0], best[4])
+		if short {
+			fmt.Fprintf(f, "Quad %P", best[0])
+		} else {
+			fmt.Fprintf(f, "Four of a Kind, %P, kicker %N", best[0], best[4])
+		}
 	case FullHouse:
-		fmt.Fprintf(f, "Full House, %P full of %P", best[0], best[3])
+		if short {
+			fmt.Fprintf(f, "%P full of %P", best[0], best[3])
+		} else {
+			fmt.Fprintf(f, "Full House, %P full of %P", best[0], best[3])
+		}
 	case Flush:
-		fmt.Fprintf(f, "Flush, %N-high, kickers %N, %N, %N, %N", best[0], best[1], best[2], best[3], best[4])
+		if short {
+			fmt.Fprintf(f, "%N-high Flush", best[0])
+		} else {
+			fmt.Fprintf(f, "Flush, %N-high, kickers %N, %N, %N, %N", best[0], best[1], best[2], best[3], best[4])
+		}
 	case Straight:
-		fmt.Fprintf(f, "Straight, %N-high", best[0])
+		if short {
+			fmt.Fprintf(f, "%N-high Straight", best[0])
+		} else {
+			fmt.Fprintf(f, "Straight, %N-high", best[0])
+		}
 	case ThreeOfAKind:
-		fmt.Fprintf(f, "Three of a Kind, %P, kickers %N, %N", best[0], best[3], best[4])
+		if short {
+			fmt.Fprintf(f, "Set of %P", best[0])
+		} else {
+			fmt.Fprintf(f, "Three of a Kind, %P, kickers %N, %N", best[0], best[3], best[4])
+		}
 	case TwoPair:
-		fmt.Fprintf(f, "Two Pair, %P over %P, kicker %N", best[0], best[2], best[4])
+		if short {
+			fmt.Fprintf(f, "%P over %P", best[0], best[2])
+		} else {
+			fmt.Fprintf(f, "Two Pair, %P over %P, kicker %N", best[0], best[2], best[4])
+		}
 	case Pair:
-		fmt.Fprintf(f, "Pair, %P, kickers %N, %N, %N", best[0], best[2], best[3], best[4])
+		if short {
+			fmt.Fprintf(f, "Pair of %P", best[0])
+		} else {
+			fmt.Fprintf(f, "Pair, %P, kickers %N, %N, %N", best[0], best[2], best[3], best[4])
+		}
 	case Nothing:
-		fmt.Fprintf(f, "%N-high, kickers %N, %N, %N, %N", best[0], best[1], best[2], best[3], best[4])
+		if short {
+			fmt.Fprintf(f, "%N-high", best[0])
+		} else {
+			fmt.Fprintf(f, "%N-high, kickers %N, %N, %N, %N", best[0], best[1], best[2], best[3], best[4])
+		}
 	default:
 		fmt.Fprint(f, "None")
 	}
@@ -1299,26 +1335,34 @@ func CactusDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 
 // FlushOverDesc writes a FlushOver description to f for the rank, best, and
 // unused cards.
-func FlushOverDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
-	CactusDesc(f, verb, rank.FromFlushOver(), best, unused)
+func FlushOverDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, short bool) {
+	CactusDesc(f, verb, rank.FromFlushOver(), best, unused, short)
 }
 
 // SokoDesc writes a [Soko] description to f for the rank, best, and unused cards.
-func SokoDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+func SokoDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, short bool) {
 	switch {
 	case rank <= TwoPair:
-		CactusDesc(f, verb, rank, best, unused)
+		CactusDesc(f, verb, rank, best, unused, short)
 	case rank <= sokoFlush:
-		fmt.Fprintf(f, "Four Flush, %N-high, kickers %N, %N, %N, %N", best[0], best[1], best[2], best[3], best[4])
+		if short {
+			fmt.Fprintf(f, "%N-high Four Flush", best[0])
+		} else {
+			fmt.Fprintf(f, "Four Flush, %N-high, kickers %N, %N, %N, %N", best[0], best[1], best[2], best[3], best[4])
+		}
 	case rank <= sokoStraight:
-		fmt.Fprintf(f, "Four Straight, %N-high, kicker %N", best[0], best[4])
+		if short {
+			fmt.Fprintf(f, "%N-high Four Straight", best[0])
+		} else {
+			fmt.Fprintf(f, "Four Straight, %N-high, kicker %N", best[0], best[4])
+		}
 	default:
-		CactusDesc(f, verb, rank-sokoStraight+TwoPair, best, unused)
+		CactusDesc(f, verb, rank-sokoStraight+TwoPair, best, unused, short)
 	}
 }
 
 // LowDesc writes a Low description to f for the rank, best, and unused cards.
-func LowDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+func LowDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, short bool) {
 	switch {
 	case rank == 0, rank == Invalid:
 		_, _ = f.Write([]byte("None"))
@@ -1335,28 +1379,28 @@ func LowDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 
 // LowballDesc writes a [Lowball] description to f for the rank, best, and
 // unused cards.
-func LowballDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+func LowballDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, short bool) {
 	switch r := rank.FromLowball(); {
 	case rank <= StraightFlush:
-		LowDesc(f, verb, r, best, unused)
+		LowDesc(f, verb, r, best, unused, short)
 		fmt.Fprintf(f, ", No. %d", rank)
 	case Pair < r && r <= Nothing || r == Straight:
-		LowDesc(f, verb, r, best, unused)
+		LowDesc(f, verb, r, best, unused, short)
 	case r == StraightFlush:
-		CactusDesc(f, verb, Flush, best, unused)
+		CactusDesc(f, verb, Flush, best, unused, short)
 	default:
-		CactusDesc(f, verb, r, best, unused)
+		CactusDesc(f, verb, r, best, unused, short)
 	}
 }
 
 // RazzDesc writes a [Razz] description to f for the rank, best, and unused
 // cards.
-func RazzDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+func RazzDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card, short bool) {
 	switch {
 	case rank < aceFiveMax:
-		LowDesc(f, verb, rank, best, unused)
+		LowDesc(f, verb, rank, best, unused, short)
 	default:
-		CactusDesc(f, verb, Invalid-rank, best, unused)
+		CactusDesc(f, verb, Invalid-rank, best, unused, short)
 	}
 }
 
