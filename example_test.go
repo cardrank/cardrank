@@ -84,11 +84,12 @@ func Example() {
 		change   byte
 		runs     int
 		inactive []int
+		names    []string
 	}{
-		{566, 2, 't', 3, nil},
-		{1039, 5, 'f', 2, []int{0, 3, 4}},
-		{2087, 6, 't', 2, []int{0, 5}},
-		{4022, 6, 'p', 2, []int{0, 1, 4}},
+		{566, 2, 't', 3, nil, []string{"Alice", "Bob"}},
+		{1039, 5, 'f', 2, []int{0, 3, 4}, []string{"Alice", "Bob", "Carl", "Dave", "Elizabeth"}},
+		{2087, 6, 't', 2, []int{0, 5}, []string{"Alice", "Bob", "Carl", "Dave", "Elizabeth", "Frank"}},
+		{4022, 6, 'p', 2, []int{0, 1, 4}, []string{"Alice", "Bob", "Carl", "Dave", "Elizabeth", "Fenny"}},
 	} {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
@@ -116,7 +117,7 @@ func Example() {
 			// display pockets
 			if d.HasPocket() {
 				for i := 0; i < game.players; i++ {
-					fmt.Printf("    %d: %v\n", i, run.Pockets[i])
+					fmt.Printf("    %d %s: %v\n", i, game.names[i], run.Pockets[i])
 				}
 			}
 			// display discarded cards
@@ -157,10 +158,10 @@ func Example() {
 					fmt.Printf("    %d: inactive\n", i)
 				}
 			}
-			hi, lo := res.Win()
-			fmt.Printf("    Result: %d with %s\n", hi, hi)
+			hi, lo := res.Win(game.names...)
+			fmt.Printf("    Result: %S\n", hi)
 			if lo != nil {
-				fmt.Printf("            %d with %s\n", lo, lo)
+				fmt.Printf("            %S\n", lo)
 			}
 		}
 	}
@@ -176,16 +177,16 @@ func Example() {
 	//   [6d Tc Kc Qd]
 	// Run 0:
 	//   p: Pre-Flop (p: 2)
-	//     0: [4h 5c]
-	//     1: [Qs 4c]
+	//     0 Alice: [4h 5c]
+	//     1 Bob: [Qs 4c]
 	//   f: Flop (p: 1, d: 1, b: 3)
-	//     0: [4h 5c 5d]
-	//     1: [Qs 4c 8d]
+	//     0 Alice: [4h 5c 5d]
+	//     1 Bob: [Qs 4c 8d]
 	//     Discard: [8c]
 	//     Board: [As Ks 6h]
 	//   t: Turn (p: 1, d: 1, b: 1)
-	//     0: [4h 5c 5d 7s]
-	//     1: [Qs 4c 8d 9s]
+	//     0 Alice: [4h 5c 5d 7s]
+	//     1 Bob: [Qs 4c 8d 9s]
 	//     Discard: [8c 3h]
 	//     Board: [As Ks 6h Ac]
 	//   r: River (d: 1, b: 1)
@@ -205,21 +206,21 @@ func Example() {
 	//        [] [] None
 	//     1: [Ac As 9h 9s Qs] [Ks 8d 6h 4c] Two Pair, Aces over Nines, kicker Queen
 	//        [] [] None
-	//     Result: 1 scoops with Two Pair, Aces over Nines, kicker Queen
+	//     Result: Bob scoops with Two Pair, Aces over Nines, kicker Queen
 	//   Run 1:
 	//     0: [Ac As 7d 7s 5c] [Ks 6h 5d 4h] Two Pair, Aces over Sevens, kicker Five
 	//        [7d 6h 5c 4h As] [Ac Ks 7s 5d] Seven, Six, Five, Four, Ace-low
 	//     1: [Ac As Ks Qs 9s] [8d 7d 6h 4c] Pair, Aces, kickers King, Queen, Nine
 	//        [8d 7d 6h 4c As] [Ac Ks Qs 9s] Eight, Seven, Six, Four, Ace-low
-	//     Result: 0 wins with Two Pair, Aces over Sevens, kicker Five
-	//             0 wins with Seven, Six, Five, Four, Ace-low
+	//     Result: Alice wins with Two Pair, Aces over Sevens, kicker Five
+	//             Alice wins with Seven, Six, Five, Four, Ace-low
 	//   Run 2:
 	//     0: [Ac As 5c 5d Ks] [8s 7s 6h 4h] Two Pair, Aces over Fives, kicker King
 	//        [8s 6h 5c 4h As] [Ac Ks 7s 5d] Eight, Six, Five, Four, Ace-low
 	//     1: [As Ks Qs 9s 8s] [Ac 8d 6h 4c] Flush, Ace-high, kickers King, Queen, Nine, Eight
 	//        [] [] None
-	//     Result: 1 wins with Flush, Ace-high, kickers King, Queen, Nine, Eight
-	//             0 wins with Eight, Six, Five, Four, Ace-low
+	//     Result: Bob wins with Flush, Ace-high, kickers King, Queen, Nine, Eight
+	//             Alice wins with Eight, Six, Five, Four, Ace-low
 	// ------ FusionHiLo 2 ------
 	// Deck:
 	//   [2h 5s Ac Ts Kd 5h 6d Th]
@@ -231,25 +232,25 @@ func Example() {
 	//   [2d 9s Jd Kh]
 	// Run 0:
 	//   p: Pre-Flop (p: 2)
-	//     0: [2h 5h]
-	//     1: [5s 6d]
-	//     2: [Ac Th]
-	//     3: [Ts 2s]
-	//     4: [Kd 6s]
+	//     0 Alice: [2h 5h]
+	//     1 Bob: [5s 6d]
+	//     2 Carl: [Ac Th]
+	//     3 Dave: [Ts 2s]
+	//     4 Elizabeth: [Kd 6s]
 	//   f: Flop (p: 1, d: 1, b: 3)
-	//     0: [2h 5h 7c]
-	//     1: [5s 6d 4h]
-	//     2: [Ac Th 8c]
-	//     3: [Ts 2s 9h]
-	//     4: [Kd 6s Ah]
+	//     0 Alice: [2h 5h 7c]
+	//     1 Bob: [5s 6d 4h]
+	//     2 Carl: [Ac Th 8c]
+	//     3 Dave: [Ts 2s 9h]
+	//     4 Elizabeth: [Kd 6s Ah]
 	//     Discard: [8s]
 	//     Board: [Kc 9d 5c]
 	//   t: Turn (p: 1, d: 1, b: 1)
-	//     0: [2h 5h 7c 5d]
-	//     1: [5s 6d 4h As]
-	//     2: [Ac Th 8c 4d]
-	//     3: [Ts 2s 9h 3h]
-	//     4: [Kd 6s Ah 2c]
+	//     0 Alice: [2h 5h 7c 5d]
+	//     1 Bob: [5s 6d 4h As]
+	//     2 Carl: [Ac Th 8c 4d]
+	//     3 Dave: [Ts 2s 9h 3h]
+	//     4 Elizabeth: [Kd 6s Ah 2c]
 	//     Discard: [8s 7s]
 	//     Board: [Kc 9d 5c 8h]
 	//   r: River (d: 1, b: 1)
@@ -257,11 +258,11 @@ func Example() {
 	//     Board: [Kc 9d 5c 8h 7d]
 	// Run 1:
 	//   t: Turn (p: 1, d: 1, b: 1)
-	//     0: [2h 5h 7c 8d]
-	//     1: [5s 6d 4h Qs]
-	//     2: [Ac Th 8c 3c]
-	//     3: [Ts 2s 9h 7h]
-	//     4: [Kd 6s Ah Jc]
+	//     0 Alice: [2h 5h 7c 8d]
+	//     1 Bob: [5s 6d 4h Qs]
+	//     2 Carl: [Ac Th 8c 3c]
+	//     3 Dave: [Ts 2s 9h 7h]
+	//     4 Elizabeth: [Kd 6s Ah Jc]
 	//     Discard: [Jh]
 	//     Board: [Kc 9d 5c 6c]
 	//   r: River (d: 1, b: 1)
@@ -276,8 +277,8 @@ func Example() {
 	//        [8h 7d 5c 4d Ac] [Kc Th 9d 8c] Eight, Seven, Five, Four, Ace-low
 	//     3: inactive
 	//     4: inactive
-	//     Result: 1 wins with Straight, Nine-high
-	//             1, 2 split with Eight, Seven, Five, Four, Ace-low
+	//     Result: Bob wins with Straight, Nine-high
+	//             Bob, Carl split with Eight, Seven, Five, Four, Ace-low
 	//   Run 1:
 	//     0: inactive
 	//     1: [Qd Qs 6c 6d Kc] [9d 5c 5s 4h] Two Pair, Queens over Sixes, kicker King
@@ -286,7 +287,7 @@ func Example() {
 	//        [] [] None
 	//     3: inactive
 	//     4: inactive
-	//     Result: 2 scoops with Flush, Ace-high, kickers King, Eight, Six, Five
+	//     Result: Carl scoops with Flush, Ace-high, kickers King, Eight, Six, Five
 	// ------ FusionHiLo 3 ------
 	// Deck:
 	//   [8h 5d 5c 3h Jc 6h Kd Td]
@@ -298,28 +299,28 @@ func Example() {
 	//   [3c 8s 4d 9c]
 	// Run 0:
 	//   p: Pre-Flop (p: 2)
-	//     0: [8h Kd]
-	//     1: [5d Td]
-	//     2: [5c 6s]
-	//     3: [3h As]
-	//     4: [Jc 7c]
-	//     5: [6h 6c]
+	//     0 Alice: [8h Kd]
+	//     1 Bob: [5d Td]
+	//     2 Carl: [5c 6s]
+	//     3 Dave: [3h As]
+	//     4 Elizabeth: [Jc 7c]
+	//     5 Frank: [6h 6c]
 	//   f: Flop (p: 1, d: 1, b: 3)
-	//     0: [8h Kd 2c]
-	//     1: [5d Td Jd]
-	//     2: [5c 6s 9h]
-	//     3: [3h As 8c]
-	//     4: [Jc 7c 7s]
-	//     5: [6h 6c 5s]
+	//     0 Alice: [8h Kd 2c]
+	//     1 Bob: [5d Td Jd]
+	//     2 Carl: [5c 6s 9h]
+	//     3 Dave: [3h As 8c]
+	//     4 Elizabeth: [Jc 7c 7s]
+	//     5 Frank: [6h 6c 5s]
 	//     Discard: [8d]
 	//     Board: [Tc 3s Kc]
 	//   t: Turn (p: 1, d: 1, b: 1)
-	//     0: [8h Kd 2c Qh]
-	//     1: [5d Td Jd Qd]
-	//     2: [5c 6s 9h 7d]
-	//     3: [3h As 8c Ks]
-	//     4: [Jc 7c 7s Jh]
-	//     5: [6h 6c 5s 4s]
+	//     0 Alice: [8h Kd 2c Qh]
+	//     1 Bob: [5d Td Jd Qd]
+	//     2 Carl: [5c 6s 9h 7d]
+	//     3 Dave: [3h As 8c Ks]
+	//     4 Elizabeth: [Jc 7c 7s Jh]
+	//     5 Frank: [6h 6c 5s 4s]
 	//     Discard: [8d 9s]
 	//     Board: [Tc 3s Kc 4h]
 	//   r: River (d: 1, b: 1)
@@ -341,7 +342,7 @@ func Example() {
 	//     4: [Kc Qc Jc Tc 7c] [Jh 7s 4h 3s] Flush, King-high, kickers Queen, Jack, Ten, Seven
 	//        [] [] None
 	//     5: inactive
-	//     Result: 4 scoops with Flush, King-high, kickers Queen, Jack, Ten, Seven
+	//     Result: Elizabeth scoops with Flush, King-high, kickers Queen, Jack, Ten, Seven
 	//   Run 1:
 	//     0: inactive
 	//     1: [Tc Td Kc Qd 4h] [Jd 5d 3s 2d] Pair, Tens, kickers King, Queen, Four
@@ -353,8 +354,8 @@ func Example() {
 	//     4: [Jc Jh Kc Tc 4h] [7c 7s 3s 2d] Pair, Jacks, kickers King, Ten, Four
 	//        [] [] None
 	//     5: inactive
-	//     Result: 2 wins with Straight, Six-high
-	//             2 wins with Six, Five, Four, Three, Two-low
+	//     Result: Carl wins with Straight, Six-high
+	//             Carl wins with Six, Five, Four, Three, Two-low
 	// ------ FusionHiLo 4 ------
 	// Deck:
 	//   [Qc 4h 2c 7c Kc 5c 9d 5h]
@@ -366,28 +367,28 @@ func Example() {
 	//   [Qs 8h Kh 6s]
 	// Run 0:
 	//   p: Pre-Flop (p: 2)
-	//     0: [Qc 9d]
-	//     1: [4h 5h]
-	//     2: [2c 3c]
-	//     3: [7c Tc]
-	//     4: [Kc 9c]
-	//     5: [5c Qd]
+	//     0 Alice: [Qc 9d]
+	//     1 Bob: [4h 5h]
+	//     2 Carl: [2c 3c]
+	//     3 Dave: [7c Tc]
+	//     4 Elizabeth: [Kc 9c]
+	//     5 Fenny: [5c Qd]
 	//   f: Flop (p: 1, d: 1, b: 3)
-	//     0: [Qc 9d As]
-	//     1: [4h 5h 4s]
-	//     2: [2c 3c 5d]
-	//     3: [7c Tc Jc]
-	//     4: [Kc 9c 4c]
-	//     5: [5c Qd Ad]
+	//     0 Alice: [Qc 9d As]
+	//     1 Bob: [4h 5h 4s]
+	//     2 Carl: [2c 3c 5d]
+	//     3 Dave: [7c Tc Jc]
+	//     4 Elizabeth: [Kc 9c 4c]
+	//     5 Fenny: [5c Qd Ad]
 	//     Discard: [9s]
 	//     Board: [8s Qh 3h]
 	//   t: Turn (p: 1, d: 1, b: 1)
-	//     0: [Qc 9d As Td]
-	//     1: [4h 5h 4s 7h]
-	//     2: [2c 3c 5d 7s]
-	//     3: [7c Tc Jc Ks]
-	//     4: [Kc 9c 4c 6d]
-	//     5: [5c Qd Ad Kd]
+	//     0 Alice: [Qc 9d As Td]
+	//     1 Bob: [4h 5h 4s 7h]
+	//     2 Carl: [2c 3c 5d 7s]
+	//     3 Dave: [7c Tc Jc Ks]
+	//     4 Elizabeth: [Kc 9c 4c 6d]
+	//     5 Fenny: [5c Qd Ad Kd]
 	//     Discard: [9s 7d]
 	//     Board: [8s Qh 3h Jh]
 	//   r: River (d: 1, b: 1)
@@ -395,21 +396,21 @@ func Example() {
 	//     Board: [8s Qh 3h Jh Js]
 	// Run 1:
 	//   f: Flop (p: 1, d: 1, b: 3)
-	//     0: [Qc 9d 4d]
-	//     1: [4h 5h 6h]
-	//     2: [2c 3c Th]
-	//     3: [7c Tc Ah]
-	//     4: [Kc 9c Ac]
-	//     5: [5c Qd Ts]
+	//     0 Alice: [Qc 9d 4d]
+	//     1 Bob: [4h 5h 6h]
+	//     2 Carl: [2c 3c Th]
+	//     3 Dave: [7c Tc Ah]
+	//     4 Elizabeth: [Kc 9c Ac]
+	//     5 Fenny: [5c Qd Ts]
 	//     Discard: [3d]
 	//     Board: [6c Jd 2s]
 	//   t: Turn (p: 1, d: 1, b: 1)
-	//     0: [Qc 9d 4d 2h]
-	//     1: [4h 5h 6h 9h]
-	//     2: [2c 3c Th 3s]
-	//     3: [7c Tc Ah 5s]
-	//     4: [Kc 9c Ac 8d]
-	//     5: [5c Qd Ts 8c]
+	//     0 Alice: [Qc 9d 4d 2h]
+	//     1 Bob: [4h 5h 6h 9h]
+	//     2 Carl: [2c 3c Th 3s]
+	//     3 Dave: [7c Tc Ah 5s]
+	//     4 Elizabeth: [Kc 9c Ac 8d]
+	//     5 Fenny: [5c Qd Ts 8c]
 	//     Discard: [3d Qs]
 	//     Board: [6c Jd 2s 8h]
 	//   r: River (d: 1, b: 1)
@@ -426,7 +427,7 @@ func Example() {
 	//     4: inactive
 	//     5: [Qd Qh Jh Js Ad] [Kd 8s 5c 3h] Two Pair, Queens over Jacks, kicker Ace
 	//        [] [] None
-	//     Result: 3 scoops with Three of a Kind, Jacks, kickers King, Queen
+	//     Result: Dave scoops with Three of a Kind, Jacks, kickers King, Queen
 	//   Run 1:
 	//     0: inactive
 	//     1: inactive
@@ -437,8 +438,8 @@ func Example() {
 	//     4: inactive
 	//     5: [8c 8h 6c 6s Qd] [Jd Ts 5c 2s] Two Pair, Eights over Sixes, kicker Queen
 	//        [] [] None
-	//     Result: 5 wins with Two Pair, Eights over Sixes, kicker Queen
-	//             3 wins with Eight, Six, Five, Two, Ace-low
+	//     Result: Fenny wins with Two Pair, Eights over Sixes, kicker Queen
+	//             Dave wins with Eight, Six, Five, Two, Ace-low
 }
 
 func ExampleType_holdem() {

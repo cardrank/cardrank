@@ -720,13 +720,13 @@ func NewResult(typ Type, run *Run, active map[int]bool, calc bool) *Result {
 }
 
 // Win returns the Hi and Lo win.
-func (res *Result) Win() (*Win, *Win) {
+func (res *Result) Win(names ...string) (*Win, *Win) {
 	low := res.Evals[res.HiOrder[0]].Type.Low()
 	var lo *Win
 	if res.LoOrder != nil && res.LoPivot != 0 {
-		lo = NewWin(res.Evals, res.LoOrder, res.LoPivot, true, false)
+		lo = NewWin(res.Evals, res.LoOrder, res.LoPivot, true, false, names)
 	}
-	hi := NewWin(res.Evals, res.HiOrder, res.HiPivot, false, low && lo == nil)
+	hi := NewWin(res.Evals, res.HiOrder, res.HiPivot, false, low && lo == nil, names)
 	return hi, lo
 }
 
@@ -737,16 +737,18 @@ type Win struct {
 	Pivot int
 	Low   bool
 	Scoop bool
+	Names []string
 }
 
 // NewWin creates a new win.
-func NewWin(evs []*Eval, order []int, pivot int, low, scoop bool) *Win {
+func NewWin(evs []*Eval, order []int, pivot int, low, scoop bool, names []string) *Win {
 	return &Win{
 		Evals: evs,
 		Order: order,
 		Pivot: pivot,
 		Low:   low,
 		Scoop: scoop,
+		Names: names,
 	}
 }
 
@@ -785,12 +787,21 @@ func (win *Win) Format(f fmt.State, verb rune) {
 		win.Evals[win.Order[0]].Desc(win.Low).Format(f, 's')
 	case 'S':
 		if !win.Invalid() {
-			win.Format(f, 'd')
-			fmt.Fprint(f, " with ")
-			win.Format(f, 's')
+			var v []string
+			for i := 0; i < win.Pivot; i++ {
+				pos := win.Order[i]
+				if pos < len(win.Names) {
+					v = append(v, win.Names[win.Order[i]])
+				} else {
+					v = append(v, strconv.Itoa(win.Order[i]))
+				}
+			}
+			fmt.Fprintf(f, "%s %s with %s", strings.Join(v, ", "), win.Verb(), win)
 		} else {
 			fmt.Fprint(f, "None")
 		}
+	case 'V':
+		fmt.Fprint(f, win.Verb())
 	case 'v':
 		var v []string
 		for i := 0; i < win.Pivot; i++ {
