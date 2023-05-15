@@ -290,6 +290,15 @@ func (suit Suit) UnicodeWhite() rune {
 	return 0
 }
 
+// Emoji returns the card suit pip emoji.
+func (suit Suit) Emoji() string {
+	switch suit {
+	case Spade, Heart, Diamond, Club:
+		return string(suit.UnicodeBlack()) + "\ufe0f"
+	}
+	return ""
+}
+
 // Card is a card consisting of a [Rank] (23456789TJQKA) and [Suit] (shdc).
 type Card uint32
 
