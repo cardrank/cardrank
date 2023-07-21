@@ -343,6 +343,10 @@ func TestTypeComp(t *testing.T) {
 		{Manila, "10c 8d 9d As Qs", "Kc Ks", "Ac 7s", 3547, 1604, +1},
 		{Manila, "10s 8s 9s Ac Qs", "As 7s", "Kc Ks", 5, 3547, -1},
 		{Manila, "10s 8s 9s Ac Qs", "Kc Ks", "As 7s", 3547, 5, +1},
+		{Dallas, "4h Tc 4d 6s 6h", "4s 7h", "Jc Ts", 2310, 2966, -1},
+		{Dallas, "4h Tc 4d 6s 6h", "Jc Ts", "4s 7h", 2966, 2310, +1},
+		{Houston, "4h Tc 4d 6s", "4s 7h 6s", "Jc Ts 2h", 295, 2988, -1},
+		{Houston, "4h Tc 4d 6s", "Jc Ts 2h", "4s 7h 6s", 2988, 295, +1},
 		{Omaha, "Td 2c Jd 4c 5c", "As Ah Qh 3s", "Ad Ac 7d 4d", 1609, 3430, -1},
 		{Omaha, "Td 2c Jd 4c 5c", "Ad Ac 7d 4d", "As Ah Qh 3s", 3430, 1609, +1},
 		{Omaha, "Kc Qh Jc 8d 4s", "Ac Td 3h 6c", "Ah Tc 2c 3c", 1600, 1600, 0},
@@ -353,10 +357,10 @@ func TestTypeComp(t *testing.T) {
 		{Omaha, "Tc 6c 2s 3s As", "9h 9d 4h 4d", "Kd Qs Js 8h", 4455, 522, +1},
 		{Omaha, "4s 3h 6c 2d Kd", "Kh Qs 5h 2c", "7s 7c 4h 2s", 1608, 3305, -1},
 		{Omaha, "4s 3h 6c 2d Kd", "7s 7c 4h 2s", "Kh Qs 5h 2c", 3305, 1608, +1},
-		{Dallas, "4h Tc 4d 6s 6h", "4s 7h", "Jc Ts", 2310, 2966, -1},
-		{Dallas, "4h Tc 4d 6s 6h", "Jc Ts", "4s 7h", 2966, 2310, +1},
 		{OmahaFive, "Qs Ts 8s 10c 9s", "As Kc Jh Jd Th", "Ks Js 3h 4d 6h", 1601, 2, +1},
 		{OmahaFive, "Qs Ts 8s 10c 9s", "Ks Js 3h 4d 6h", "As Kc Jh Jd Th", 2, 1601, -1},
+		{OmahaSix, "Qs Ts 8s 10c 9s", "As Kc Jh Jd Th Jc", "Ks Js 3h 4d 6h 5c", 1601, 2, +1},
+		{OmahaSix, "Qs Ts 8s 10c 9s", "Ks Js 3h 4d 6h 5c", "As Kc Jh Jd Th Jc", 2, 1601, -1},
 	}
 	for i, test := range tests {
 		board := Must(test.board)

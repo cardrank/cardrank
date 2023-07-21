@@ -143,6 +143,36 @@ func TestCalc(t *testing.T) {
 			},
 			204266,
 		},
+		{
+			OmahaFive,
+			[]string{
+				"Kh Qh 2c 2h 2c",
+				"Ac Jc Kd 4h Ad",
+				"Qd Qs Jh Jd 9c",
+				"8h 7c Td 3h 6h",
+				"6d 5d Th Qc 3d",
+			},
+			"",
+			[]int{
+				17987, 22634, 14518, 31961, 17426,
+			},
+			104526,
+		},
+		{
+			OmahaSix,
+			[]string{
+				"Kh Qh 2c 2h 2c 4d",
+				"Ac Jc Kd 4h Ad 9h",
+				"Qd Qs Jh Jd 9c 5c",
+				"8h 7c Td 3h 6h Ah",
+				"6d 5d Th Qc 3d As",
+			},
+			"",
+			[]int{
+				7597, 3621, 7073, 13035, 5883,
+			},
+			37209,
+		},
 	}
 	for i, tt := range tests {
 		test := tt

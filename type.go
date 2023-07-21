@@ -72,10 +72,10 @@ import (
 //
 // [Stud] is a best-5 card game, using a standard deck of 52 cards (see
 // [DeckFrench]), comprising a pocket of 7 cards, no community cards, with
-// Ante, 4th, 5th, 6th and River streets. 3 pocket cards are dealt on the Ante,
-// with 1 pocket card turend up, and an additional pocket card dealt up on the
-// 4th, 5th, and 6th streets, with a final pocket card dealt down on the 7th
-// street for a total of 7 pocket cards.
+// Ante, 4th, 5th, 6th and River streets. 2 pocket cards are dealt down and 1
+// pocket card up on the Ante, and 1 additional pocket card dealt up on the
+// 4th, 5th, and 6th streets, with 1 final additional pocket card dealt down on
+// the 7th street.
 //
 // [StudHiLo] is the Hi/Lo variant of [Stud], using a [Eight]-or-better
 // qualifier (see [RankEightOrBetter]) for the Lo.
@@ -1053,15 +1053,15 @@ func (typ EvalType) New(normalize, low bool) EvalFunc {
 	case EvalSpanish:
 		return NewSpanishEval(normalize)
 	case EvalDallas:
-		return NewDallasEval(RankCactus, Five, nil, normalize, low)
+		return NewOmahaEval(normalize, low)
 	case EvalHouston:
-		return NewHoustonEval(RankCactus, Five, nil, normalize, low)
+		return NewOmahaEval(normalize, low)
 	case EvalOmaha:
 		return NewOmahaEval(normalize, low)
 	case EvalOmahaFive:
-		return NewOmahaFiveEval(normalize, low)
+		return NewOmahaEval(normalize, low)
 	case EvalOmahaSix:
-		return NewOmahaSixEval(normalize, low)
+		return NewOmahaEval(normalize, low)
 	case EvalSoko:
 		return NewSokoEval(normalize, low)
 	case EvalLowball:

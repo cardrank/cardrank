@@ -345,6 +345,43 @@ func (g *BinGen) Next(v []int) bool {
 	return true
 }
 
+// NextUnused copies the next with unused.
+func (g *BinGen) NextUnused(v []int) bool {
+	if !g.Next(v) {
+		return false
+	}
+	m := make(map[int]bool)
+	for i := 0; i < g.k; i++ {
+		m[v[i]] = true
+	}
+	pos := g.k
+	for i := 0; i < g.n; i++ {
+		if !m[i] {
+			v[pos] = i
+			pos++
+		}
+	}
+	return true
+}
+
+// Sets returns sets.
+func (g *BinGen) Sets() [][]int {
+	var res [][]int
+	v := make([]int, g.n)
+	for g.NextUnused(v) {
+		z := make([]int, g.n)
+		copy(z, v)
+		res = append(res, z)
+	}
+	if len(res) == 0 {
+		for i := 0; i < g.n; i++ {
+			v[i] = i
+		}
+		res = append(res, v)
+	}
+	return res
+}
+
 // CalcStart returns the starting pocket value between 0 and 1.
 func CalcStart(pocket []Card) (float32, bool) {
 	if len(pocket) != 2 {

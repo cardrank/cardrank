@@ -514,120 +514,70 @@ func NewDallasEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normaliz
 	}
 }
 
-// NewHoustonEval creates a [Houston] eval func.
-//
-// Uses pocket of any 2 from 3, and any 3 from a board of 3, 4, or 5 to make a
-// best-5.
-func NewHoustonEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize, low bool) EvalFunc {
-	f := NewDallasEval(hi, base, inv, normalize, low)
-	return func(ev *Eval, p, b []Card) {
-		if len(p) != 3 {
-			return
-		}
-		v := make([]Card, 2)
-		for i := 0; i < 3; i++ {
-			v[0], v[1] = p[i%3], p[(i+1)%3]
-			uv := EvalOf(ev.Type)
-			f(uv, v, b)
-			if uv.HiRank < ev.HiRank {
-				ev.HiRank, ev.HiBest, ev.HiUnused = uv.HiRank, uv.HiBest, uv.HiUnused
-				ev.HiUnused = append(ev.HiUnused, p[(i+2)%3])
-			}
-		}
-	}
-}
-
 // NewOmahaEval creates a [Omaha] eval func.
+//
+// Uses any 2 from 2, 3, 4, 5, or 6 pocket cards, and any 3 from 3, 4 or 5
+// board cards to make a best-5.
 func NewOmahaEval(normalize, low bool) EvalFunc {
 	return func(ev *Eval, p, b []Card) {
-		ev.Init(5, 4, low)
-		v, r := make([]Card, 5), EvalRank(0)
-		for i := 0; i < 6; i++ {
-			for j := 0; j < 10; j++ {
-				v[0], v[1] = p[t4c2[i][0]], p[t4c2[i][1]] // pocket
-				v[2], v[3] = b[t5c3[j][0]], b[t5c3[j][1]] // board
-				v[4] = b[t5c3[j][2]]                      // board
-				if r = RankCactus(v[0], v[1], v[2], v[3], v[4]); r < ev.HiRank {
+		np, nb := len(p), len(b)
+		if np < 2 || 6 < np || nb < 3 || 5 < nb {
+			return
+		}
+		var fp, fb func([]Card) ([][]Card, int)
+		switch np {
+		case 2:
+			fp = take2c2
+		case 3:
+			fp = take3c2
+		case 4:
+			fp = take4c2
+		case 5:
+			fp = take5c2
+		case 6:
+			fp = take6c2
+		}
+		switch nb {
+		case 3:
+			fb = take3c3
+		case 4:
+			fb = take4c3
+		case 5:
+			fb = take5c3
+		}
+		vp, ip := fp(p)
+		vb, ib := fb(b)
+		ev.HiUnused = make([]Card, np+nb-5)
+		var loBest, loUnused []Card
+		if low {
+			loUnused = make([]Card, np+nb-5)
+		}
+		var c0, c1, c2, c3, c4 Card
+		for i, r := 0, EvalRank(0); i < ip; i++ {
+			for j := 0; j < ib; j++ {
+				c0, c1, c2, c3, c4 = vp[i][0], vp[i][1], vb[j][0], vb[j][1], vb[j][2]
+				if r = RankCactus(c0, c1, c2, c3, c4); r < ev.HiRank {
 					ev.HiRank = r
-					copy(ev.HiBest, v)
-					ev.HiUnused[0], ev.HiUnused[1] = p[t4c2[i][2]], p[t4c2[i][3]] // pocket
-					ev.HiUnused[2], ev.HiUnused[3] = b[t5c3[j][3]], b[t5c3[j][4]] // board
+					ev.HiBest = []Card{c0, c1, c2, c3, c4}
+					ev.HiUnused = append(ev.HiUnused[:0], vp[i][2:]...)
+					ev.HiUnused = append(ev.HiUnused, vb[j][3:]...)
 				}
 				if low {
-					if r = RankEightOrBetter(v[0], v[1], v[2], v[3], v[4]); r < ev.LoRank && r < eightOrBetterMax {
+					if r = RankEightOrBetter(c0, c1, c2, c3, c4); r < eightOrBetterMax && r < ev.LoRank {
 						ev.LoRank = r
-						copy(ev.LoBest, v)
-						ev.LoUnused[0], ev.LoUnused[1] = p[t4c2[i][2]], p[t4c2[i][3]] // pocket
-						ev.LoUnused[2], ev.LoUnused[3] = b[t5c3[j][3]], b[t5c3[j][4]] // board
+						loBest = []Card{c0, c1, c2, c3, c4}
+						loUnused = append(loUnused[:0], vp[i][2:]...)
+						loUnused = append(loUnused, vb[j][3:]...)
 					}
 				}
 			}
 		}
-		bestOmaha(ev, normalize, low)
-	}
-}
-
-// NewOmahaFiveEval creates a [OmahaFive] eval func.
-func NewOmahaFiveEval(normalize, low bool) EvalFunc {
-	return func(ev *Eval, p, b []Card) {
-		ev.Init(5, 5, low)
-		v, r := make([]Card, 5), EvalRank(0)
-		for i := 0; i < 10; i++ {
-			for j := 0; j < 10; j++ {
-				v[0], v[1] = p[t5c2[i][0]], p[t5c2[i][1]] // pocket
-				v[2], v[3] = b[t5c3[j][0]], b[t5c3[j][1]] // board
-				v[4] = b[t5c3[j][2]]                      // board
-				if r = RankCactus(v[0], v[1], v[2], v[3], v[4]); r < ev.HiRank {
-					ev.HiRank = r
-					copy(ev.HiBest, v)
-					ev.HiUnused[0], ev.HiUnused[1] = p[t5c2[i][2]], p[t5c2[i][3]] // pocket
-					ev.HiUnused[2] = p[t5c2[i][4]]                                // pocket
-					ev.HiUnused[3], ev.HiUnused[4] = b[t5c3[j][3]], b[t5c3[j][4]] // board
-				}
-				if low {
-					if r = RankEightOrBetter(v[0], v[1], v[2], v[3], v[4]); r < ev.LoRank && r < eightOrBetterMax {
-						ev.LoRank = r
-						copy(ev.LoBest, v)
-						ev.LoUnused[0], ev.LoUnused[1] = p[t5c2[i][2]], p[t5c2[i][3]] // pocket
-						ev.LoUnused[2] = p[t5c2[i][4]]                                // pocket
-						ev.LoUnused[3], ev.LoUnused[4] = b[t5c3[j][3]], b[t5c3[j][4]] // board
-					}
-				}
-			}
+		if low && ev.LoRank != Invalid {
+			ev.LoBest, ev.LoUnused = loBest, loUnused
 		}
-		bestOmaha(ev, normalize, low)
-	}
-}
-
-// NewOmahaSixEval creates a [OmahaSix] eval func.
-func NewOmahaSixEval(normalize, low bool) EvalFunc {
-	return func(ev *Eval, p, b []Card) {
-		ev.Init(5, 6, low)
-		v, r := make([]Card, 5), EvalRank(0)
-		for i := 0; i < 15; i++ {
-			for j := 0; j < 10; j++ {
-				v[0], v[1] = p[t6c2[i][0]], p[t6c2[i][1]] // pocket
-				v[2], v[3] = b[t5c3[j][0]], b[t5c3[j][1]] // board
-				v[4] = b[t5c3[j][2]]                      // board
-				if r = RankCactus(v[0], v[1], v[2], v[3], v[4]); r < ev.HiRank {
-					ev.HiRank = r
-					copy(ev.HiBest, v)
-					ev.HiUnused[0], ev.HiUnused[1] = p[t6c2[i][2]], p[t6c2[i][3]] // pocket
-					ev.HiUnused[2], ev.HiUnused[3] = p[t6c2[i][4]], p[t6c2[i][5]] // pocket
-					ev.HiUnused[4], ev.HiUnused[5] = b[t5c3[j][3]], b[t5c3[j][4]] // board
-				}
-				if low {
-					if r = RankEightOrBetter(v[0], v[1], v[2], v[3], v[4]); r < ev.LoRank && r < eightOrBetterMax {
-						ev.LoRank = r
-						copy(ev.LoBest, v)
-						ev.LoUnused[0], ev.LoUnused[1] = p[t6c2[i][2]], p[t6c2[i][3]] // pocket
-						ev.LoUnused[2], ev.LoUnused[3] = p[t6c2[i][4]], p[t6c2[i][5]] // pocket
-						ev.LoUnused[4], ev.LoUnused[5] = b[t5c3[j][3]], b[t5c3[j][4]] // board
-					}
-				}
-			}
+		if normalize {
+			bestOmaha(ev, low)
 		}
-		bestOmaha(ev, normalize, low)
 	}
 }
 
@@ -754,24 +704,6 @@ func EvalOf(typ Type) *Eval {
 // Eval evaluates the pocket, board.
 func (ev *Eval) Eval(pocket, board []Card) {
 	evals[ev.Type](ev, pocket, board)
-}
-
-// Init inits best, unused.
-func (ev *Eval) Init(n, m int, low bool) {
-	if 0 < n {
-		ev.HiBest = make([]Card, n)
-	}
-	if 0 < m {
-		ev.HiUnused = make([]Card, m)
-	}
-	if low {
-		if 0 < n {
-			ev.LoBest = make([]Card, n)
-		}
-		if 0 < m {
-			ev.LoUnused = make([]Card, m)
-		}
-	}
 }
 
 // Comp compares the eval's Hi/Lo to b's Hi/Lo.
@@ -1052,7 +984,7 @@ func (ev *Eval) HiLo24(hi, lo RankFunc, c0, c1 Card, b []Card, max EvalRank) {
 	}
 	v, r := make([]Card, 3), EvalRank(0)
 	for i := 0; i < 4; i++ {
-		v[0], v[1], v[2] = b[i%4], b[(i+1)%4], b[(i+2)%4]
+		v[0], v[1], v[2] = b[i], b[(i+1)%4], b[(i+2)%4]
 		if r = hi(c0, c1, v[0], v[1], v[2]); r < ev.HiRank {
 			ev.HiRank = r
 			copy(ev.HiBest[2:], v)
@@ -1204,10 +1136,7 @@ func bestAceLow(v []Card) {
 }
 
 // bestOmaha sets the best Omaha on the eval.
-func bestOmaha(ev *Eval, normalize, low bool) {
-	if !normalize {
-		return
-	}
+func bestOmaha(ev *Eval, low bool) {
 	bestCactus(ev.HiRank, ev.HiBest, nil, 0, nil)
 	bestAceHigh(ev.HiUnused)
 	switch {
@@ -1379,6 +1308,8 @@ func orderSuits(v []Card) []Suit {
 	return suits
 }
 
+// suitNormalize normalizes the suits in v, swapping cards from v of the same
+// rank in u.
 func suitNormalize(v, u []Card) {
 	m := make(map[Rank][]Card)
 	for _, c := range v {
@@ -1402,6 +1333,94 @@ func suitNormalize(v, u []Card) {
 		r := c.Rank()
 		u[i], m[r] = m[r][0], m[r][1:]
 	}
+}
+
+// take2c2 generates the permutations of v.
+func take2c2(v []Card) ([][]Card, int) {
+	return [][]Card{v}, 1
+}
+
+// take3c2 generates the permutations of v.
+func take3c2(v []Card) ([][]Card, int) {
+	u := make([][]Card, 3)
+	for i := 0; i < 3; i++ {
+		u[i] = []Card{v[i], v[(i+1)%3], v[(i+2)%3]}
+	}
+	return u, 3
+}
+
+// take4c2 generates the permutations of v.
+func take4c2(v []Card) ([][]Card, int) {
+	u := make([][]Card, 6)
+	for i := 0; i < 6; i++ {
+		u[i] = []Card{
+			v[t4c2[i][0]],
+			v[t4c2[i][1]],
+			v[t4c2[i][2]],
+			v[t4c2[i][3]],
+		}
+	}
+	return u, 6
+}
+
+// take5c2 generates the permutations of v.
+func take5c2(v []Card) ([][]Card, int) {
+	u := make([][]Card, 10)
+	for i := 0; i < 10; i++ {
+		u[i] = []Card{
+			v[t5c2[i][0]],
+			v[t5c2[i][1]],
+			v[t5c2[i][2]],
+			v[t5c2[i][3]],
+			v[t5c2[i][4]],
+		}
+	}
+	return u, 10
+}
+
+// take6c2 generates the permutations of v.
+func take6c2(v []Card) ([][]Card, int) {
+	u := make([][]Card, 15)
+	for i := 0; i < 15; i++ {
+		u[i] = []Card{
+			v[t6c2[i][0]],
+			v[t6c2[i][1]],
+			v[t6c2[i][2]],
+			v[t6c2[i][3]],
+			v[t6c2[i][4]],
+			v[t6c2[i][5]],
+		}
+	}
+	return u, 15
+}
+
+// take3c3 generates the permutations of v.
+func take3c3(v []Card) ([][]Card, int) {
+	return [][]Card{v}, 1
+}
+
+// take4c3 generates the permutations of v.
+func take4c3(v []Card) ([][]Card, int) {
+	u := make([][]Card, 4)
+	for i := 0; i < 4; i++ {
+		u[i] = []Card{v[i], v[(i+1)%4], v[(i+2)%4], v[(i+3)%4]}
+	}
+	return u, 4
+}
+
+// take5c3 generates the permutations of v.
+func take5c3(v []Card) ([][]Card, int) {
+	u := make([][]Card, 10)
+	for i := 0; i < 10; i++ {
+		u[i] = []Card{
+			v[t5c3[i][0]],
+			v[t5c3[i][1]],
+			v[t5c3[i][2]],
+			v[t5c3[i][3]],
+			v[t5c3[i][4]],
+		}
+	}
+	return u, 10
 }
 
 // t4c2 is used for taking 4, choosing 2.
