@@ -1335,12 +1335,12 @@ func suitNormalize(v, u []Card) {
 	}
 }
 
-// take2c2 generates the permutations of v.
+// take2c2 generates the combinations of v.
 func take2c2(v []Card) ([][]Card, int) {
 	return [][]Card{v}, 1
 }
 
-// take3c2 generates the permutations of v.
+// take3c2 generates the combinations of v.
 func take3c2(v []Card) ([][]Card, int) {
 	u := make([][]Card, 3)
 	for i := 0; i < 3; i++ {
@@ -1349,7 +1349,7 @@ func take3c2(v []Card) ([][]Card, int) {
 	return u, 3
 }
 
-// take4c2 generates the permutations of v.
+// take4c2 generates the combinations of v.
 func take4c2(v []Card) ([][]Card, int) {
 	u := make([][]Card, 6)
 	for i := 0; i < 6; i++ {
@@ -1363,7 +1363,7 @@ func take4c2(v []Card) ([][]Card, int) {
 	return u, 6
 }
 
-// take5c2 generates the permutations of v.
+// take5c2 generates the combinations of v.
 func take5c2(v []Card) ([][]Card, int) {
 	u := make([][]Card, 10)
 	for i := 0; i < 10; i++ {
@@ -1378,7 +1378,7 @@ func take5c2(v []Card) ([][]Card, int) {
 	return u, 10
 }
 
-// take6c2 generates the permutations of v.
+// take6c2 generates the combinations of v.
 func take6c2(v []Card) ([][]Card, int) {
 	u := make([][]Card, 15)
 	for i := 0; i < 15; i++ {
@@ -1394,12 +1394,12 @@ func take6c2(v []Card) ([][]Card, int) {
 	return u, 15
 }
 
-// take3c3 generates the permutations of v.
+// take3c3 generates the combinations of v.
 func take3c3(v []Card) ([][]Card, int) {
 	return [][]Card{v}, 1
 }
 
-// take4c3 generates the permutations of v.
+// take4c3 generates the combinations of v.
 func take4c3(v []Card) ([][]Card, int) {
 	u := make([][]Card, 4)
 	for i := 0; i < 4; i++ {
@@ -1408,7 +1408,7 @@ func take4c3(v []Card) ([][]Card, int) {
 	return u, 4
 }
 
-// take5c3 generates the permutations of v.
+// take5c3 generates the combinations of v.
 func take5c3(v []Card) ([][]Card, int) {
 	u := make([][]Card, 10)
 	for i := 0; i < 10; i++ {
