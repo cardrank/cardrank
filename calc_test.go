@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func TestCalcPocket(t *testing.T) {
+func TestCalcStart(t *testing.T) {
 	v := Must("Jh 9h")
 	f, _ := CalcStart(v)
 	t.Logf("%0.2f%%", f*100)
@@ -142,6 +142,18 @@ func TestCalc(t *testing.T) {
 				32924, 45033, 35036, 53714, 37559,
 			},
 			204266,
+		},
+		{
+			Omaha,
+			[]string{
+				"2h 5h Ts Js",
+				"Kh Kc 9s Ac",
+			},
+			"Jc Qc 2d",
+			[]int{
+				361, 459,
+			},
+			820,
 		},
 		{
 			OmahaFive,
