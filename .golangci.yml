@@ -3,6 +3,7 @@ linters:
   disable:
     - cyclop
     - deadcode
+    - depguard
     - dupl
     - dupword
     - exhaustive
@@ -17,6 +18,7 @@ linters:
     - ifshort
     - interfacer
     - ireturn
+    - makezero
     - maligned
     - musttag
     - nlreturn
@@ -36,8 +38,12 @@ linters-settings:
   gocritic:
     disabled-checks:
       - singleCaseSwitch
+  lll:
+    line-length: 150
   maintidx:
     under: 15
+  nestif:
+    min-complexity: 10
   revive:
     rules:
       - name: var-naming

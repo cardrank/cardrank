@@ -156,6 +156,19 @@ func TestCalc(t *testing.T) {
 			820,
 		},
 		{
+			Omaha,
+			[]string{
+				"Jc Th Td Tc",
+				"Ah Kh 5d 4h",
+				"Ts 8s 6c 5c",
+			},
+			"4c Qc 6s",
+			[]int{
+				320, 125, 235,
+			},
+			680,
+		},
+		{
 			OmahaFive,
 			[]string{
 				"Kh Qh 2c 2h 2c",
