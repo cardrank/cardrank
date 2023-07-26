@@ -34,7 +34,7 @@ algorithms](#cactus-kev). [Evaluation][eval] of cards can be compared and
 Supports [evaluating and ranking][eval] the following [`Type`][type]'s:
 
 | Holdem Variants    | Omaha Variants           | Hybrid Variants      | Draw Variants      | Other                   |
-|--------------------|--------------------------|----------------------|--------------------|-------------------------|
+| ------------------ | ------------------------ | -------------------- | ------------------ | ----------------------- |
 | [`Holdem`][type]   | [`Omaha`][type]          | [`Dallas`][type]     | [`Video`][type]    | [`Soko`][type]          |
 | [`Split`][type]    | [`OmahaHiLo`][type]      | [`Houston`][type]    | [`Draw`][type]     | [`SokoHiLo`][type]      |
 | [`Short`][type]    | [`OmahaDouble`][type]    | [`Fusion`][type]     | [`DrawHiLo`][type] | [`Lowball`][type]       |
@@ -67,9 +67,9 @@ use of various types, utilities, and interfaces.
 Additional examples for a [`Dealer`][dealer] and the [`Holdem`][type] and
 [`OmahaHiLo`][type] types are included in the [example directory](/_example):
 
-* [dealer](/_example/dealer) - shows use of the [`Dealer`][dealer], to handle dealing cards, handling multiple run outs, and determining winners using any [`Type`'s][type]
-* [holdem](/_example/holdem) - shows using types and utilities to deal [`Holdem`][type]
-* [omahahilo](/_example/omahahilo) - shows using types and utilities to [`OmahaHiLo`][type], demonstrating splitting Hi and Lo wins
+- [dealer](/_example/dealer) - shows use of the [`Dealer`][dealer], to handle dealing cards, handling multiple run outs, and determining winners using any [`Type`'s][type]
+- [holdem](/_example/holdem) - shows using types and utilities to deal [`Holdem`][type]
+- [omahahilo](/_example/omahahilo) - shows using types and utilities to [`OmahaHiLo`][type], demonstrating splitting Hi and Lo wins
 
 ### Eval Ranking
 
@@ -81,7 +81,7 @@ always ordered, low to high, and are relative/comparable:
 fmt.Printf("%t\n", cardrank.StraightFlush < cardrank.FullHouse)
 
 // Output:
-true
+// true
 ```
 
 Pocket and board [`Card`'s][card] can be passed to a [`Type`'s][type] `Eval`
@@ -132,9 +132,9 @@ available in the resulting `Eval` as the [`HiRank`][eval.hi-rank] and
 For most [`Type`'s][type], the [`EvalRank`][eval-rank] is determined by Go
 implementations of a few well-known [Cactus Kev][cactus-kev] algorithms:
 
-* [`Cactus`][cactus] - the original [Cactus Kev][cactus-kev] poker hand evaluator
-* [`CactusFast`][cactus-fast] - the [Fast Cactus][senzee] poker hand evaluator, using Paul Senzee's perfect hash lookup
-* [`TwoPlusTwo`][two-plus-two] - the [2+2 forum][tangentforks] poker hand evaluator, using a 130 MiB lookup table
+- [`Cactus`][cactus] - the original [Cactus Kev][cactus-kev] poker hand evaluator
+- [`CactusFast`][cactus-fast] - the [Fast Cactus][senzee] poker hand evaluator, using Paul Senzee's perfect hash lookup
+- [`TwoPlusTwo`][two-plus-two] - the [2+2 forum][tangentforks] poker hand evaluator, using a 130 MiB lookup table
 
 See [below for more information](#rank-cactus-func) on the default rank func in
 use by the package, and for information on [using build tags][build-tags] to
@@ -151,11 +151,11 @@ types, or trying new algorithms.
 [`NewTwoPlusTwoEval`][two-plus-two] makes use of a large (approximately 130
 MiB) lookup table to accomplish extremely fast 5, 6 and 7 card hand rank
 evaluation. Due to the large size of the lookup table, the lookup table can be
-excluded when using the using the [`portable` or `embedded` build tags][build-tags],
-with slightly degraded performance for when evaluating 7 cards.
+excluded when using the [`portable` or `embedded` build tags][build-tags], with
+a tradeoff of slightly degraded performance when evaluating 7 cards.
 
-Note: it is disabled by default when `GOOS=js` (ie, WASM) builds, but can be
-forced to be included with the [`forcefat` build tag][build-tags].
+Note: the Two-Plus-Two eval is disabled by default when `GOOS=js` (ie, WASM)
+builds, but can be forced included with the [`forcefat` build tag][build-tags].
 
 ### Winner Determination
 
@@ -164,39 +164,40 @@ either the Hi or Lo value for the [`Type`][type]. Two or more hands having a
 `EvalRank` of equal value indicate that the hands have equivalent ranks, and
 have both won.
 
-`Eval`'s can be sorted (low-to-high) by it's `HiRank` and `LoRank` members.
-Winner(s) of a hand will be the hands in the lowest position and having
-equivalent `HiRank`'s or `LoRank`'s.
+`Eval`'s can be sorted (low-to-high) by the `Eval`'s `HiRank` and `LoRank`
+member variables. Winner(s) of a hand will be the hands in the lowest position
+and having equivalent `HiRank`'s or `LoRank`'s.
 
 #### Comparing Eval Ranks
 
 A [`Eval`][eval] can be compared to another `Eval` using [`Comp`][eval.comp].
-
 `Comp` returns `-1`, `0`, or `+1`, making it easy to compare or sort hands:
 
 ```go
-// Compare Hi:
-if ev1.Comp(ev2, false) < 0 {
-	fmt.Printf("%s is a winner!", ev1)
+// Compare a and b's Hi:
+if a.Comp(b, false) < 0 {
+	fmt.Printf("%s is a winner!", a)
 }
 
-// Compare Lo:
-if ev1.Comp(ev2, true) == 0 {
-	fmt.Printf("%s and %s are equal!", ev1, ev2)
+// Compare a and b's Lo:
+if a.Comp(b, true) == 0 {
+	fmt.Printf("%s and %s are equal!", a, b)
 }
 
-// Sort by Hi:
-hi := evs[0].NewComp(false)
+// Sort slice of []*Eval by Hi:
 sort.Slice(evs, func(i, j int) bool {
-	return hi(evs[i], evs[j]) < 0
+	return evs[i].Comp(evs[j], false) < 0
 })
 
-// Sort by Lo:
-lo := evs[0].NewComp(true)
+// Sort slice of []*Eval by Lo:
 sort.Slice(evs, func(i, j int) bool {
-	return lo(evs[i], evs[j]) < 0
+	return evs[i].Comp(evs[j], true) < 0
 })
 ```
+
+The package level [`Order`][order] func is provided as a high-level way to
+order `Eval` slices and to determine winners. See [ordering evals
+below](#ordering-evals).
 
 #### Ordering Evals
 
@@ -306,21 +307,19 @@ GOOS=js GOARCH=wasm go build -tags 'forcefat' -o cardrank.wasm
 
 ## Links
 
-* [Overview of Cactus Kev][cactus-kev] - original Cactus Kev article
-* [Coding the Wheel][coding-the-wheel] - article covering various poker hand evaluators
-* [Paul Senzee Perfect Hash for Cactus Kev][senzee] - overview of the "Fast Cactus" perfect hash by Paul Senzee
-* [TwoPlusTwoHandEvaluator][tangentforks] - original implementation of the Two-Plus-Two evaluator
+- [Overview of Cactus Kev][cactus-kev] - original Cactus Kev article
+- [Coding the Wheel][coding-the-wheel] - article covering various poker hand evaluators
+- [Paul Senzee Perfect Hash for Cactus Kev][senzee] - overview of the "Fast Cactus" perfect hash by Paul Senzee
+- [TwoPlusTwoHandEvaluator][tangentforks] - original implementation of the Two-Plus-Two evaluator
 
 [cactus-kev]: https://archive.is/G6GZg
 [coding-the-wheel]: https://www.codingthewheel.com/archives/poker-hand-evaluator-roundup/
 [senzee]: http://senzee.blogspot.com/2006/06/some-perfect-hash.html
 [tangentforks]: https://github.com/tangentforks/TwoPlusTwoHandEvaluator
-
 [pkg]: https://pkg.go.dev/github.com/cardrank/cardrank
 [eval-ranking]: #eval-ranking
 [build-tags]: #build-tags
 [winners]: #winner-determination
-
 [card]: https://pkg.go.dev/github.com/cardrank/cardrank#Card
 [suit]: https://pkg.go.dev/github.com/cardrank/cardrank#Suit
 [rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Rank
@@ -345,5 +344,4 @@ GOOS=js GOARCH=wasm go build -tags 'forcefat' -o cardrank.wasm
 [cactus]: https://pkg.go.dev/github.com/cardrank/cardrank#Cactus
 [cactus-fast]: https://pkg.go.dev/github.com/cardrank/cardrank#CactusFast
 [two-plus-two]: https://pkg.go.dev/github.com/cardrank/cardrank#NewTwoPlusTwoEval
-
 [pkg-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package
