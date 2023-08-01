@@ -18,11 +18,12 @@ func TestCalc(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	tests := []struct {
-		typ     Type
-		pockets []string
-		board   string
-		v       []int
-		n       int
+		typ      Type
+		pockets  []string
+		board    string
+		v        []int
+		n        int
+		inactive []int
 	}{
 		{
 			Holdem,
@@ -36,6 +37,7 @@ func TestCalc(t *testing.T) {
 				120, 87, 707,
 			},
 			914,
+			nil,
 		},
 		{
 			Holdem,
@@ -48,6 +50,7 @@ func TestCalc(t *testing.T) {
 				483, 507,
 			},
 			990,
+			nil,
 		},
 		{
 			Holdem,
@@ -60,6 +63,7 @@ func TestCalc(t *testing.T) {
 				17, 27,
 			},
 			44,
+			nil,
 		},
 		{
 			Holdem,
@@ -72,6 +76,7 @@ func TestCalc(t *testing.T) {
 				0, 1,
 			},
 			1,
+			nil,
 		},
 		{
 			Holdem,
@@ -84,6 +89,7 @@ func TestCalc(t *testing.T) {
 				32, 36,
 			},
 			68,
+			nil,
 		},
 		{
 			Holdem,
@@ -102,6 +108,7 @@ func TestCalc(t *testing.T) {
 				65642, 47822, 40591, 50138, 73099, 36467, 69067, 9447,
 			},
 			392273,
+			nil,
 		},
 		{
 			Omaha,
@@ -115,6 +122,7 @@ func TestCalc(t *testing.T) {
 				64, 96, 506,
 			},
 			666,
+			nil,
 		},
 		{
 			Omaha,
@@ -127,6 +135,7 @@ func TestCalc(t *testing.T) {
 				295, 525,
 			},
 			820,
+			nil,
 		},
 		{
 			Omaha,
@@ -142,6 +151,7 @@ func TestCalc(t *testing.T) {
 				32924, 45033, 35036, 53714, 37559,
 			},
 			204266,
+			nil,
 		},
 		{
 			Omaha,
@@ -154,6 +164,7 @@ func TestCalc(t *testing.T) {
 				361, 459,
 			},
 			820,
+			nil,
 		},
 		{
 			Omaha,
@@ -167,6 +178,25 @@ func TestCalc(t *testing.T) {
 				320, 125, 235,
 			},
 			680,
+			nil,
+		},
+		{
+			Omaha,
+			[]string{
+				"As Ah Kd Td",
+				"Js 8h 8d 3h", // folded
+				"Kc Qs Qd 3d", // folded
+				"9s 9h 6c 3s", // folded
+				"Tc 9d 7s 5h", // folded
+				"Ac 4s 4c 2s", // folded
+				"7c 5d 4d 3c",
+			},
+			"7h Jc 2d",
+			[]int{
+				138, 0, 0, 0, 0, 0, 72,
+			},
+			210,
+			[]int{1, 2, 3, 4, 5},
 		},
 		{
 			OmahaFive,
@@ -182,6 +212,7 @@ func TestCalc(t *testing.T) {
 				17987, 22634, 14518, 31961, 17426,
 			},
 			104526,
+			nil,
 		},
 		{
 			OmahaSix,
@@ -197,6 +228,7 @@ func TestCalc(t *testing.T) {
 				7597, 3621, 7073, 13035, 5883,
 			},
 			37209,
+			nil,
 		},
 	}
 	for i, tt := range tests {
@@ -207,16 +239,31 @@ func TestCalc(t *testing.T) {
 			for i := 0; i < len(test.pockets); i++ {
 				pockets[i] = Must(test.pockets[i])
 			}
-			testCalc(t, ctx, test.typ, pockets, Must(test.board), test.v, test.n)
+			var active map[int]bool
+			if len(test.inactive) != 0 {
+				active = make(map[int]bool)
+				for i := 0; i < len(test.pockets); i++ {
+					active[i] = true
+				}
+				for i := 0; i < len(test.inactive); i++ {
+					active[test.inactive[i]] = false
+				}
+			}
+			testCalc(t, ctx, test.typ, pockets, Must(test.board), test.v, test.n, active)
 		})
 	}
 }
 
-func testCalc(t *testing.T, ctx context.Context, typ Type, pockets [][]Card, board []Card, v []int, n int) {
+func testCalc(t *testing.T, ctx context.Context, typ Type, pockets [][]Card, board []Card, v []int, n int, active map[int]bool) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	odds, _, ok := NewCalc(typ, WithCalcPockets(pockets, board), WithCalcDeep(true)).Calc(ctx)
+	odds, _, ok := NewCalc(
+		typ,
+		WithCalcPockets(pockets, board),
+		WithCalcDeep(true),
+		WithCalcActive(active, true),
+	).Calc(ctx)
 	switch {
 	case !ok:
 		t.Fatalf("expected ok")

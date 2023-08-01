@@ -11,6 +11,7 @@ type Calc struct {
 	typ     Type
 	runs    []*Run
 	active  map[int]bool
+	folded  bool
 	discard bool
 	deep    bool
 }
@@ -34,7 +35,7 @@ func (c *Calc) u() []Card {
 			ex = append(ex, run.Discard)
 		}
 		ex = append(ex, run.Hi, run.Lo)
-		if c.active == nil {
+		if c.active == nil || c.folded {
 			ex = append(ex, run.Pockets...)
 		} else {
 			for i := 0; i < len(run.Pockets); i++ {
@@ -266,10 +267,11 @@ func WithCalcPockets(pockets [][]Card, board []Card) CalcOption {
 	}
 }
 
-// WithCalcActive is a run odds calc option to run with the active map.
-func WithCalcActive(active map[int]bool) CalcOption {
+// WithCalcActive is a run odds calc option to run with the active map and
+// whether or not folded positions should be included.
+func WithCalcActive(active map[int]bool, folded bool) CalcOption {
 	return func(c *Calc) {
-		c.active = active
+		c.active, c.folded = active, folded
 	}
 }
 
