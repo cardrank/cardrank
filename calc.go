@@ -331,7 +331,7 @@ func (g *BinGen) Next(v []int) bool {
 			g.v[i] = i
 		}
 	default:
-		for i := g.k - 1; i >= 0; i-- {
+		for i := g.k - 1; 0 <= i; i-- {
 			if g.v[i] == g.n+i-g.k {
 				continue
 			}
