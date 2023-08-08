@@ -276,7 +276,7 @@ var straight4 map[Card]bool
 
 func init() {
 	straight4 = make(map[Card]bool)
-	for i, r := 0, 9; r >= 0; i, r = i+1, r-1 {
+	for r := 9; 0 <= r; r-- {
 		straight4[0xf<<r] = true
 	}
 }
