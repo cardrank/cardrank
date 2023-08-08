@@ -24,8 +24,7 @@ func TestDeck(t *testing.T) {
 		{28, DeckSpanish, "89TJQKA"},
 		{20, DeckRoyal, "TJQKA"},
 	}
-	for _, tt := range tests {
-		test := tt
+	for _, test := range tests {
 		t.Run(test.typ.Name(), func(t *testing.T) {
 			testDeckNew(t, test.exp, test.typ, test.r)
 			testDeckDraw(t, test.exp, test.typ)
@@ -164,17 +163,17 @@ func TestDealer(t *testing.T) {
 	seed := int64(1677109206437341728)
 	t.Logf("seed: %d", seed)
 	r := rand.New(rand.NewSource(seed))
-	for _, tt := range Types() {
-		if max := tt.Max(); max != 1 {
-			for i := 2; i <= max; i++ {
-				typ, count, s := tt, i, r.Int63()
+	for _, typ := range Types() {
+		if max := typ.Max(); max != 1 {
+			for count := 2; count <= max; count++ {
+				s := r.Int63()
 				t.Run(fmt.Sprintf("%s/%d", typ, count), func(t *testing.T) {
 					testDealer(t, typ, count, s, nil)
 				})
 			}
 		} else {
 			for i := 1; i <= 8; i++ {
-				typ, s := tt, r.Int63()
+				s := r.Int63()
 				t.Run(fmt.Sprintf("%s/%d", typ, i), func(t *testing.T) {
 					testDealer(t, typ, 1, s, nil)
 				})
@@ -197,8 +196,7 @@ func TestDealerRuns(t *testing.T) {
 		{FusionHiLo, 5, 256},
 		{Manila, 3, 768},
 	}
-	for _, tt := range tests {
-		test := tt
+	for _, test := range tests {
 		t.Run(test.typ.Name(), func(t *testing.T) {
 			testDealer(t, test.typ, test.count, test.seed, func(r *rand.Rand, d *Dealer) {
 				switch run, _ := d.Run(); {
@@ -307,8 +305,7 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 }
 
 func TestHasNext(t *testing.T) {
-	for _, tt := range Types() {
-		typ := tt
+	for _, typ := range Types() {
 		if max := typ.Max(); max != 1 {
 			for i := 2; i <= max; i++ {
 				t.Run(fmt.Sprintf("%s/%d", typ, i), func(t *testing.T) {
@@ -357,12 +354,11 @@ func TestRunOut(t *testing.T) {
 	// seed := time.Now().UnixNano()
 	const seed = 1679273183508957122
 	t.Logf("seed: %d", seed)
-	for _, tt := range Types() {
-		if tt.Board() == 0 || tt.Draw() {
+	for _, typ := range Types() {
+		if typ.Board() == 0 || typ.Draw() {
 			continue
 		}
-		for n := 2; n <= tt.Max()-6; n++ {
-			typ, count := tt, n
+		for count := 2; count <= typ.Max()-6; count++ {
 			t.Run(fmt.Sprintf("%s/%d", typ, count), func(t *testing.T) {
 				testRunOut(t, seed, typ, count)
 			})

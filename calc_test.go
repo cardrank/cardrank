@@ -231,8 +231,7 @@ func TestCalc(t *testing.T) {
 			nil,
 		},
 	}
-	for i, tt := range tests {
-		test := tt
+	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			t.Parallel()
 			pockets := make([][]Card, len(test.pockets))

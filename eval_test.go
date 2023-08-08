@@ -32,8 +32,7 @@ func TestOrder(t *testing.T) {
 		{56867, 2, 1, []int{0, 1}},
 		{91981, 6, 6, []int{0, 1, 2, 3, 4, 5}},
 	}
-	for n, tt := range tests {
-		i, test := n, tt
+	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			d := NewDeck()
 			// note: use a real random source
@@ -135,15 +134,14 @@ func TestEvalComp(t *testing.T) {
 }
 
 func TestEval(t *testing.T) {
-	for _, rr := range cactusTests(true, true) {
+	for _, r := range cactusTests(true, true) {
 		for i, f := range []func() []cardTest{
 			fiveCardTests,
 			sixCardTests,
 			sevenCardTests,
 		} {
-			r, tests := rr, f()
 			t.Run(fmt.Sprintf("%s/%d", r.name, i+5), func(t *testing.T) {
-				for j, test := range tests {
+				for j, test := range f() {
 					v := Must(test.v)
 					ev := EvalOf(0)
 					r.eval(ev, v[:2], v[2:])

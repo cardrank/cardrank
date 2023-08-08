@@ -6,11 +6,10 @@ import (
 )
 
 func BenchmarkCactus(b *testing.B) {
-	for _, t := range cactusTests(true, false) {
-		for i, benchf := range []func(*testing.B, EvalFunc, int){
+	for _, test := range cactusTests(true, false) {
+		for i, f := range []func(*testing.B, EvalFunc, int){
 			bench5, bench6, bench7,
 		} {
-			test, f := t, benchf
 			b.Run(fmt.Sprintf("%s/%d", test.name, i+5), func(b *testing.B) {
 				f(b, test.eval, b.N)
 			})
@@ -104,8 +103,7 @@ func bench7(b *testing.B, f EvalFunc, n int) {
 
 func BenchmarkType(b *testing.B) {
 	e, l := make(map[EvalType]bool), make(map[EvalType]bool)
-	for _, t := range Types() {
-		typ := t
+	for _, typ := range Types() {
 		low, etyp := typ.Low(), typ.Desc().Eval
 		switch {
 		// skip already evaluated types and Jacks-or-better

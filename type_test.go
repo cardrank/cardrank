@@ -9,10 +9,8 @@ import (
 
 func TestMax(t *testing.T) {
 	rnd := rand.New(rand.NewSource(0))
-	for _, v := range Types() {
-		typ := v
-		for n := 2; n <= typ.Max(); n++ {
-			count := n
+	for _, typ := range Types() {
+		for count := 2; count <= typ.Max(); count++ {
 			t.Run(fmt.Sprintf("%s/%d", typ, count), func(t *testing.T) {
 				pockets, _ := typ.Deal(rnd, 1, count)
 				if l := len(pockets); l != count {
