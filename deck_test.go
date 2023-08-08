@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -49,10 +50,10 @@ func testDeckNew(t *testing.T, exp int, typ DeckType, r string) {
 				if c == InvalidCard {
 					t.Fatalf("expected valid card for %c%c", r, s)
 				}
-				if !contains(c, v...) {
+				if !slices.Contains(v, c) {
 					t.Errorf("v does not contain %s", c)
 				}
-				if !contains(c, d.v...) {
+				if !slices.Contains(d.v, c) {
 					t.Errorf("d.v does not contain %s", c)
 				}
 			}
@@ -62,10 +63,10 @@ func testDeckNew(t *testing.T, exp int, typ DeckType, r string) {
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	d1.Shuffle(rnd, 1)
 	d2.Shuffle(rnd, 1)
-	if equals(d1.v, v) {
+	if slices.Equal(d1.v, v) {
 		t.Fatalf("expected d1.v != v")
 	}
-	if equals(d2.v, v) {
+	if slices.Equal(d2.v, v) {
 		t.Fatalf("expected d2.v != v")
 	}
 	if n, exp := len(d1.v), exp; n != exp {
@@ -75,10 +76,10 @@ func testDeckNew(t *testing.T, exp int, typ DeckType, r string) {
 		t.Fatalf("expected len(d2.v) == %d, got: %d", exp, n)
 	}
 	for i := 0; i < exp; i++ {
-		if !contains(v[i], d1.v...) {
+		if !slices.Contains(d1.v, v[i]) {
 			t.Errorf("d1.v does not contain %s", v[i])
 		}
-		if !contains(v[i], d2.v...) {
+		if !slices.Contains(d2.v, v[i]) {
 			t.Errorf("d2.v does not contain %s", v[i])
 		}
 	}

@@ -3,6 +3,7 @@ package cardrank
 import (
 	"fmt"
 	"math/rand"
+	"slices"
 	"testing"
 )
 
@@ -64,10 +65,10 @@ func TestHoldem(t *testing.T) {
 		if r, exp := ev.HiRank, test.r; r != exp {
 			t.Errorf("test %d %v expected %d, got: %d", i, pocket, exp, r)
 		}
-		if !equals(ev.HiBest, best) {
+		if !slices.Equal(ev.HiBest, best) {
 			t.Errorf("test %d %v expected %v, got: %v", i, pocket, best, ev.HiBest)
 		}
-		if !equals(ev.HiUnused, unused) {
+		if !slices.Equal(ev.HiUnused, unused) {
 			t.Errorf("test %d %v expected %v, got: %v", i, pocket, unused, ev.HiUnused)
 		}
 		desc := ev.Desc(false)
@@ -95,10 +96,10 @@ func TestDallas(t *testing.T) {
 		if r, exp := ev.HiRank, test.r; r != exp {
 			t.Errorf("test %d %v expected %d, got: %d", i, pocket, exp, r)
 		}
-		if !equals(ev.HiBest, best) {
+		if !slices.Equal(ev.HiBest, best) {
 			t.Errorf("test %d %v expected %v, got: %v", i, pocket, best, ev.HiBest)
 		}
-		if !equals(ev.HiUnused, unused) {
+		if !slices.Equal(ev.HiUnused, unused) {
 			t.Errorf("test %d %v expected %v, got: %v", i, pocket, unused, ev.HiUnused)
 		}
 		desc := ev.Desc(false)
@@ -136,10 +137,10 @@ func TestShort(t *testing.T) {
 		if r, exp := ev.HiRank, test.r; r != exp {
 			t.Errorf("test %d %v expected %d, got: %d", i, pocket, exp, r)
 		}
-		if !equals(ev.HiBest, best) {
+		if !slices.Equal(ev.HiBest, best) {
 			t.Errorf("test %d %v expected %v, got: %v", i, pocket, best, ev.HiBest)
 		}
-		if !equals(ev.HiUnused, unused) {
+		if !slices.Equal(ev.HiUnused, unused) {
 			t.Errorf("test %d %v expected %v, got: %v", i, pocket, unused, ev.HiUnused)
 		}
 		desc := ev.Desc(false)
@@ -174,10 +175,10 @@ func TestManila(t *testing.T) {
 		if r, exp := ev.HiRank, test.r; r != exp {
 			t.Errorf("test %d %v expected %d, got: %d", i, v, exp, r)
 		}
-		if !equals(ev.HiBest, best) {
+		if !slices.Equal(ev.HiBest, best) {
 			t.Errorf("test %d %v expected %v, got: %v", i, v, best, ev.HiBest)
 		}
-		if !equals(ev.HiUnused, unused) {
+		if !slices.Equal(ev.HiUnused, unused) {
 			t.Errorf("test %d %v expected %v, got: %v", i, v, unused, ev.HiUnused)
 		}
 		desc := ev.Desc(false)
@@ -210,10 +211,10 @@ func TestRazz(t *testing.T) {
 		if ev.HiRank != test.r {
 			t.Errorf("test %d %v expected rank %d, got: %d", i, pocket, test.r, ev.HiRank)
 		}
-		if !equals(ev.HiBest, best) {
+		if !slices.Equal(ev.HiBest, best) {
 			t.Errorf("test %d %v expected best %v, got: %v", i, pocket, best, ev.HiBest)
 		}
-		if !equals(ev.HiUnused, unused) {
+		if !slices.Equal(ev.HiUnused, unused) {
 			t.Errorf("test %d %v expected unused %v, got: %v", i, pocket, unused, ev.HiUnused)
 		}
 	}
@@ -253,10 +254,10 @@ func TestBadugi(t *testing.T) {
 		if ev.HiRank != test.exp {
 			t.Errorf("test %d %v expected rank %d, got: %d", i, pocket, test.exp, ev.HiRank)
 		}
-		if !equals(ev.HiBest, best) {
+		if !slices.Equal(ev.HiBest, best) {
 			t.Errorf("test %d %v expected best %v, got: %v", i, pocket, best, ev.HiBest)
 		}
-		if !equals(ev.HiUnused, unused) {
+		if !slices.Equal(ev.HiUnused, unused) {
 			t.Errorf("test %d %v expected unused %v, got: %v", i, pocket, unused, ev.HiUnused)
 		}
 		if s := fmt.Sprintf("%s", ev); s != test.s {
@@ -308,7 +309,7 @@ func TestLowball(t *testing.T) {
 		if ev.HiRank != test.exp {
 			t.Errorf("test %d %v expected rank %d, got: %d", i, pocket, test.exp, ev.HiRank)
 		}
-		if best := Must(test.b); !equals(ev.HiBest, best) {
+		if best := Must(test.b); !slices.Equal(ev.HiBest, best) {
 			t.Errorf("test %d expected %v, got: %v", i, best, ev.HiBest)
 		}
 		if s, exp := fmt.Sprintf("%s", ev.Desc(false)), test.s; s != exp {

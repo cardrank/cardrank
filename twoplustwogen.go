@@ -10,7 +10,6 @@ import (
 	"encoding/binary"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 
@@ -108,7 +107,7 @@ func run(verbose bool, out, sum string) error {
 	logf("%16s: matches!\n", "Hash")
 	for i := 0; i < len(b); i += TenMiB {
 		n, name := min(len(b), i+TenMiB), fmt.Sprintf(out, i/TenMiB)
-		if err := ioutil.WriteFile(name, b[i:n], 0o644); err != nil {
+		if err := os.WriteFile(name, b[i:n], 0o644); err != nil {
 			return fmt.Errorf("unable to write %s: %w", name, err)
 		}
 	}
@@ -405,19 +404,6 @@ func (g *TwoPlusTwoGenerator) eval(id int64) cardrank.EvalRank {
 	}
 	// now a handrank that I like
 	return result
-}
-
-// ordered is the ordered constraint.
-type ordered interface {
-	~float32 | ~float64 | ~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
-}
-
-// min returns the min of a, b.
-func min[T ordered](a, b T) T {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 var primes = [...]uint32{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41}

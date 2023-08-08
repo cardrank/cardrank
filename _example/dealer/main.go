@@ -93,16 +93,3 @@ func main() {
 		}
 	}
 }
-
-// ordered is the ordered constraint.
-type ordered interface {
-	~float32 | ~float64 | ~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
-}
-
-// min returns the min of a, b.
-func min[T ordered](a, b T) T {
-	if a < b {
-		return a
-	}
-	return b
-}

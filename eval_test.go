@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -65,7 +66,7 @@ func TestOrder(t *testing.T) {
 				ev := evals[v[j-1]]
 				t.Logf("player %d %s %b %b %s", v[j-1], typ, ev.HiBest, ev.HiUnused, ev.Desc(false))
 			}
-			if !equals(v, test.exp) {
+			if !slices.Equal(v, test.exp) {
 				t.Errorf("test %d expected %v, got: %v", i, test.exp, v)
 			}
 		})

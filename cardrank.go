@@ -109,55 +109,5 @@ const (
 	ErrInvalidType Error = "invalid type"
 )
 
-// ordered is the ordered constraint.
-type ordered interface {
-	~float32 | ~float64 | ~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
-}
-
-// min returns the min of a, b.
-func min[T ordered](a, b T) T {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-// max returns the max of a, b.
-func max[T ordered](a, b T) T {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-// insert inserts a at i in v.
-func insert[T any](v []T, i int, a ...T) []T {
-	return append(v[:i], append(a, v[i:]...)...)
-}
-
-// equals returns true when a equals b.
-func equals[T comparable](a, b []T) bool {
-	n := len(a)
-	if n != len(b) {
-		return false
-	}
-	for i := 0; i < n; i++ {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
-// contains returns true when v contains a.
-func contains[T comparable](a T, v ...T) bool {
-	for i := 0; i < len(v); i++ {
-		if v[i] == a {
-			return true
-		}
-	}
-	return false
-}
-
 // primes are the first 13 prime numbers (one per card rank).
 var primes = [...]uint32{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41}
