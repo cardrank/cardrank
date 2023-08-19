@@ -1240,7 +1240,7 @@ func bestStraight(v []Card, base Rank) {
 	copy(v, b)
 	// collect remaining
 	var d []Card
-	for i := Ace; i != 255; i-- {
+	for i := Ace; i != InvalidRank; i-- {
 		if _, ok := m[i]; ok && m[i] != nil {
 			d = append(d, m[i]...)
 		}

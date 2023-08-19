@@ -163,19 +163,7 @@ func (typ DeckType) Shuffle(shuffler Shuffler, shuffles int) *Deck {
 
 // Exclude returns a set of unshuffled cards excluding any supplied cards.
 func (typ DeckType) Exclude(ex ...[]Card) []Card {
-	m := make(map[Card]bool)
-	for _, v := range ex {
-		for _, c := range v {
-			m[c] = true
-		}
-	}
-	var v []Card
-	for _, c := range typ.v() {
-		if !m[c] {
-			v = append(v, c)
-		}
-	}
-	return v
+	return Exclude(typ.v(), ex...)
 }
 
 // Deck is a set of playing cards.
@@ -477,14 +465,14 @@ func (d *Dealer) Run() (int, *Run) {
 
 // Calc calculates the run odds, including whether or not to include folded
 // positions.
-func (d *Dealer) Calc(ctx context.Context, folded bool, opts ...CalcOption) (*Odds, *Odds, bool) {
+func (d *Dealer) Calc(ctx context.Context, folded bool, opts ...OddsCalcOption) (*Odds, *Odds, bool) {
 	if 0 <= d.r && d.r < d.runs {
-		return NewCalc(
+		return NewOddsCalc(
 			d.Type,
 			append(
 				opts,
-				WithCalcRuns(d.Runs[:d.r+1]),
-				WithCalcActive(d.Active, folded),
+				WithOddsCalcRuns(d.Runs[:d.r+1]),
+				WithOddsCalcActive(d.Active, folded),
 			)...,
 		).Calc(ctx)
 	}
@@ -673,20 +661,23 @@ func (run *Run) Eval(typ Type, active map[int]bool, calc bool) []*Eval {
 }
 
 // CalcStart returns the run's starting odds.
-func (run *Run) CalcStart(n int, low bool) (*Odds, *Odds) {
+func (run *Run) CalcStart(low bool) (*Odds, *Odds) {
 	count := len(run.Pockets)
 	hi := NewOdds(count, nil)
-	hi.N = n
+	hi.Total = startingTotal
 	var lo *Odds
 	if low {
 		lo = NewOdds(count, nil)
-		lo.N = n
+		lo.Total = startingTotal
 	}
 	for i, pocket := range run.Pockets {
-		f, _ := CalcStart(pocket)
-		hi.V[i] = int(float32(n) * f)
+		expv := StartingExpValue(pocket)
+		if expv == nil {
+			return nil, nil
+		}
+		hi.Counts[i] = int(expv.Wins + expv.Losses)
 		if low {
-			lo.V[i] = int(float32(n) * (1.0 - f))
+			lo.Counts[i] = int(expv.Wins + expv.Losses)
 		}
 	}
 	return hi, lo

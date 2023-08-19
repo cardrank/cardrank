@@ -677,6 +677,28 @@ const (
 	UnicodeClubWhite    rune = '♧'
 )
 
+// Exclude is returns v excluding any specified cards.
+func Exclude(v []Card, ex ...[]Card) []Card {
+	if len(ex) == 0 {
+		o := make([]Card, len(v))
+		copy(o, v)
+		return o
+	}
+	m := make(map[Card]bool)
+	for _, u := range ex {
+		for _, c := range u {
+			m[c] = true
+		}
+	}
+	var u []Card
+	for _, c := range v {
+		if !m[c] {
+			u = append(u, c)
+		}
+	}
+	return u
+}
+
 // runeCardRank converts the unicode rune offset to a card rank.
 func runeCardRank(rank, ace rune) Rank {
 	r := Rank(rank - ace)

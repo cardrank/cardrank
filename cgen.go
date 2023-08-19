@@ -16,9 +16,13 @@ func main() {
 	flag.IntVar(&n, "n", 7, "n")
 	flag.IntVar(&k, "k", 5, "k")
 	flag.Parse()
-	count, g, v := 0, cardrank.NewBinGen(n, k), make([]int, n)
+	count := 0
+	u := make([]int, n)
+	for i := 0; i < n; i++ {
+		u[i] = i
+	}
 	buf := new(bytes.Buffer)
-	for g.NextUnused(v) {
+	for g, v := cardrank.NewCombinUnusedGen(u, k); g.Next(); {
 		fmt.Fprint(buf, "\t{")
 		for i := 0; i < n; i++ {
 			if i != 0 {

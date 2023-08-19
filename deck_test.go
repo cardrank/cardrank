@@ -256,10 +256,10 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 		if d.HasCalc() {
 			if hi, lo, ok := d.Calc(ctx, false); ok && hi != nil {
 				t.Log("    Calc:")
-				for i := 0; i < len(hi.V); i++ {
-					t.Logf("      %d: %*s outs: %*b", i, i, hi, i, hi)
+				for i := 0; i < len(hi.Counts); i++ {
+					t.Logf("      %d: %*s", i, i, hi)
 					if lo != nil {
-						t.Logf("         %*s outs: %*b", i, lo, i, lo)
+						t.Logf("         %*s", i, lo)
 					}
 				}
 			}

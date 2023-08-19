@@ -1,20 +1,25 @@
 package cardrank
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"os"
 	"reflect"
+	"sort"
 	"strconv"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
 
-func TestCalcStart(t *testing.T) {
-	v := Must("Jh 9h")
-	f, _ := CalcStart(v)
-	t.Logf("%0.2f%%", f*100)
+func TestStartingExpValue(t *testing.T) {
+	expv := StartingExpValue(Must("Jh 9h"))
+	t.Logf("%v", expv)
 }
 
-func TestCalc(t *testing.T) {
+func TestOddsCalc(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	tests := []struct {
@@ -249,38 +254,310 @@ func TestCalc(t *testing.T) {
 					active[test.inactive[i]] = false
 				}
 			}
-			testCalc(t, ctx, test.typ, pockets, Must(test.board), test.v, test.n, active)
+			testOddsCalc(t, ctx, test.typ, pockets, Must(test.board), test.v, test.n, active)
 		})
 	}
 }
 
-func testCalc(t *testing.T, ctx context.Context, typ Type, pockets [][]Card, board []Card, v []int, n int, active map[int]bool) {
+func testOddsCalc(t *testing.T, ctx context.Context, typ Type, pockets [][]Card, board []Card, v []int, n int, active map[int]bool) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-	odds, _, ok := NewCalc(
+	odds, _, ok := NewOddsCalc(
 		typ,
-		WithCalcPockets(pockets, board),
-		WithCalcDeep(true),
-		WithCalcActive(active, true),
+		WithOddsCalcPockets(pockets, board),
+		WithOddsCalcDeep(true),
+		WithOddsCalcActive(active, true),
 	).Calc(ctx)
 	switch {
 	case !ok:
-		t.Fatalf("expected ok")
+		t.Fatalf("expected ok == true")
 	case odds == nil:
 		t.Fatalf("expected non-nil odds")
-	case !reflect.DeepEqual(odds.V, v):
-		t.Errorf("expected %v, got: %v", v, odds.V)
-	case odds.N != n:
-		t.Errorf("expected %d, got: %d", n, odds.N)
+	case !reflect.DeepEqual(odds.Counts, v):
+		t.Errorf("expected %v, got: %v", v, odds.Counts)
+	case odds.Total != n:
+		t.Errorf("expected %d, got: %d", n, odds.Total)
 	}
 	t.Logf("board: %v", board)
 	total := 0
 	for i := 0; i < len(pockets); i++ {
-		total += odds.V[i]
-		t.Logf("%d: %v %*s - %*o", i, pockets[i], i, odds, i, odds)
+		total += odds.Counts[i]
+		t.Logf("%d: %v %*s", i, pockets[i], i, odds)
 	}
 	if total != n {
 		t.Errorf("expected %d, got: %d", n, total)
 	}
 }
+
+func TestExpValueCalc(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	tests := []struct {
+		typ    Type
+		pocket string
+		board  string
+		opp    int
+		wins   uint64
+		splits uint64
+		losses uint64
+		total  uint64
+	}{
+		{
+			Holdem,
+			"Ah As",
+			"7d Kc Td",
+			1,
+			883595, 2207, 184388, 1070190,
+		},
+		{
+			Holdem,
+			"Ah As",
+			"7d Kc Td Kd",
+			1,
+			35823, 35, 9682, 45540,
+		},
+		{
+			Holdem,
+			"Ah As",
+			"7d Kc Td Kd Ks",
+			1,
+			945, 1, 44, 990,
+		},
+		{
+			Holdem,
+			"Ah Kh",
+			"7d Kc Td Kd Ks",
+			1,
+			990, 0, 0, 990,
+		},
+		{
+			Holdem,
+			"2s 2h",
+			"3h 4h 5s",
+			1,
+			554489, 48872, 466829, 1070190,
+		},
+		{
+			Holdem,
+			"Jc Ah",
+			"Jh 9s Ks 3c",
+			1,
+			34560, 255, 10725, 45540,
+		},
+		{
+			Holdem,
+			"Jc Ah",
+			"Jh 9s Ks 3c Jd",
+			1,
+			953, 3, 34, 990,
+		},
+		{
+			Omaha,
+			"2s 2h Ad Js",
+			"3h 4d 5s",
+			1,
+			85224285, 4436558, 32515057, 122175900,
+		},
+		{
+			Omaha,
+			"2s 2h Ad Js",
+			"3h 4d 5s Kh",
+			1,
+			3916369, 190437, 1323234, 5430040,
+		},
+		{
+			Omaha,
+			"2s 2h Ad Js",
+			"3h 4d 5s Kh Qd",
+			1,
+			103699, 3677, 16034, 123410,
+		},
+		{
+			OmahaFive,
+			"2s 2h Kd Js Ks",
+			"3h 4d 5s Kh",
+			1,
+			25613788, 0, 10964936, 36578724,
+		},
+		{
+			OmahaFive,
+			"2s 2h Kd Js Ks",
+			"3h 4d 4s Kh",
+			1,
+			35839274, 0, 739450, 36578724,
+		},
+		/*
+			{
+				Holdem,
+				"Qh 7s",
+				"",
+				1,
+				1046780178, 78084287, 972707935, 2097572400,
+			},
+		*/
+	}
+	for i, tt := range tests {
+		test := tt
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			t.Parallel()
+			testExpValueCalc(t, ctx, test.typ, Must(test.pocket), Must(test.board), test.opp, test.wins, test.splits, test.losses, test.total)
+		})
+	}
+}
+
+func testExpValueCalc(t *testing.T, ctx context.Context, typ Type, pocket, board []Card, opponents int, wins, splits, losses, total uint64) {
+	t.Helper()
+	t.Logf("type: %v pocket: %v board: %v opponents: %d", typ, pocket, board, opponents)
+	expv, ok := NewExpValueCalc(
+		typ,
+		pocket,
+		WithExpValueBoard(board),
+		WithExpValueOpponents(opponents),
+	).Calc(ctx)
+	t.Logf("wins/splits/losses/total: %d/%d/%d/%d", expv.Wins, expv.Splits, expv.Losses, expv.Total)
+	switch {
+	case !ok:
+		t.Fatalf("expected ok == true")
+	case expv.Wins != wins:
+		t.Errorf("expected wins to be equal: %d != %d", wins, expv.Wins)
+	case expv.Splits != splits:
+		t.Errorf("expected splits to be equal: %d != %d", splits, expv.Splits)
+	case expv.Losses != losses:
+		t.Errorf("expected losses to be equal: %d != %d", losses, expv.Losses)
+	case expv.Total != total:
+		t.Errorf("expected total to be equal: %d != %d", total, expv.Total)
+	default:
+		t.Logf("expected value: %v (%f)", expv, expv)
+	}
+}
+
+func TestExpValueCalcStartingPockets(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	if s := os.Getenv("TESTS"); !strings.Contains(s, "starting") {
+		t.Skip("skipping: $ENV{TESTS} does not contain 'starting'")
+	}
+	m, ch, count, wait := make(map[string]bool), make(chan *expValueRes, 1), 0, int64(0)
+	for r1 := Ace; r1 != InvalidRank; r1-- {
+		for r2 := Ace; r2 != InvalidRank; r2-- {
+			a, b := r1, r2
+			if a < b {
+				a, b = b, a
+			}
+			c0, c1, c2 := New(a, Heart), New(b, Heart), New(b, Spade)
+			if a != b {
+				if key := HashKey(c0, c1); !m[key] {
+					m[key], count = true, count+1
+					atomic.AddInt64(&wait, 1)
+					go testExpValue(t, ctx, c0, c1, &wait, ch)
+				}
+			}
+			if key := HashKey(c0, c2); !m[key] {
+				m[key], count = true, count+1
+				atomic.AddInt64(&wait, 1)
+				go testExpValue(t, ctx, c0, c2, &wait, ch)
+			}
+		}
+	}
+	go func() {
+		start := time.Now()
+		t.Logf("started: %d", count)
+		tick := time.NewTicker(1 * time.Minute)
+		for {
+			w := atomic.LoadInt64(&wait)
+			if w == 0 {
+				close(ch)
+				return
+			}
+			select {
+			case <-ctx.Done():
+			case <-tick.C:
+				t.Logf("wait: %d elapsed: %v", w, time.Now().Sub(start).Round(time.Second))
+			case <-time.After(50 * time.Millisecond):
+			}
+		}
+	}()
+	var v []*expValueRes
+	for res := range ch {
+		t.Logf("%v/%v: %v %f", res.c0, res.c1, res, res.Float64())
+		v = append(v, res)
+	}
+	sort.Slice(v, func(i, j int) bool {
+		return v[j].Float64() < v[i].Float64()
+	})
+	buf := new(bytes.Buffer)
+	fmt.Fprintf(buf, "%s,%s,%s,%s,%s\n", "name", "wins", "splits", "losses", "calc")
+	for _, res := range v {
+		fmt.Fprintf(buf, "%s,%d,%d,%d,%f\n", HashKey(res.c0, res.c1), res.Wins, res.Splits, res.Losses, res.Float64())
+	}
+	if err := os.WriteFile("starting.csv", buf.Bytes(), 0o644); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func testExpValue(t *testing.T, ctx context.Context, c0, c1 Card, wait *int64, ch chan *expValueRes) {
+	t.Helper()
+	expv, ok := NewExpValueCalc(Holdem, []Card{c0, c1}).Calc(ctx)
+	ch <- &expValueRes{
+		c0:       c0,
+		c1:       c1,
+		ExpValue: *expv,
+		ok:       ok,
+	}
+	atomic.AddInt64(wait, -1)
+}
+
+type expValueRes struct {
+	c0, c1 Card
+	ExpValue
+	ok bool
+}
+
+func TestHashKey(t *testing.T) {
+	tests := []struct {
+		s   string
+		exp string
+	}{
+		{"As Ah", "AA"},
+		{"As Ks", "AKs"},
+		{"2h 2s", "22"},
+		{"3h 2c", "32o"},
+		{"7h Jc", "J7o"},
+	}
+	for i, test := range tests {
+		v := Must(test.s)
+		if s := HashKey(v[0], v[1]); s != test.exp {
+			t.Errorf("test %d expected %q, got: %q", i, test.exp, s)
+		}
+		if s := HashKey(v[1], v[0]); s != test.exp {
+			t.Errorf("test %d expected %q, got: %q", i, test.exp, s)
+		}
+	}
+}
+
+func TestHoldemStarting(t *testing.T) {
+	m := HoldemStarting()
+	m = m
+}
+
+/*
+func TestStarting(t *testing.T) {
+	type vv struct {
+		key string
+		val int
+	}
+	var res []vv
+	for k, v := range starting {
+		if len(v) == 1 {
+			res = append(res, vv{k, int(v[0])})
+		} else {
+			res = append(res, vv{k + "s", int(v[0])}, vv{k + "o", int(v[1])})
+		}
+	}
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].val < res[j].val
+	})
+	for i, v := range res {
+		t.Logf("% 3d %v: %d", i, v.key, v.val)
+	}
+}
+*/
