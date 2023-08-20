@@ -27,13 +27,13 @@ func TestStartingExpValue(t *testing.T) {
 				if key := HashKey(c0, c1); !m[key] {
 					m[key], count = true, count+1
 					expv := StartingExpValue([]Card{c0, c2})
-					t.Logf("% 3d: %- 3v %v", count, key, expv)
+					t.Logf("%3d: %- 3v %v", count, key, expv)
 				}
 			}
 			if key := HashKey(c0, c2); !m[key] {
 				m[key], count = true, count+1
 				expv := StartingExpValue([]Card{c0, c2})
-				t.Logf("% 3d: %- 3v %v", count, key, expv)
+				t.Logf("%3d: %- 3v %v", count, key, expv)
 			}
 		}
 	}
