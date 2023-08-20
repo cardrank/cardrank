@@ -15,8 +15,28 @@ import (
 )
 
 func TestStartingExpValue(t *testing.T) {
-	expv := StartingExpValue(Must("Jh 9h"))
-	t.Logf("%v", expv)
+	m, count := make(map[string]bool), 0
+	for r1 := Ace; r1 != InvalidRank; r1-- {
+		for r2 := Ace; r2 != InvalidRank; r2-- {
+			a, b := r1, r2
+			if a < b {
+				a, b = b, a
+			}
+			c0, c1, c2 := New(a, Heart), New(b, Heart), New(b, Spade)
+			if a != b {
+				if key := HashKey(c0, c1); !m[key] {
+					m[key], count = true, count+1
+					expv := StartingExpValue([]Card{c0, c2})
+					t.Logf("% 3d: %- 3v %v", count, key, expv)
+				}
+			}
+			if key := HashKey(c0, c2); !m[key] {
+				m[key], count = true, count+1
+				expv := StartingExpValue([]Card{c0, c2})
+				t.Logf("% 3d: %- 3v %v", count, key, expv)
+			}
+		}
+	}
 }
 
 func TestOddsCalc(t *testing.T) {
