@@ -1,6 +1,7 @@
 package cardrank_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -1329,6 +1330,46 @@ func ExampleType_badugi() {
 	// Player 5: [5♣ Q♠ J♥ 2♠] Jack, Five, Two-low [J♥ 5♣ 2♠] [Q♠]
 	// Player 6: [6♠ 7♠ 7♥ 2♥] Six, Two-low [6♠ 2♥] [7♥ 7♠]
 	// Result:   Player 4 wins with Eight, Seven, Three-low
+}
+
+func ExampleOddsCalc() {
+	pockets := [][]cardrank.Card{
+		cardrank.Must("Ah As Jc Qs"),
+		cardrank.Must("3h 2h Ks Tc"),
+	}
+	board := cardrank.Must("6h 6s Jh")
+	odds, _, ok := cardrank.Omaha.Odds(context.Background(), pockets, board)
+	if !ok {
+		panic("unable to calculate odds")
+	}
+	for i := range pockets {
+		fmt.Printf("%d: %*v\n", i, i, odds)
+	}
+	// Output:
+	// 0: 66.1% (542/820)
+	// 1: 33.9% (278/820)
+}
+
+func ExampleExpValueCalc() {
+	pocket, board := cardrank.Must("Kh 3h"), cardrank.Must("Ah 8h 3c")
+	expv, ok := cardrank.Holdem.ExpValue(context.Background(), pocket, cardrank.WithBoard(board))
+	if !ok {
+		panic("unable to calculate expected value")
+	}
+	fmt.Println("expected value:", expv)
+	// Output:
+	// expected value: 75.6% (802371,13659/1070190)
+}
+
+func Example_computerHand() {
+	pocket := cardrank.Must("Qh 7s")
+	expv, ok := cardrank.Holdem.ExpValue(context.Background(), pocket)
+	if !ok {
+		panic("unable to calculate expected value")
+	}
+	fmt.Println("expected value:", expv)
+	// Output:
+	// expected value: 51.8% (1046780178,78084287/2097572400)
 }
 
 /*

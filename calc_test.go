@@ -283,9 +283,9 @@ func testOddsCalc(t *testing.T, ctx context.Context, typ Type, pockets [][]Card,
 	t.Helper()
 	odds, _, ok := NewOddsCalc(
 		typ,
-		WithOddsCalcPockets(pockets, board),
-		WithOddsCalcDeep(true),
-		WithOddsCalcActive(active, true),
+		WithPocketsBoard(pockets, board),
+		WithDeep(true),
+		WithActive(active, true),
 	).Calc(ctx)
 	switch {
 	case !ok:
@@ -430,8 +430,8 @@ func testExpValueCalc(t *testing.T, ctx context.Context, typ Type, pocket, board
 	expv, ok := NewExpValueCalc(
 		typ,
 		pocket,
-		WithExpValueBoard(board),
-		WithExpValueOpponents(opponents),
+		WithBoard(board),
+		WithOpponents(opponents),
 	).Calc(ctx)
 	t.Logf("wins/splits/losses/total: %d/%d/%d/%d", expv.Wins, expv.Splits, expv.Losses, expv.Total)
 	switch {

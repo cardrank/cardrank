@@ -465,14 +465,14 @@ func (d *Dealer) Run() (int, *Run) {
 
 // Calc calculates the run odds, including whether or not to include folded
 // positions.
-func (d *Dealer) Calc(ctx context.Context, folded bool, opts ...OddsCalcOption) (*Odds, *Odds, bool) {
+func (d *Dealer) Calc(ctx context.Context, folded bool, opts ...CalcOption) (*Odds, *Odds, bool) {
 	if 0 <= d.r && d.r < d.runs {
 		return NewOddsCalc(
 			d.Type,
 			append(
 				opts,
-				WithOddsCalcRuns(d.Runs[:d.r+1]),
-				WithOddsCalcActive(d.Active, folded),
+				WithRuns(d.Runs[:d.r+1]),
+				WithActive(d.Active, folded),
 			)...,
 		).Calc(ctx)
 	}

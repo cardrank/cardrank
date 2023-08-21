@@ -459,9 +459,15 @@ func (typ Type) EvalPockets(pockets [][]Card, board []Card) []*Eval {
 	return evs
 }
 
-// CalcPockets returns the calculated odds for the pockets, board.
-func (typ Type) CalcPockets(ctx context.Context, pockets [][]Card, board []Card, opts ...OddsCalcOption) (*Odds, *Odds, bool) {
-	return NewOddsCalc(typ, append(opts, WithOddsCalcPockets(pockets, board))...).Calc(ctx)
+// Odds calculates the odds for the pockets, board.
+func (typ Type) Odds(ctx context.Context, pockets [][]Card, board []Card, opts ...CalcOption) (*Odds, *Odds, bool) {
+	return NewOddsCalc(typ, append(opts, WithPocketsBoard(pockets, board))...).Calc(ctx)
+}
+
+// ExpValue calculates expected value for a single pocket. Use [WithBoard] to
+// pass a board.
+func (typ Type) ExpValue(ctx context.Context, pocket []Card, opts ...CalcOption) (*ExpValue, bool) {
+	return NewExpValueCalc(typ, pocket, opts...).Calc(ctx)
 }
 
 // TypeDesc is a type description.
