@@ -286,8 +286,11 @@ func (c *ExpValueCalc) u() []Card {
 // Calc calculates the expected value.
 func (c *ExpValueCalc) Calc(ctx context.Context) (*ExpValue, bool) {
 	u, b, nb := c.u(), c.typ.Board(), len(c.board)
-	if len(c.pocket) == 2 && nb == 0 {
+	switch {
+	case len(c.pocket) == 2 && nb == 0:
 		return StartingExpValue(c.pocket), true
+	case c.typ == Omaha && nb == 0:
+		return StartingExpValueOmaha(c.pocket), true
 	}
 	v := make([]Card, b)
 	copy(v, c.board)
@@ -366,6 +369,14 @@ type ExpValue struct {
 	Splits    uint64
 	Losses    uint64
 	Total     uint64
+}
+
+// Add adds b to the expected value.
+func (expv *ExpValue) Add(v *ExpValue) {
+	expv.Wins += v.Wins
+	expv.Splits += v.Splits
+	expv.Losses += v.Losses
+	expv.Total += v.Total
 }
 
 // Float32 returns the expected value as a float32.
@@ -593,13 +604,23 @@ func init() {
 	}
 }
 
-// StartingExpValue returns the starting pocket value between 0 and 1.
+// StartingExpValue returns the starting pocket expected value.
 func StartingExpValue(pocket []Card) *ExpValue {
 	if len(pocket) != 2 {
 		return nil
 	}
 	expv := startingExpValue[HashKey(pocket[0], pocket[1])]
 	return &expv
+}
+
+// StartingExpValueOmaha returns the starting pocket value.
+func StartingExpValueOmaha(pocket []Card) *ExpValue {
+	expv := new(ExpValue)
+	vv, _ := take4c2(pocket)
+	for _, v := range vv {
+		expv.Add(StartingExpValue(v[:2]))
+	}
+	return expv
 }
 
 // HashKey returns the hash key of the pocket cards.

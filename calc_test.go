@@ -39,6 +39,14 @@ func TestStartingExpValue(t *testing.T) {
 	}
 }
 
+func TestStartingExpValueOmaha(t *testing.T) {
+	expv, ok := Omaha.ExpValue(context.Background(), Must("Ah Kh 9s Jd"))
+	if !ok {
+		t.Fatalf("expected ok")
+	}
+	t.Logf("%v", expv)
+}
+
 func TestOddsCalc(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
