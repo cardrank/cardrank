@@ -414,6 +414,15 @@ func TestExpValueCalc(t *testing.T) {
 				1046780178, 78084287, 972707935, 2097572400,
 			},
 		*/
+		/*
+			{
+				Omaha,
+				"Ah As Kd 9s",
+				"",
+				1,
+				1046780178, 78084287, 972707935, 2097572400,
+			},
+		*/
 	}
 	for i, tt := range tests {
 		test := tt
@@ -552,11 +561,6 @@ func TestHashKey(t *testing.T) {
 			t.Errorf("test %d expected %q, got: %q", i, test.exp, s)
 		}
 	}
-}
-
-func TestHoldemStarting(t *testing.T) {
-	m := HoldemStarting()
-	m = m
 }
 
 /*
