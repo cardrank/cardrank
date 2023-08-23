@@ -286,11 +286,11 @@ func (c *ExpValueCalc) u() []Card {
 // Calc calculates the expected value.
 func (c *ExpValueCalc) Calc(ctx context.Context) (*ExpValue, bool) {
 	u, b, nb := c.u(), c.typ.Board(), len(c.board)
-	switch {
-	case len(c.pocket) == 2 && nb == 0:
+	switch np := len(c.pocket); {
+	case 1 < np && np < 7 && nb == 0:
 		return StartingExpValue(c.pocket), true
-	case c.typ == Omaha && nb == 0:
-		return StartingExpValueOmaha(c.pocket), true
+	case nb == 0:
+		return NewExpValue(1), false
 	}
 	v := make([]Card, b)
 	copy(v, c.board)
@@ -357,9 +357,7 @@ func (c *ExpValueCalc) do(ctx context.Context, expv *ExpValue, board, avail []Ca
 
 // NewExpValue creates a new expected value.
 func (c *ExpValueCalc) NewExpValue() *ExpValue {
-	return &ExpValue{
-		Opponents: c.opponents,
-	}
+	return NewExpValue(c.opponents)
 }
 
 // ExpValue is the result of a expected value calculation.
@@ -369,6 +367,13 @@ type ExpValue struct {
 	Splits    uint64
 	Losses    uint64
 	Total     uint64
+}
+
+// NewExpValue creates a new expected value.
+func NewExpValue(opponents int) *ExpValue {
+	return &ExpValue{
+		Opponents: opponents,
+	}
 }
 
 // Add adds b to the expected value.
@@ -606,19 +611,26 @@ func init() {
 
 // StartingExpValue returns the starting pocket expected value.
 func StartingExpValue(pocket []Card) *ExpValue {
-	if len(pocket) != 2 {
+	var f func([]Card) ([][]Card, int)
+	switch len(pocket) {
+	case 2:
+		f = take2c2
+	case 3:
+		f = take3c2
+	case 4:
+		f = take4c2
+	case 5:
+		f = take5c2
+	case 6:
+		f = take6c2
+	default:
 		return nil
 	}
-	expv := startingExpValue[HashKey(pocket[0], pocket[1])]
-	return &expv
-}
-
-// StartingExpValueOmaha returns the starting pocket value.
-func StartingExpValueOmaha(pocket []Card) *ExpValue {
-	expv := new(ExpValue)
-	vv, _ := take4c2(pocket)
-	for _, v := range vv {
-		expv.Add(StartingExpValue(v[:2]))
+	pockets, n := f(pocket)
+	expv := NewExpValue(1)
+	for i := 0; i < n; i++ {
+		v := startingExpValue[HashKey(pockets[i][0], pockets[i][1])]
+		expv.Add(&v)
 	}
 	return expv
 }
