@@ -144,6 +144,42 @@ func TestOddsCalc(t *testing.T) {
 			nil,
 		},
 		{
+			Holdem,
+			[]string{
+				"Jd Jc",
+				"6c 6s", // folded
+				"Qd 4h", // folded
+				"5c 2s", // folded
+				"Kd 9d",
+				"Qc 9c",
+				"Kc Qs",
+			},
+			"",
+			[]int{
+				285949, 0, 0, 0, 76137, 44172, 123268,
+			},
+			529526,
+			[]int{1, 2, 3},
+		},
+		{
+			Holdem,
+			[]string{
+				"Jd Jc",
+				"6c 6s", // folded
+				"Qd 4h", // folded
+				"5c 2s", // folded
+				"Kd 9d",
+				"Qc 9c",
+				"Kc Qs",
+			},
+			"Kh Qh 9s",
+			[]int{
+				179, 0, 0, 0, 45, 8, 393,
+			},
+			625,
+			[]int{1, 2, 3},
+		},
+		{
 			Omaha,
 			[]string{
 				"Ah Qc 7s 7h",
