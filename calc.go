@@ -15,11 +15,11 @@ import (
 // OddsCalc calculates run odds.
 type OddsCalc struct {
 	typ     Type
+	deep    bool
 	runs    []*Run
 	active  map[int]bool
 	folded  bool
 	discard bool
-	deep    bool
 }
 
 // NewOddsCalc creates a new run odds calc.
@@ -260,6 +260,7 @@ func (odds *Odds) formatOuts(f fmt.State, verb rune, distinct bool) {
 // ExpValueCalc is a expected value calculator.
 type ExpValueCalc struct {
 	typ       Type
+	deep      bool
 	pocket    []Card
 	board     []Card
 	opponents int
@@ -287,7 +288,7 @@ func (c *ExpValueCalc) u() []Card {
 func (c *ExpValueCalc) Calc(ctx context.Context) (*ExpValue, bool) {
 	u, b, nb := c.u(), c.typ.Board(), len(c.board)
 	switch np := len(c.pocket); {
-	case 1 < np && np < 7 && nb == 0:
+	case !c.deep && 1 < np && np < 7 && nb == 0:
 		return StartingExpValue(c.pocket), true
 	case nb == 0:
 		return NewExpValue(1), false
@@ -414,10 +415,23 @@ func (expv *ExpValue) Format(f fmt.State, verb rune) {
 	}
 }
 
-// CalcOption is calculator option.
+// CalcOption is a calc option.
 type CalcOption func(interface{})
 
-// WithRuns is a run odds calc option to set the runs.
+// WithDeep is a calc option to set whether the run should run deep
+// calculations.
+func WithDeep(deep bool) CalcOption {
+	return func(v interface{}) {
+		switch c := v.(type) {
+		case *OddsCalc:
+			c.deep = deep
+		case *ExpValueCalc:
+			c.deep = deep
+		}
+	}
+}
+
+// WithRuns is a calc option to set the runs.
 func WithRuns(runs []*Run) CalcOption {
 	return func(v interface{}) {
 		if c, ok := v.(*OddsCalc); ok {
@@ -426,7 +440,7 @@ func WithRuns(runs []*Run) CalcOption {
 	}
 }
 
-// WithPocketsBoard is a run odds calc option to run with the pockets, board.
+// WithPocketsBoard is a calc option to run with the pockets, board.
 func WithPocketsBoard(pockets [][]Card, board []Card) CalcOption {
 	return func(v interface{}) {
 		if c, ok := v.(*OddsCalc); ok {
@@ -437,8 +451,8 @@ func WithPocketsBoard(pockets [][]Card, board []Card) CalcOption {
 	}
 }
 
-// WithActive is a run odds calc option to run with the active map and whether
-// or not folded positions should be included.
+// WithActive is a calc option to run with the active map and whether or not
+// folded positions should be included.
 func WithActive(active map[int]bool, folded bool) CalcOption {
 	return func(v interface{}) {
 		if c, ok := v.(*OddsCalc); ok {
@@ -447,8 +461,8 @@ func WithActive(active map[int]bool, folded bool) CalcOption {
 	}
 }
 
-// WithDiscard is a run odds calc option to set whether the run's discarded
-// cards should be excluded.
+// WithDiscard is a calc option to set whether the run's discarded cards should
+// be excluded.
 func WithDiscard(discard bool) CalcOption {
 	return func(v interface{}) {
 		if c, ok := v.(*OddsCalc); ok {
@@ -457,17 +471,7 @@ func WithDiscard(discard bool) CalcOption {
 	}
 }
 
-// WithDeep is a run odds calc option to set whether the run should run deep
-// calculations.
-func WithDeep(deep bool) CalcOption {
-	return func(v interface{}) {
-		if c, ok := v.(*OddsCalc); ok {
-			c.deep = deep
-		}
-	}
-}
-
-// WithBoard is an expected value calculator option to set the board.
+// WithBoard is a calc option to set the board.
 func WithBoard(board []Card) CalcOption {
 	return func(v interface{}) {
 		if c, ok := v.(*ExpValueCalc); ok {
@@ -476,7 +480,7 @@ func WithBoard(board []Card) CalcOption {
 	}
 }
 
-// WithOpponents is an expected value calculator option to set the opponents.
+// WithOpponents is a calc option to set the opponents.
 func WithOpponents(opponents int) CalcOption {
 	return func(v interface{}) {
 		if c, ok := v.(*ExpValueCalc); ok {
