@@ -540,7 +540,7 @@ func TestExpValueCalcStartingPockets(t *testing.T) {
 			select {
 			case <-ctx.Done():
 			case <-tick.C:
-				t.Logf("wait: %d elapsed: %v", w, time.Now().Sub(start).Round(time.Second))
+				t.Logf("wait: %d elapsed: %v", w, time.Since(start).Round(time.Second))
 			case <-time.After(50 * time.Millisecond):
 			}
 		}
@@ -602,26 +602,3 @@ func TestHashKey(t *testing.T) {
 		}
 	}
 }
-
-/*
-func TestStarting(t *testing.T) {
-	type vv struct {
-		key string
-		val int
-	}
-	var res []vv
-	for k, v := range starting {
-		if len(v) == 1 {
-			res = append(res, vv{k, int(v[0])})
-		} else {
-			res = append(res, vv{k + "s", int(v[0])}, vv{k + "o", int(v[1])})
-		}
-	}
-	sort.Slice(res, func(i, j int) bool {
-		return res[i].val < res[j].val
-	})
-	for i, v := range res {
-		t.Logf("% 3d %v: %d", i, v.key, v.val)
-	}
-}
-*/

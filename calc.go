@@ -320,7 +320,7 @@ func (c *ExpValueCalc) Calc(ctx context.Context) (*ExpValue, bool) {
 	return expv, true
 }
 
-func (c *ExpValueCalc) do(ctx context.Context, expv *ExpValue, board, avail []Card, wait *int64) {
+func (c *ExpValueCalc) do(_ context.Context, expv *ExpValue, board, avail []Card, wait *int64) {
 	// setup evals
 	evs := make([]*Eval, 2)
 	for i := 0; i < len(evs); i++ {
@@ -670,7 +670,7 @@ func holdemStarting() (map[string]ExpValue, error) {
 	lines, err := r.ReadAll()
 	switch {
 	case err != nil:
-		return nil, err
+		return nil, fmt.Errorf("unable to read starting pockets: %w", err)
 	case len(lines) != 170:
 		return nil, fmt.Errorf("invalid starting pocket length %d", len(lines))
 	}
@@ -694,7 +694,7 @@ func holdemStarting() (map[string]ExpValue, error) {
 			Total:     startingTotal,
 		}
 		if fmt.Sprintf("%f", expv.Float64()) != line[4] {
-			return nil, fmt.Errorf("line %d: calculated %f does not equal %s!", i+1, expv.Float64(), line[4])
+			return nil, fmt.Errorf("line %d: calculated %f does not equal %s", i+1, expv.Float64(), line[4])
 		}
 		m[line[0]] = expv
 	}

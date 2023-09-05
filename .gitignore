@@ -3,4 +3,8 @@
 *.wasm
 *.log
 *.out
+*.html
+*.csv
+*.md
+.~lock.*
 magic*

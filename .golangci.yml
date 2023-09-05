@@ -13,6 +13,7 @@ linters:
     - gochecknoglobals
     - gochecknoinits
     - gocognit
+    - goerr113
     - golint
     - gomnd
     - ifshort
