@@ -402,7 +402,7 @@ func (t *Table) Payout(n, entries int, buyin, guaranteed int64, rake float64) in
 	if v := t.Payouts(n, n+1, entries, buyin, guaranteed, rake); len(v) != 0 {
 		return v[0]
 	}
-	return 0.0
+	return 0
 }
 
 // At returns the amount at row, col of the tournament payout table.

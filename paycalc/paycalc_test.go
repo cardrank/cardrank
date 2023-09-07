@@ -117,6 +117,7 @@ func TestPositions(t *testing.T) {
 }
 
 func TestAmount(t *testing.T) {
+	t.Parallel()
 	for _, tt := range []Type{simpleTyp, Top10, Top15, Top20} {
 		typ := tt
 		t.Run(tt.Name(), func(t *testing.T) {
@@ -147,6 +148,7 @@ func testAmount(t *testing.T, typ Type) {
 }
 
 func TestPayouts(t *testing.T) {
+	t.Parallel()
 	for _, tt := range []Type{simpleTyp, Top10, Top15, Top20} {
 		typ := tt
 		for _, gg := range []int64{7, 10, 20} {
