@@ -286,17 +286,15 @@ func (t *Table) Entries(entries int) int {
 // tournament payout table.
 func (t *Table) EntriesTitle(entries int) string {
 	col := t.Entries(entries)
-	if col == -1 {
+	switch {
+	case col < 0:
 		return ""
+	case col == 0:
+		return EntriesTitle(0, t.entries[col])
+	case col == len(t.entries)-1:
+		return EntriesTitle(t.entries[col], 0)
 	}
-	s := strconv.Itoa(t.entries[col])
-	if col != len(t.entries)-1 && t.entries[col]-t.entries[col+1] != 1 {
-		s = strconv.Itoa(t.entries[col+1]+1) + "-" + s
-	}
-	if col == 0 {
-		s += "+"
-	}
-	return s
+	return EntriesTitle(t.entries[col+1], t.entries[col])
 }
 
 // LevelsTitle returns the level (row) title for rank n in the tournament
@@ -304,7 +302,7 @@ func (t *Table) EntriesTitle(entries int) string {
 func (t *Table) LevelsTitle(n int) string {
 	for i, last := 0, 0; i < len(t.levels); i++ {
 		if n <= t.levels[i] {
-			return LevelTitle(last, t.levels[i])
+			return LevelsTitle(last, t.levels[i])
 		}
 		last = t.levels[i]
 	}

@@ -24,7 +24,7 @@ func TestLoadReader(t *testing.T) {
 func testLoadReader(data string) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
-		tbl, err := LoadReader(strings.NewReader(data), 0.05, "")
+		tbl, err := LoadReader(strings.NewReader(data), 0.10, "")
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}

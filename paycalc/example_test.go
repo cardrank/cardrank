@@ -10,7 +10,7 @@ func Example() {
 	const typ, entries, buyin, guaranteed, rake = paycalc.Top10, 110, 1000, 60000, 0.15
 	levels, amounts, payouts := typ.Stakes(entries, buyin, guaranteed, rake)
 	for i := 0; i < len(levels); i++ {
-		title := paycalc.LevelTitle(levels[i][0], levels[i][1])
+		title := paycalc.LevelsTitle(levels[i][0], levels[i][1])
 		fmt.Printf("%s (%0.2f%%): %d\n", title, amounts[i]*100, payouts[i])
 	}
 	// Output:

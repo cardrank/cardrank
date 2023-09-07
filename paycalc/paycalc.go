@@ -265,17 +265,30 @@ func (typ *Type) UnmarshalText(buf []byte) error {
 	return fmt.Errorf("invalid type %q", string(buf))
 }
 
-// EpsilonEqual returns true when a and b are within epsilon.
-func EpsilonEqual[R, S, T Ordered](a R, b S, epsilon T) bool {
-	return math.Abs(float64(a)-float64(b)) <= float64(epsilon)
+// EntriesTitle formats the entries title of last, n.
+func EntriesTitle(last, n int) string {
+	switch {
+	case last < 0 && n < 0:
+		return ""
+	case last == 0:
+		return strconv.Itoa(n) + "+"
+	case n-last < 1:
+		return strconv.Itoa(last)
+	}
+	return strconv.Itoa(last+1) + "-" + strconv.Itoa(n)
 }
 
-// LevelTitle formats the level of last, n.
-func LevelTitle(last, n int) string {
+// LevelsTitle formats the levels title of last, n.
+func LevelsTitle(last, n int) string {
 	if n-last < 2 {
 		return strconv.Itoa(n) + ord(n)
 	}
 	return fmt.Sprintf("%d-%d", last+1, n)
+}
+
+// EpsilonEqual returns true when a and b are within epsilon.
+func EpsilonEqual[R, S, T Ordered](a R, b S, epsilon T) bool {
+	return math.Abs(float64(a)-float64(b)) <= float64(epsilon)
 }
 
 // Calc calculates a payout for the percentage f, based on entries, buyin,
