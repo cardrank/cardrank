@@ -94,40 +94,6 @@ func (typ Type) Format(f fmt.State, verb rune) {
 	}
 }
 
-// EntriesMax returns the max entries for the tournament payout table.
-func (typ Type) EntriesMax() int {
-	if t, ok := tables[typ]; ok {
-		return t.EntriesMax()
-	}
-	return 0
-}
-
-// LevelsMax returns the max levels for the tournament payout table for the
-// specified entries.
-func (typ Type) LevelsMax(entries int) int {
-	if t, ok := tables[typ]; ok {
-		return t.LevelsMax(entries)
-	}
-	return 0
-}
-
-// RankingMax returns the max ranking for the tournament payout table.
-func (typ Type) RankingMax() int {
-	if t, ok := tables[typ]; ok {
-		return t.RankingMax()
-	}
-	return 0
-}
-
-// WriteTo writes the tournament payout table to w, formatting cells with f,
-// breaking line output when early is true.
-func (typ Type) WriteTo(w io.Writer, f func(interface{}, int, bool) string, divider func(int, int) string, early bool) error {
-	if t, ok := tables[typ]; ok {
-		return t.WriteTo(w, f, divider, early)
-	}
-	return nil
-}
-
 // WriteTable writes a plain text version of the tournament payout table, along
 // with optional title, to w.
 func (typ Type) WriteTable(w io.Writer, title bool) error {
@@ -154,12 +120,37 @@ func (typ Type) WriteMarkdown(w io.Writer, header int) error {
 	return nil
 }
 
+// WriteTo writes the tournament payout table to w, formatting cells with f,
+// breaking line output when early is true.
+func (typ Type) WriteTo(w io.Writer, f func(interface{}, int, bool) string, divider func(int, int) string, early bool) error {
+	if t, ok := tables[typ]; ok {
+		return t.WriteTo(w, f, divider, early)
+	}
+	return nil
+}
+
+// EntriesMax returns the max entries for the tournament payout table.
+func (typ Type) EntriesMax() int {
+	if t, ok := tables[typ]; ok {
+		return t.EntriesMax()
+	}
+	return 0
+}
+
 // Entries returns the entries column in the tournament payout table.
 func (typ Type) Entries(entries int) int {
 	if t, ok := tables[typ]; ok {
 		return t.Entries(entries)
 	}
 	return 0
+}
+
+// Level returns the level (row) in the tournament payout table.
+func (typ Type) Level(level int) int {
+	if t, ok := tables[typ]; ok {
+		return t.Level(level)
+	}
+	return -1
 }
 
 // EntriesTitle returns the column title for the specified entries in the
@@ -171,73 +162,66 @@ func (typ Type) EntriesTitle(entries int) string {
 	return ""
 }
 
-// LevelsTitle returns the level (row) title for rank n in the tournament
+// LevelTitle returns the level (row) title for rank n in the tournament
 // payout table.
-func (typ Type) LevelsTitle(n int) string {
+func (typ Type) LevelTitle(level int) string {
 	if t, ok := tables[typ]; ok {
-		return t.LevelsTitle(n)
+		return t.LevelTitle(level)
 	}
 	return ""
 }
 
-// Levels returns the levels (rows) of the tournament table from [start, end).
-func (typ Type) Levels(start, end int) []int {
+// MaxLevelTitle returnss the row title for the max level in tournament payout
+// table.
+func (typ Type) MaxLevelTitle(level int) string {
 	if t, ok := tables[typ]; ok {
-		return t.Levels(start, end)
+		return t.MaxLevelTitle(level)
 	}
-	return nil
+	return ""
 }
 
-// Rankings returns the levels for rankings from [start, end).
-func (typ Type) Rankings(start, end int) []int {
+// Paid returns the paid rankings, level (row) and corresponding entries column
+// for the tournament payout table.
+func (typ Type) Paid(entries int) (int, int, int) {
 	if t, ok := tables[typ]; ok {
-		return t.Rankings(start, end)
+		return t.Paid(entries)
 	}
-	return nil
+	return 0, 0, 0
 }
 
-// Amounts returns the tournament payout amounts for positions for [start, end)
-// as determined by the number of entries.
-func (typ Type) Amounts(start, end, entries int) []float64 {
+// Unallocated returns the unallocated amount for the paid rankings, row, and
+// col from the tournament payout table.
+func (typ Type) Unallocated(paid, row, col int) float64 {
 	if t, ok := tables[typ]; ok {
-		return t.Amounts(start, end, entries)
+		return t.Unallocated(paid, row, col)
 	}
-	return nil
+	return 0.0
 }
 
-// Payouts returns the tournament payouts for positions from [start, end) based
-// on the number of entries.
-func (typ Type) Payouts(start, end, entries int, buyin, guaranteed int64, rake float64) []int64 {
-	if t, ok := tables[typ]; ok {
-		return t.Payouts(start, end, entries, buyin, guaranteed, rake)
-	}
-	return nil
-}
-
-// Stakes returns slice of the ranges of the paid levels in the form of [low,
-// high), corresponding tournament payout table amount f, and calculated amount
-// for each position.
-func (typ Type) Stakes(entries int, buyin, guaranteed int64, rake float64) ([][2]int, []float64, []int64) {
+// Stakes returns the paid levels as [low, high), the tournament table value
+// per level, the calculated payouts per level, and the total amount paid.
+func (typ Type) Stakes(entries int, buyin, guaranteed int64, rake float64) ([][2]int, []float64, []int64, int64) {
 	if t, ok := tables[typ]; ok {
 		return t.Stakes(entries, buyin, guaranteed, rake)
 	}
-	return nil, nil, nil
+	return nil, nil, nil, 0
 }
 
-// Amount returns the tournament payout value for position n.
-func (typ Type) Amount(n, entries int) float64 {
+// Payouts returns the tournament paid rankings.
+func (typ Type) Payouts(entries int, buyin, guaranteed int64, rake float64) ([]int64, int64) {
 	if t, ok := tables[typ]; ok {
-		return t.Amount(n, entries)
+		return t.Payouts(entries, buyin, guaranteed, rake)
 	}
-	return 0
+	return nil, 0
 }
 
-// Payout returns the tournament payout for position n.
-func (typ Type) Payout(n, entries int, buyin, guaranteed int64, rake float64) int64 {
+// Amount returns the amount for the level and entries from the tournament
+// payout table.
+func (typ Type) Amount(level, entries int) float64 {
 	if t, ok := tables[typ]; ok {
-		return t.Payout(n, entries, buyin, guaranteed, rake)
+		return t.Amount(level, entries)
 	}
-	return 0
+	return 0.0
 }
 
 // At returns the amount at row, col of the tournament payout table.
@@ -266,54 +250,74 @@ func (typ *Type) UnmarshalText(buf []byte) error {
 }
 
 // EntriesTitle formats the entries title of last, n.
-func EntriesTitle(last, n int) string {
+func EntriesTitle(last, entries int) string {
 	switch {
-	case last < 0 && n < 0:
+	case last < 0 && entries < 0:
 		return ""
 	case last == 0:
-		return strconv.Itoa(n) + "+"
-	case n-last < 1:
+		return strconv.Itoa(entries) + "+"
+	case entries-last < 1:
 		return strconv.Itoa(last)
 	}
-	return strconv.Itoa(last+1) + "-" + strconv.Itoa(n)
+	return strconv.Itoa(last+1) + "-" + strconv.Itoa(entries)
 }
 
-// LevelsTitle formats the levels title of last, n.
-func LevelsTitle(last, n int) string {
-	if n-last < 2 {
-		return strconv.Itoa(n) + ord(n)
+// LevelTitle formats the levels title of last, n.
+func LevelTitle(last, level int) string {
+	if level-last < 2 {
+		return strconv.Itoa(level) + ord(level)
 	}
-	return fmt.Sprintf("%d-%d", last+1, n)
+	return fmt.Sprintf("%d-%d", last+1, level)
 }
 
-// EpsilonEqual returns true when a and b are within epsilon.
-func EpsilonEqual[R, S, T Ordered](a R, b S, epsilon T) bool {
+// Equal returns true when a and b are within [Epsilon].
+func Equal[S, T Ordered](a S, b T) bool {
+	return math.Abs(float64(a)-float64(b)) <= Epsilon
+}
+
+// Epsilon is the epsilon value used for for [EpsilonEqual].
+var Epsilon = 0.0000000001
+
+// EqualEpsilon returns true when a and b are within epsilon.
+func EqualEpsilon[R, S, T Ordered](a R, b S, epsilon T) bool {
 	return math.Abs(float64(a)-float64(b)) <= float64(epsilon)
 }
 
-// Calc calculates a payout for the percentage f, based on entries, buyin,
-// guaranteed amount, and rake. Uses [Round] to round to [Precision].
-func Calc(f float64, entries int, buyin, guaranteed int64, rake float64) int64 {
-	return int64(Round(f * float64(Total(entries, buyin, guaranteed, rake))))
-}
-
-// Total calculates the total payout based on entries, buyin, guaranteed
+// Prize calculates the total payout based on entries, buyin, guaranteed
 // amount, and rake. Uses [Round] to round to [Precision].
-func Total(entries int, buyin, guaranteed int64, rake float64) int64 {
+func Prize(entries int, buyin, guaranteed int64, rake float64) int64 {
 	amt := int64(entries) * buyin
-	if 0.0 < rake && rake < 1.0 {
-		amt = max(guaranteed, amt-int64(Round(rake*float64(amt))))
+	if rake < 0.0 || 1.0 < rake {
+		return amt
 	}
-	return amt
+	return max(guaranteed, amt-int64(Round(rake*float64(amt))))
 }
 
-// Precision is the precision amount used by [Calc].
-var Precision = int(math.Pow(10, 2))
+// Calc calculates the amount scaled by unallocated. Uses [Round] to round to
+// [Precision].
+func Calc(f float64, total int64, unallocated float64) int64 {
+	if unallocated < 0.0 || 1.0 < unallocated {
+		unallocated = 0.0
+	}
+	return int64(Round(f * float64(total) / (1.0 - unallocated)))
+}
 
 // Round is the round implementation used by [Calc]. Rounds to [Precision].
 var Round = func(f float64) float64 {
-	return math.Round(f*float64(Precision)) / float64(Precision)
+	return math.Ceil(math.Round(f*Precision) / Precision)
 }
+
+// Precision is the precision amount used by [Calc].
+var Precision float64 = 10000
+
+// Paid returns the number of paid rankings, uses [PaidRound].
+var Paid = func(f float64, entries int) int {
+	return int(PaidRound(f * float64(entries)))
+}
+
+// PaidRound by default is [math.Ceil] and is used by [PaidMax] to determine
+// the number of paid rankings.
+var PaidRound = math.Ceil
 
 // ord returns the ordinal suffix for n.
 func ord(n int) string {

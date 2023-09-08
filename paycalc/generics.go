@@ -7,6 +7,13 @@ func max[T comparable](a, b T) T {
 	return b
 }
 
+func min[T comparable](a, b T) T {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 type comparable interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 |
 		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr |

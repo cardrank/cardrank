@@ -2,59 +2,102 @@ package paycalc
 
 import (
 	"bytes"
-	"strings"
 	"testing"
 )
 
-func TestLoadReader(t *testing.T) {
+func TestLoad(t *testing.T) {
 	tests := []struct {
+		buf  []byte
+		top  float64
 		name string
-		s    string
 	}{
-		{"simple", simpleTable},
-		{"top10", string(top10)},
-		{"top15", string(top15)},
-		{"top20", string(top20)},
+		{simpleCSV, .10, "simple"},
+		{top10, .10, "top10"},
+		{top15, .15, "top15"},
+		{top20, .20, "top20"},
 	}
-	for _, test := range tests {
-		t.Run(test.name, testLoadReader(test.s))
-	}
-}
-
-func testLoadReader(data string) func(*testing.T) {
-	return func(t *testing.T) {
-		t.Helper()
-		tbl, err := LoadReader(strings.NewReader(data), 0.10, "")
-		if err != nil {
-			t.Fatalf("expected no error, got: %v", err)
-		}
-		t.Logf("\n%s\n%c\n%m", tbl, tbl, tbl)
-		buf := new(bytes.Buffer)
-		if err := tbl.WriteCSV(buf); err != nil {
-			t.Fatalf("expected no error, got: %v", err)
-		}
-		if s, exp := buf.String(), data; s != exp {
-			t.Errorf("expected generated table csv output to match input, expected:\n%s\ngot:\n%s", exp, s)
-		}
+	for _, tt := range tests {
+		test := tt
+		t.Run(test.name, func(t *testing.T) {
+			testLoad(t, test.buf, test.top, test.name)
+		})
 	}
 }
 
-const simpleTable = `r/e,401+,351-400,301-350,251-300,201-250,151-200,101-150,76-100,61-75,51-60,41-50,31-40,11-30,3-10,2
-1st,24.5,25,25.5,26,26.5,27,28,30,31,35,37,40,50,70,100
-2nd,14.25,14.5,14.75,15,15.5,16,17,20,21,22,25,25,30,30
-3rd,9,9.2,9.4,9.6,9.8,10,10.6,12,13,15,15,20,20
-4th,7,7.2,7.4,7.6,7.8,8,8.6,9.5,10,11,12,15
-5th,6,6.2,6.4,6.6,6.8,7,7.6,8,8.5,9,11
-6th,4.2,4.3,4.4,4.5,4.6,4.9,5.3,6,6.5,8
-7th,3.2,3.3,3.4,3.5,3.6,3.9,4.3,5,5.5
-8th,2.2,2.3,2.4,2.6,2.8,2.9,3.3,4,4.5
-9th,1.65,1.85,1.95,2.1,2.2,2.4,2.7,3
-10th,1.25,1.4,1.4,1.5,1.65,1.9,2.1,2.5
-11-15,1.25,1.4,1.4,1.5,1.65,1.9,2.1
-16-20,0.85,0.9,0.95,1,1.1,1.3
-21-25,0.75,0.8,0.85,0.9,1
-26-30,0.65,0.7,0.75,0.8
-31-35,0.55,0.6,0.65
-36-40,0.5,0.55
-41-50,0.4
-`
+func testLoad(t *testing.T, buf []byte, top float64, name string) {
+	t.Helper()
+	tbl, err := LoadBytes(buf, top, name)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	t.Logf("\n%s\n%c\n%m", tbl, tbl, tbl)
+	b := new(bytes.Buffer)
+	if err := tbl.WriteCSV(b); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if s, exp := b.String(), string(buf); s != exp {
+		t.Errorf("expected generated table csv output to match input, expected:\n%s\ngot:\n%s", exp, s)
+	}
+}
+
+func TestPaidUnallocated(t *testing.T) {
+	tests := []struct {
+		typ     Type
+		entries int
+		paid    int
+		row     int
+		col     int
+		s       string
+		exp     float64
+	}{
+		{Top10, 2, 1, 0, 30, "1st/2", 0.0},
+		{Top15, 2, 1, 0, 30, "1st/2", 0.0},
+		{Top20, 2, 1, 0, 27, "1st/2", 0.0},
+		{Top10, 12, 2, 1, 28, "2nd/11-30", 20.0},
+		{Top15, 12, 2, 1, 28, "2nd/11-20", 20.0},
+		{Top20, 12, 3, 2, 25, "3rd/11-20", 15.0},
+		{Top10, 20, 2, 1, 28, "2nd/11-30", 20.0},
+		{Top15, 20, 3, 2, 28, "3rd/11-20", 0.0},
+		{Top20, 20, 4, 3, 25, "4th/11-20", 0.0},
+		{Top10, 90, 9, 8, 23, "9th/76-100", 2.5},
+		{Top15, 60, 9, 8, 24, "9th/51-60", 0.0},
+		{Top20, 45, 9, 8, 22, "9th/41-50", 3.2},
+		{Top10, 64, 7, 6, 24, "7th/61-75", 4.5},
+		{Top15, 64, 10, 9, 23, "10th/61-75", 8.8},
+		{Top20, 64, 13, 10, 21, "11-13/51-75", 2.1 * 2},
+		{Top10, 87, 9, 8, 23, "9th/76-100", 2.5},
+		{Top15, 87, 14, 10, 22, "11-14/76-100", 1.86 * 1},
+		{Top20, 87, 18, 11, 20, "16-18/76-100", 1.3 * 2},
+		{Top10, 93, 10, 9, 23, "10th/76-100", 0.0},
+		{Top15, 93, 14, 10, 22, "11-14/76-100", 1.86 * 1},
+		{Top20, 93, 19, 11, 20, "16-19/76-100", 1.3 * 1},
+		{Top10, 100, 10, 9, 23, "10th/76-100", 0.0},
+		{Top15, 100, 15, 10, 22, "11-15/76-100", 0.0},
+		{Top20, 100, 20, 11, 20, "16-20/76-100", 0.0},
+		{Top10, 101, 11, 10, 22, "11th/101-150", 2.1 * 4},
+		{Top15, 101, 16, 11, 21, "16th/101-125", 6.4},
+		{Top20, 101, 21, 12, 19, "21st/101-125", 4.2},
+		{Top10, 234, 24, 12, 20, "21-24/201-250", 1.0 * 1},
+		{Top15, 234, 36, 15, 18, "36th/201-250", 0.45 * 4},
+		{Top20, 234, 47, 16, 16, "41-47/201-250", 0.45 * 3},
+		{Top10, 247, 25, 12, 20, "21-25/201-250", 0.0},
+		{Top15, 247, 38, 15, 18, "36-38/201-250", 0.45 * 2},
+		{Top20, 247, 50, 16, 16, "41-50/201-250", 0.0},
+	}
+	for i, test := range tests {
+		paid, row, col := test.typ.Paid(test.entries)
+		switch s := test.typ.MaxLevelTitle(paid) + "/" + test.typ.EntriesTitle(test.entries); {
+		case paid != test.paid:
+			t.Errorf("test %d %n %d expected paid %d, got: %d", i, test.typ, test.entries, test.paid, paid)
+		case row != test.row:
+			t.Errorf("test %d %n %d expected row %d, got: %d", i, test.typ, test.entries, test.row, row)
+		case col != test.col:
+			t.Errorf("test %d %n %d expected col %d, got: %d", i, test.typ, test.entries, test.col, col)
+		case s != test.s:
+			t.Errorf("test %d %n %d expected %q, got: %q", i, test.typ, test.entries, test.s, s)
+		}
+		if f, exp := test.typ.Unallocated(paid, row, col)*100.0, test.exp; !Equal(f, exp) {
+			t.Errorf("test %d %n %d expected %f, got: %f", i, test.typ, test.entries, exp, f)
+		}
+	}
+}

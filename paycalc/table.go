@@ -13,15 +13,15 @@ import (
 
 // Table is a tournament payout table.
 type Table struct {
-	top     float64
 	name    string
+	top     float64
 	levels  []int
 	entries []int
 	amounts [][]float64
 }
 
 // New creates a new tournament payout table.
-func New(top float64, name string, levels, entries []int, amounts [][]float64) (*Table, error) {
+func New(name string, top float64, levels, entries []int, amounts [][]float64) (*Table, error) {
 	rows, cols := len(levels), len(entries)
 	if rows < 1 || cols < 1 {
 		return nil, errors.New("invalid table")
@@ -56,15 +56,32 @@ func New(top float64, name string, levels, entries []int, amounts [][]float64) (
 			sums[j] += float64(n) * amounts[i][j]
 		}
 	}
-	// check sums
+	// check entries
 	for i := 0; i < cols; i++ {
-		if !EpsilonEqual(1.0, sums[i], 0.0000000001) {
-			return nil, fmt.Errorf("entry column %d sum %f != 1.0", i, sums[i])
+		// check column sum
+		if !Equal(1.0, sums[i]) {
+			return nil, fmt.Errorf("entries %s sum %f != 1.0", EntriesTitle(entries[i+1], entries[i]), sums[i])
+		}
+		// check levels exist for entries
+		if i != 0 {
+			paid := Paid(top, entries[i])
+			if l := findLevel(paid-1, levels); l == -1 || amounts[l][i] == 0.0 {
+				last := 0
+				if 0 < l {
+					last = levels[l-1]
+				}
+				return nil, fmt.Errorf(
+					"top %0.2f%% needs %d levels for entries %s: level %s not defined",
+					top*100.0, paid,
+					EntriesTitle(entries[i+1], entries[i]),
+					LevelTitle(last, levels[l]),
+				)
+			}
 		}
 	}
 	return &Table{
-		top:     top,
 		name:    name,
+		top:     top,
 		levels:  levels,
 		entries: entries,
 		amounts: amounts,
@@ -118,7 +135,7 @@ func LoadReader(rdr io.Reader, top float64, name string) (*Table, error) {
 			amounts[i-1][j-1] /= 100.0
 		}
 	}
-	return New(top, name, levels, entries, amounts)
+	return New(name, top, levels, entries, amounts)
 }
 
 // LoadBytes loads CSV formatted tournament payout table from buf.
@@ -138,7 +155,7 @@ func (t *Table) Name() string {
 
 // Title returns the title of the tournament payout table.
 func (t *Table) Title() string {
-	return fmt.Sprintf("Top %d%% Paid", int(t.Top()*100))
+	return fmt.Sprintf("Top %d%%", int(t.Top()*100))
 }
 
 // Format satisfies the [fmt.Formatter] interface.
@@ -150,6 +167,8 @@ func (t *Table) Format(f fmt.State, verb rune) {
 		fmt.Fprintf(f, "%f", t.Top())
 	case 't':
 		fmt.Fprint(f, t.Title())
+	case 'n':
+		fmt.Fprint(f, t.Name())
 	case 'c':
 		_ = t.WriteCSV(f)
 	case 'm':
@@ -161,29 +180,31 @@ func (t *Table) Format(f fmt.State, verb rune) {
 	}
 }
 
-// EntriesMax returns the max entries for the tournament payout table.
-func (t *Table) EntriesMax() int {
-	return t.entries[0]
-}
-
-// LevelsMax returns the max levels for the tournament payout table for the
-// specified entries.
-func (t *Table) LevelsMax(entries int) int {
-	col := t.Entries(entries)
-	if col < 0 {
-		return -1
-	}
-	for i := len(t.levels) - 1; 0 <= i; i-- {
-		if t.amounts[i][col] != 0.0 {
-			return t.levels[i]
+// WriteTable writes a plain text version of the tournament payout table, along
+// with optional title, to w.
+func (t *Table) WriteTable(w io.Writer, title bool) error {
+	if title {
+		if _, err := fmt.Fprintln(w, t.Title()+"\n"); err != nil {
+			return fmt.Errorf("unable to write table: %w", err)
 		}
 	}
-	return -1
+	return t.WriteTo(w, tableFormat, nil, true)
 }
 
-// RankingMax returns the max ranking for the tournament payout table.
-func (t *Table) RankingMax() int {
-	return t.levels[len(t.levels)-1]
+// WriteCSV writes a CSV version of the tournament payout table to w.
+func (t *Table) WriteCSV(w io.Writer) error {
+	return t.WriteTo(w, csvFormat, nil, true)
+}
+
+// WriteMarkdown writes a Markdown formatted version of the tournament payout
+// table to w.
+func (t *Table) WriteMarkdown(w io.Writer, header int) error {
+	if 0 < header && header <= 6 {
+		if _, err := fmt.Fprintln(w, strings.Repeat("#", header), t.Title()+"\n"); err != nil {
+			return fmt.Errorf("unable to write markdown: %w", err)
+		}
+	}
+	return t.WriteTo(w, markdownFormat, markdownDivider, false)
 }
 
 // WriteTo writes the tournament payout table to w, formatting cells with f,
@@ -222,7 +243,7 @@ func (t *Table) WriteTo(w io.Writer, f func(interface{}, int, bool) string, divi
 	// write levels/entries
 	for i := 0; i < len(t.levels); i++ {
 		// write ranking
-		if _, err = fmt.Fprint(w, f(t.LevelsTitle(t.levels[i]), maxlen, false)); err != nil {
+		if _, err = fmt.Fprint(w, f(t.LevelTitle(t.levels[i]-1), maxlen, false)); err != nil {
 			return fmt.Errorf("unable to write table: %w", err)
 		}
 		// write entries
@@ -242,34 +263,12 @@ func (t *Table) WriteTo(w io.Writer, f func(interface{}, int, bool) string, divi
 	return nil
 }
 
-// WriteTable writes a plain text version of the tournament payout table, along
-// with optional title, to w.
-func (t *Table) WriteTable(w io.Writer, title bool) error {
-	if title {
-		if _, err := fmt.Fprintln(w, t.Title()+"\n"); err != nil {
-			return fmt.Errorf("unable to write table: %w", err)
-		}
-	}
-	return t.WriteTo(w, tableFormat, nil, true)
+// EntriesMax returns the max entries for the tournament payout table.
+func (t *Table) EntriesMax() int {
+	return t.entries[0]
 }
 
-// WriteCSV writes a CSV version of the tournament payout table to w.
-func (t *Table) WriteCSV(w io.Writer) error {
-	return t.WriteTo(w, csvFormat, nil, true)
-}
-
-// WriteMarkdown writes a Markdown formatted version of the tournament payout
-// table to w.
-func (t *Table) WriteMarkdown(w io.Writer, header int) error {
-	if 0 < header && header <= 6 {
-		if _, err := fmt.Fprintln(w, strings.Repeat("#", header), t.Title()+"\n"); err != nil {
-			return fmt.Errorf("unable to write markdown: %w", err)
-		}
-	}
-	return t.WriteTo(w, markdownFormat, markdownDivider, false)
-}
-
-// Entries returns the entries column in the tournament payout table.
+// Entries returns the column for the entries in the tournament payout table.
 func (t *Table) Entries(entries int) int {
 	if entries < 2 {
 		return -1
@@ -280,6 +279,11 @@ func (t *Table) Entries(entries int) int {
 		}
 	}
 	return 0
+}
+
+// Level returns the row for the level in the tournament payout table.
+func (t *Table) Level(level int) int {
+	return findLevel(level, t.levels)
 }
 
 // EntriesTitle returns the column title for the specified entries in the
@@ -297,110 +301,85 @@ func (t *Table) EntriesTitle(entries int) string {
 	return EntriesTitle(t.entries[col+1], t.entries[col])
 }
 
-// LevelsTitle returns the level (row) title for rank n in the tournament
-// payout table.
-func (t *Table) LevelsTitle(n int) string {
+// LevelTitle returns the row title for the level in the tournament payout
+// table.
+func (t *Table) LevelTitle(level int) string {
 	for i, last := 0, 0; i < len(t.levels); i++ {
-		if n <= t.levels[i] {
-			return LevelsTitle(last, t.levels[i])
+		if level < t.levels[i] {
+			return LevelTitle(last, t.levels[i])
 		}
 		last = t.levels[i]
 	}
 	return ""
 }
 
-// Levels returns the levels (rows) of the tournament table from [start, end).
-func (t *Table) Levels(start, end int) []int {
-	if start < 0 || end < 1 || end <= start {
-		return nil
-	}
-	var i int
-	for ; i < len(t.levels) && t.levels[i] < start; i++ {
-	}
-	var v []int
-	for ; i < len(t.levels) && t.levels[i] < end; i++ {
-		v = append(v, i)
-	}
-	if i != len(t.levels) {
-		return append(v, i)
-	}
-	return v
-}
-
-// Rankings returns the levels for rankings from [start, end).
-func (t *Table) Rankings(start, end int) []int {
-	if start < 0 || end < 1 || end <= start {
-		return nil
-	}
-	v, rows := t.Levels(start, end), make([]int, end-start)
-	for i, pos := 0, 0; i < end-start; i++ {
-		if t.levels[v[pos]] <= i+start {
-			pos++
+// MaxLevelTitle returnss the row title for the max level in tournament payout
+// table.
+func (t *Table) MaxLevelTitle(level int) string {
+	for i, last := 0, 0; i < len(t.levels); i++ {
+		if level <= t.levels[i] {
+			return LevelTitle(last, level)
 		}
-		rows[i] = v[pos]
+		last = t.levels[i]
 	}
-	return rows
+	return ""
 }
 
-// Amounts returns the tournament payout amounts for positions for [start, end)
-// as determined by the number of entries.
-func (t *Table) Amounts(start, end, entries int) []float64 {
-	rows, col := t.Rankings(start, end), t.Entries(entries)
-	if len(rows) == 0 || col == -1 {
-		return nil
-	}
-	v := make([]float64, end-start)
-	for i := 0; i < len(rows); i++ {
-		v[i] = t.amounts[rows[i]][col]
-	}
-	return v
+// Paid returns the paid rankings, level (row) and corresponding entries column
+// for the tournament payout table.
+func (t *Table) Paid(entries int) (int, int, int) {
+	paid := Paid(t.top, entries)
+	return paid, t.Level(paid - 1), t.Entries(entries)
 }
 
-// Payouts returns the tournament payouts for positions from [start, end) based
-// on the number of entries.
-func (t *Table) Payouts(start, end, entries int, buyin, guaranteed int64, rake float64) []int64 {
-	rows, col := t.Rankings(start, end), t.Entries(entries)
-	if len(rows) == 0 || col == -1 {
-		return nil
+// Unallocated returns the unallocated amount for the paid rankings, row, and
+// col from the tournament payout table.
+func (t *Table) Unallocated(paid, row, col int) float64 {
+	if row <= 0 || col < 0 || len(t.levels) <= row || len(t.entries) <= col {
+		return 0.0
 	}
-	v := make([]int64, end-start)
-	for i := 0; i < len(rows); i++ {
-		v[i] = Calc(t.amounts[rows[i]][col], entries, buyin, guaranteed, rake)
+	f := float64(t.levels[row]-paid) * t.amounts[row][col]
+	for i, last := row+1, t.levels[row]; i < len(t.levels) && t.amounts[i][col] != 0.0; i++ {
+		f += float64(t.levels[i]-last) * t.amounts[i][col]
+		last = t.levels[i]
 	}
-	return v
+	return f
 }
 
-// Stakes returns slice of the ranges of the paid levels in the form of [low,
-// high), table amount, and calculated payouts for each position.
-func (t *Table) Stakes(entries int, buyin, guaranteed int64, rake float64) ([][2]int, []float64, []int64) {
-	maxLevel := t.LevelsMax(entries)
-	rows, col := t.Levels(0, maxLevel), t.Entries(entries)
-	n := len(rows)
-	levels, amounts, payouts := make([][2]int, n), make([]float64, n), make([]int64, n)
-	for i, last := 0, 0; i < n; i++ {
-		level := t.levels[rows[i]]
-		levels[i] = [2]int{last, level}
-		amounts[i] = t.amounts[rows[i]][col]
-		payouts[i] = Calc(amounts[i], entries, buyin, guaranteed, rake)
+// Stakes returns the paid levels as [low, high), the tournament table value
+// per level, the calculated payouts per level, and the total amount paid.
+func (t *Table) Stakes(entries int, buyin, guaranteed int64, rake float64) ([][2]int, []float64, []int64, int64) {
+	prize := Prize(entries, buyin, guaranteed, rake)
+	paid, row, col := t.Paid(entries)
+	unallocated := t.Unallocated(paid, row, col)
+	levels, amounts, payouts, total := make([][2]int, row+1), make([]float64, row+1), make([]int64, row+1), int64(0)
+	for i, last := 0, 0; i <= row; i++ {
+		level := min(t.levels[i], paid)
+		amounts[i] = t.amounts[i][col]
+		levels[i], payouts[i] = [2]int{last, level}, Calc(amounts[i], prize, unallocated)
+		total += payouts[i] * int64(level-last)
 		last = level
 	}
-	return levels, amounts, payouts
+	return levels, amounts, payouts, total
 }
 
-// Amount returns the tournament payout amount for position n.
-func (t *Table) Amount(n, entries int) float64 {
-	if v := t.Amounts(n, n+1, entries); len(v) != 0 {
-		return v[0]
+// Payouts returns the tournament payouts for rankings from [start, end) based
+// on the number of entries.
+func (t *Table) Payouts(entries int, buyin, guaranteed int64, rake float64) ([]int64, int64) {
+	levels, _, amounts, total := t.Stakes(entries, buyin, guaranteed, rake)
+	payouts := make([]int64, 0, levels[len(levels)-1][1])
+	for i, level := range levels {
+		for j := level[0]; j < level[1]; j++ {
+			payouts = append(payouts, amounts[i])
+		}
 	}
-	return 0.0
+	return payouts, total
 }
 
-// Payout returns the tournament payout for position n.
-func (t *Table) Payout(n, entries int, buyin, guaranteed int64, rake float64) int64 {
-	if v := t.Payouts(n, n+1, entries, buyin, guaranteed, rake); len(v) != 0 {
-		return v[0]
-	}
-	return 0
+// Amount returns the amount for the level and entries from the tournament
+// payout table.
+func (t *Table) Amount(level, entries int) float64 {
+	return t.At(t.Level(level), t.Entries(entries))
 }
 
 // At returns the amount at row, col of the tournament payout table.
@@ -439,7 +418,7 @@ func csvFormat(v any, n int, last bool) string {
 		}
 	case float64:
 		if x != 0.0 {
-			s = strconv.FormatFloat(math.Round(x*10000)/100, 'f', -1, 64)
+			s = strconv.FormatFloat(math.Round(x*1000000.0)/10000.0, 'f', -1, 64)
 		}
 	}
 	if last {
@@ -511,6 +490,18 @@ func parseEntries(s string) (int, error) {
 		return 0, fmt.Errorf("unable to parse col %q: %w", v[len(v)-1], err)
 	}
 	return i, nil
+}
+
+// findLevel returns the row for the level in levels.
+func findLevel(level int, levels []int) int {
+	if 0 <= level {
+		for i, l := range levels {
+			if level < l {
+				return i
+			}
+		}
+	}
+	return -1
 }
 
 // reCell is the upper left cell value in a csv tournament pay table.
