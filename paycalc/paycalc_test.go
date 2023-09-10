@@ -144,7 +144,7 @@ var simpleTyp = Top20 + 1
 
 func init() {
 	simpleTyp := Top20 + 1
-	if err := RegisterBytes(simpleTyp, simpleCSV, 0.10, "simple"); err != nil {
+	if err := RegisterBytes(simpleTyp, "simple", 0.10, simpleCSV); err != nil {
 		panic(fmt.Sprintf("expected no error, got: %v", err))
 	}
 }

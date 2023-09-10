@@ -7,26 +7,26 @@ import (
 
 func TestLoad(t *testing.T) {
 	tests := []struct {
-		buf  []byte
-		top  float64
 		name string
+		top  float64
+		buf  []byte
 	}{
-		{simpleCSV, .10, "simple"},
-		{top10, .10, "top10"},
-		{top15, .15, "top15"},
-		{top20, .20, "top20"},
+		{"simple", .10, simpleCSV},
+		{"top10", .10, top10},
+		{"top15", .15, top15},
+		{"top20", .20, top20},
 	}
 	for _, tt := range tests {
 		test := tt
 		t.Run(test.name, func(t *testing.T) {
-			testLoad(t, test.buf, test.top, test.name)
+			testLoad(t, test.name, test.top, test.buf)
 		})
 	}
 }
 
-func testLoad(t *testing.T, buf []byte, top float64, name string) {
+func testLoad(t *testing.T, name string, top float64, buf []byte) {
 	t.Helper()
-	tbl, err := LoadBytes(buf, top, name)
+	tbl, err := LoadBytes(name, top, buf)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}

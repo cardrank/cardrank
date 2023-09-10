@@ -10,10 +10,9 @@ func Example() {
 	const entries, buyin, guaranteed, rake = 88, 200000, 10000000, 0.15
 	for _, typ := range []paycalc.Type{paycalc.Top10, paycalc.Top15, paycalc.Top20} {
 		paid, row, col := typ.Paid(entries)
-		unallocated := typ.Unallocated(paid, row, col)
 		fmt.Printf("%t (%d of %d):\n", typ, paid, entries)
 		fmt.Printf("  l/e:   %s/%s\n", typ.MaxLevelTitle(paid), typ.EntriesTitle(entries))
-		fmt.Printf("  short: %.2f%%\n", unallocated*100.0)
+		fmt.Printf("  short: %.2f%%\n", typ.Unallocated(paid, row, col)*100.0)
 		fmt.Printf("  buyin: %d\n", buyin)
 		fmt.Printf("  rake:  %.0f%%\n", rake*100.0)
 		fmt.Printf("  gtd:   %d\n", guaranteed)

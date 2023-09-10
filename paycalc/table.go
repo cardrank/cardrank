@@ -89,7 +89,7 @@ func New(name string, top float64, levels, entries []int, amounts [][]float64) (
 }
 
 // LoadReader loads a CSV formatted tournament payout table from the reader.
-func LoadReader(rdr io.Reader, top float64, name string) (*Table, error) {
+func LoadReader(name string, top float64, rdr io.Reader) (*Table, error) {
 	r := csv.NewReader(rdr)
 	r.FieldsPerRecord = -1
 	lines, err := r.ReadAll()
@@ -139,8 +139,8 @@ func LoadReader(rdr io.Reader, top float64, name string) (*Table, error) {
 }
 
 // LoadBytes loads CSV formatted tournament payout table from buf.
-func LoadBytes(buf []byte, top float64, name string) (*Table, error) {
-	return LoadReader(bytes.NewReader(buf), top, name)
+func LoadBytes(name string, top float64, buf []byte) (*Table, error) {
+	return LoadReader(name, top, bytes.NewReader(buf))
 }
 
 // Top returns the proportion of paid rankings for the tournament payout table.
@@ -349,9 +349,8 @@ func (t *Table) Unallocated(paid, row, col int) float64 {
 // Stakes returns the paid levels as [low, high), the tournament table value
 // per level, the calculated payouts per level, and the total amount paid.
 func (t *Table) Stakes(entries int, buyin, guaranteed int64, rake float64) ([][2]int, []float64, []int64, int64) {
-	prize := Prize(entries, buyin, guaranteed, rake)
 	paid, row, col := t.Paid(entries)
-	unallocated := t.Unallocated(paid, row, col)
+	prize, unallocated := Prize(entries, buyin, guaranteed, rake), t.Unallocated(paid, row, col)
 	levels, amounts, payouts, total := make([][2]int, row+1), make([]float64, row+1), make([]int64, row+1), int64(0)
 	for i, last := 0, 0; i <= row; i++ {
 		level := min(t.levels[i], paid)

@@ -25,8 +25,8 @@ func Register(typ Type, t *Table) error {
 
 // RegisterReader registers a tournament payout table read as CSV from the
 // reader.
-func RegisterReader(typ Type, r io.Reader, top float64, name string) error {
-	t, err := LoadReader(r, top, name)
+func RegisterReader(typ Type, name string, top float64, r io.Reader) error {
+	t, err := LoadReader(name, top, r)
 	if err != nil {
 		return err
 	}
@@ -34,19 +34,19 @@ func RegisterReader(typ Type, r io.Reader, top float64, name string) error {
 }
 
 // RegisterBytes registers a tournament payout table read as CSV from buf.
-func RegisterBytes(typ Type, buf []byte, top float64, name string) error {
-	return RegisterReader(typ, bytes.NewReader(buf), top, name)
+func RegisterBytes(typ Type, name string, top float64, buf []byte) error {
+	return RegisterReader(typ, name, top, bytes.NewReader(buf))
 }
 
 // Init initializes the tournament payout tables.
 func Init() error {
-	if err := RegisterBytes(Top10, top10, 0.10, "top10"); err != nil {
+	if err := RegisterBytes(Top10, "top10", 0.10, top10); err != nil {
 		return err
 	}
-	if err := RegisterBytes(Top15, top15, 0.15, "top15"); err != nil {
+	if err := RegisterBytes(Top15, "top15", 0.15, top15); err != nil {
 		return err
 	}
-	if err := RegisterBytes(Top20, top20, 0.20, "top20"); err != nil {
+	if err := RegisterBytes(Top20, "top20", 0.20, top20); err != nil {
 		return err
 	}
 	return nil
