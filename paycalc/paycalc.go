@@ -288,7 +288,7 @@ func EqualEpsilon[R, S, T Ordered](a R, b S, epsilon T) bool {
 func Prize(entries int, buyin, guaranteed int64, rake float64) int64 {
 	amt := int64(entries) * buyin
 	if rake < 0.0 || 1.0 < rake {
-		return amt
+		return max(guaranteed, amt)
 	}
 	return max(guaranteed, amt-int64(Round(rake*float64(amt))))
 }
