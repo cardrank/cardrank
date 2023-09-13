@@ -62,8 +62,41 @@ func (r EvalRank) Fixed() EvalRank {
 	return Invalid
 }
 
-// String satisfies the [fmt.Stringer] interface.
-func (r EvalRank) String() string {
+// Name returns the eval rank name.
+//
+// Examples:
+//
+//	StraightFlush
+//	FourOfAKind
+func (r EvalRank) Name() string {
+	switch r.Fixed() {
+	case StraightFlush:
+		return "StraightFlush"
+	case FourOfAKind:
+		return "FourOfAKind"
+	case FullHouse:
+		return "FullHouse"
+	case Flush:
+		return "Flush"
+	case Straight:
+		return "Straight"
+	case ThreeOfAKind:
+		return "ThreeOfAKind"
+	case TwoPair:
+		return "TwoPair"
+	case Pair:
+		return "Pair"
+	}
+	return "Nothing"
+}
+
+// Title returns the eval rank title.
+//
+// Examples:
+//
+//	Straight Flush
+//	Four of a Kind
+func (r EvalRank) Title() string {
 	switch r.Fixed() {
 	case StraightFlush:
 		return "Straight Flush"
@@ -87,27 +120,14 @@ func (r EvalRank) String() string {
 	return "Invalid"
 }
 
-// Name returns the eval rank name.
-func (r EvalRank) Name() string {
-	switch r.Fixed() {
-	case StraightFlush:
-		return "StraightFlush"
-	case FourOfAKind:
-		return "FourOfAKind"
-	case FullHouse:
-		return "FullHouse"
-	case Flush:
-		return "Flush"
-	case Straight:
-		return "Straight"
-	case ThreeOfAKind:
-		return "ThreeOfAKind"
-	case TwoPair:
-		return "TwoPair"
-	case Pair:
-		return "Pair"
+// Format satisfies the [fmt.Formatter] interface.
+func (r EvalRank) Format(f fmt.State, verb rune) {
+	switch verb {
+	case 'e', 's', 'S', 'v':
+		fmt.Fprint(f, r.Title())
+	case 'n':
+		fmt.Fprint(f, r.Name())
 	}
-	return "Nothing"
 }
 
 // ToFlushOver changes a Cactus rank to a Flush Over a Full House rank.
@@ -760,11 +780,11 @@ func (ev *Eval) Format(f fmt.State, verb rune) {
 	case 'b':
 		fmt.Fprintf(f, "%s %b", ev.Desc(false), ev.HiBest)
 	case 'h':
-		fmt.Fprintf(f, "%s %h", ev.Desc(false), CardFormatter(ev.HiBest))
+		fmt.Fprintf(f, "%s %h", ev.Desc(false), Formatter(ev.HiBest))
 	case 'c':
 		fmt.Fprintf(f, "%s %c", ev.Desc(false), ev.HiBest)
 	case 'C':
-		fmt.Fprintf(f, "%s %C", ev.Desc(false), CardFormatter(ev.HiBest))
+		fmt.Fprintf(f, "%s %C", ev.Desc(false), Formatter(ev.HiBest))
 	case 'f':
 		for _, c := range ev.HiBest {
 			c.Format(f, 's')
@@ -1171,11 +1191,10 @@ func bestSoko(rank EvalRank, v, u []Card) {
 		bestAceHigh(u)
 	case rank <= sokoStraight:
 		bestAceHigh(v)
-		for i, r := 0, v[0].Rank()+1; i < 4; i++ {
-			if v[i].Rank() != r-1 {
-				v[i], v[i+1] = v[i+1], v[i]
-			}
-			r = v[i].Rank()
+		if v[0].Rank()-v[1].Rank() != 1 {
+			c := v[0]
+			copy(v, v[1:])
+			v[4] = c
 		}
 		bestAceHigh(u)
 	default:

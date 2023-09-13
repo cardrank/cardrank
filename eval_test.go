@@ -229,7 +229,7 @@ func TestEvalRankToFrom(t *testing.T) {
 	}
 }
 
-func TestEvalRankString(t *testing.T) {
+func TestEvalRankTitle(t *testing.T) {
 	tests := []struct {
 		r   EvalRank
 		exp string
@@ -255,7 +255,7 @@ func TestEvalRankString(t *testing.T) {
 		{0x0001, "Straight Flush"},
 	}
 	for i, test := range tests {
-		if s := test.r.String(); s != test.exp {
+		if s := test.r.Title(); s != test.exp {
 			t.Errorf("test %d expected %q, got: %q", i, test.exp, s)
 		}
 	}

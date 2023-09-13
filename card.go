@@ -627,12 +627,12 @@ func (c Card) Format(f fmt.State, verb rune) {
 	_, _ = f.Write(buf)
 }
 
-// CardFormatter wraps formatting a set of cards. Allows `go test` to function
+// Formatter wraps formatting a set of cards. Allows `go test` to function
 // without disabling vet.
-type CardFormatter []Card
+type Formatter []Card
 
 // Format satisfies the [fmt.Formatter] interface.
-func (v CardFormatter) Format(f fmt.State, verb rune) {
+func (v Formatter) Format(f fmt.State, verb rune) {
 	_, _ = f.Write([]byte{'['})
 	for i, c := range v {
 		if i != 0 {

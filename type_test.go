@@ -428,3 +428,50 @@ func TestIdToType(t *testing.T) {
 		}
 	}
 }
+
+func TestDescType(t *testing.T) {
+	tests := []struct {
+		typ Type
+		v   string
+		s   string
+		exp string
+	}{
+		{Holdem, "Ah Kh Qh Jh Th", "%s", "Straight Flush, Ace-high, Royal"},
+		{Holdem, "Ah Kh Qh Jh Th", "%S", "Straight Flush, Ace-high"},
+		{Holdem, "Ah Kh Qh Jh Th", "%e", "Straight Flush"},
+		{Short, "Qh Qd Qc Qh Ah", "%s", "Four of a Kind, Queens, kicker Ace"},
+		{Short, "Qh Qd Qc Qh Ah", "%S", "Four of a Kind, Queens"},
+		{Short, "Qh Qd Qc Qh Ah", "%e", "Four of a Kind"},
+		{Short, "Ah Kh Qh 9h 8h", "%s", "Flush, Ace-high, kickers King, Queen, Nine, Eight"},
+		{Short, "Ah Kh Qh 9h 8h", "%S", "Flush, Ace-high"},
+		{Short, "Ah Kh Qh 9h 8h", "%e", "Flush"},
+		{Short, "Ah 6c 7c 8s 9d", "%s", "Straight, Nine-high"},
+		{Short, "Ah 6c 7c 8s 9d", "%S", "Straight, Nine-high"},
+		{Short, "Ah 6c 7c 8s 9d", "%e", "Straight"},
+		{Lowball, "7h 2h 3c 4h 6h", "%s", "Seven, Six, Four, Three, Two-low, No. 2"},
+		{Lowball, "7h 2h 3c 4h 6h", "%S", "Seven-low, No. 2"},
+		{Lowball, "7h 2h 3c 4h 6h", "%e", "Seven-low"},
+		{Lowball, "6h 5c 3s 2h 4h", "%s", "Straight, Six-high"},
+		{Lowball, "6h 5c 3s 2h 4h", "%S", "Straight, Six-high"},
+		{Lowball, "6h 5c 3s 2h 4h", "%e", "Straight"},
+		{Lowball, "7s 4h 6h 5c 3s", "%s", "Straight, Seven-high"},
+		{Lowball, "7s 4h 6h 5c 3s", "%S", "Straight, Seven-high"},
+		{Lowball, "7s 4h 6h 5c 3s", "%e", "Straight"},
+		{Razz, "5h 4h 3h 2h Ah", "%s", "Five, Four, Three, Two, Ace-low"},
+		{Razz, "5h 4h 3h 2h Ah", "%S", "Five-low"},
+		{Razz, "5h 4h 3h 2h Ah", "%e", "Five-low"},
+		{Soko, "4h Th 6h 9c 7h", "%s", "Four Flush, Ten-high, kickers Seven, Six, Four, Nine"},
+		{Soko, "4h Th 6h 9c 7h", "%S", "Four Flush, Ten-high"},
+		{Soko, "4h Th 6h 9c 7h", "%e", "Four Flush"},
+		{Soko, "5c Qh 4h 3c 2c", "%s", "Four Straight, Five-high, kicker Queen"},
+		{Soko, "5c Qh 4h 3c 2c", "%S", "Four Straight, Five-high"},
+		{Soko, "5c Qh 4h 3c 2c", "%e", "Four Straight"},
+	}
+	for i, test := range tests {
+		ev := test.typ.Eval(Must(test.v), nil)
+		desc := ev.Desc(false)
+		if s, exp := fmt.Sprintf(test.s, desc), test.exp; s != test.exp {
+			t.Errorf("test %d %s %q expected %q, got: %q", i, test.typ, test.v, exp, s)
+		}
+	}
+}

@@ -144,10 +144,10 @@ var simpleTyp = Top20 + 1
 
 func init() {
 	simpleTyp := Top20 + 1
-	if err := RegisterBytes(simpleTyp, "simple", 0.10, simpleCSV); err != nil {
+	if err := RegisterBytes(simpleTyp, "simpl", 0.10, simpl); err != nil {
 		panic(fmt.Sprintf("expected no error, got: %v", err))
 	}
 }
 
 //go:embed simple.csv
-var simpleCSV []byte
+var simpl []byte

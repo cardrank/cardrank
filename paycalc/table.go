@@ -313,7 +313,7 @@ func (t *Table) LevelTitle(level int) string {
 	return ""
 }
 
-// MaxLevelTitle returnss the row title for the max level in tournament payout
+// MaxLevelTitle returns the row title for the max level in tournament payout
 // table.
 func (t *Table) MaxLevelTitle(level int) string {
 	for i, last := 0, 0; i < len(t.levels); i++ {

@@ -11,7 +11,7 @@ func TestLoad(t *testing.T) {
 		top  float64
 		buf  []byte
 	}{
-		{"simple", .10, simpleCSV},
+		{"simpl", .10, simpl},
 		{"top10", .10, top10},
 		{"top15", .15, top15},
 		{"top20", .20, top20},

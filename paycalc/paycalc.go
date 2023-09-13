@@ -171,7 +171,7 @@ func (typ Type) LevelTitle(level int) string {
 	return ""
 }
 
-// MaxLevelTitle returnss the row title for the max level in tournament payout
+// MaxLevelTitle returns the row title for the max level in tournament payout
 // table.
 func (typ Type) MaxLevelTitle(level int) string {
 	if t, ok := tables[typ]; ok {
