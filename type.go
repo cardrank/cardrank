@@ -1347,14 +1347,14 @@ func CactusDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 				fmt.Fprintf(f, ", kickers %N, %N, %N", best[2], best[3], best[4])
 			}
 		}
-	default:
-		fmt.Fprintf(f, "%N-high", best[0])
+	case r == Nothing:
 		switch verb {
 		case 'e':
+			fmt.Fprintf(f, "%N-high", best[0])
 		case 'S':
-			fmt.Fprint(f, ", kicker %N", best[1])
+			fmt.Fprintf(f, "%N, %N-high", best[0], best[1])
 		default:
-			fmt.Fprintf(f, ", kickers %N, %N, %N, %N", best[1], best[2], best[3], best[4])
+			fmt.Fprintf(f, "%N-high, kickers %N, %N, %N, %N", best[0], best[1], best[2], best[3], best[4])
 		}
 	}
 }
