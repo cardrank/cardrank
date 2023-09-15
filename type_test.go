@@ -464,7 +464,7 @@ func TestDescType(t *testing.T) {
 		{Holdem, "6h 6s Ac Qd Ks", "%S", "Pair, Sixes"},
 		{Holdem, "6h 6s Ac Qd Ks", "%e", "Pair"},
 		{Holdem, "7h 5c 4h 2h As", "%s", "Ace-high, kickers Seven, Five, Four, Two"},
-		{Holdem, "7h 5c 4h 2h As", "%S", "Ace, Seven-high"},
+		{Holdem, "7h 5c 4h 2h As", "%S", "Ace-high"},
 		{Holdem, "7h 5c 4h 2h As", "%e", "Ace-high"},
 		{Lowball, "7h 2h 3c 4h 6h", "%s", "Seven, Six, Four, Three, Two-low, No. 2"},
 		{Lowball, "7h 2h 3c 4h 6h", "%S", "Seven-low, No. 2"},
