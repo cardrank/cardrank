@@ -18,9 +18,9 @@ import (
 // [Holdem] is a best-5 card game using a standard deck of 52 cards (see
 // [DeckFrench]), having a pocket of 2 cards, 5 community board cards, and a
 // Pre-Flop, Flop, Turn, and River streets. 2 pocket cards are dealt on the
-// Pre-Flop, with 3 board cards on the Flop, 1 board card on the Turn, and one
-// on the River. 1 card is discarded on the Flop, Turn, and River, prior to the
-// board cards being dealt.
+// Pre-Flop, with 3 board cards on the Flop, 1 board card on the Turn, and 1
+// board card on the River. 1 card is discarded on the Flop, Turn, and River,
+// prior to the board cards being dealt.
 //
 // [Split] is the Hi/Lo variant of [Holdem], using a [Eight]-or-better
 // qualifier (see [RankEightOrBetter]) for the Lo.
@@ -29,9 +29,9 @@ import (
 // cards with ranks of 6+ (see [DeckShort]). [Flush] ranks over [FullHouse].
 //
 // [Manila] is a [Holdem] variant using a Manila deck of 32 cards, having only
-// cards with ranks of 7+ (see [DeckManila]), forcing the use of 2 pocket
-// cards, adding a Drop street before the Flop, and with all 5 streets (instead
-// of 4) receiving 1 board card each. [Flush] ranks over [FullHouse].
+// cards with ranks of 7+ (see [DeckManila]), forcing the use of the 2 pocket
+// cards, adding a Drop street before the Flop, and with all 5 streets
+// receiving 1 board card each. [Flush] ranks over [FullHouse].
 //
 // [Spanish] is a [Holdem]/[Manila] variant, using a Spanish deck of 28 cards,
 // having only cards with ranks of 8+ (see [DeckSpanish]).
@@ -149,7 +149,23 @@ import (
 // (exchanged) multiple times on the 5th, 6th, or River streets. See
 // [NewBadugiEval] for more details.
 //
+// [Kuhn] is a best high card game, using a 3 card deck ([King], [Queen],
+// [Jack]), having 1 pocket card and no community board cards. Useful for game
+// tree testing. See [Kuhn poker].
+//
+// [Leduc] is a best high card game, using a 6 card deck ([King], [Queen],
+// [Jack] each of the [Spade] and [Heart]), having 1 pocket card and 1
+// community card. Useful for game tree testing. See [Deepstack Leduc].
+//
+// [RhodeIsland] is a best-3 card game that is simplified version of [Holdem],
+// using a standard deck of 52 cards (see [DeckFrench]), having 1 pocket card,
+// and 1 community board cards dealt each on the Flop and Turn. Useful for game
+// tree testing. See [Gilpin & Sandholm].
+//
 // [noinit]: https://pkg.go.dev/github.com/cardrank/cardrank#readme-noinit
+// [Kuhn poker]: https://en.wikipedia.org/wiki/Kuhn_poker
+// [Deepstack Leduc]: https://github.com/lifrordi/DeepStack-Leduc
+// [Gilpin & Sandholm]: https://www.cs.cmu.edu/~sandholm/RIHoldEmWithScreenShots.aaai05reviewed.pdf
 type Type uint16
 
 // Types.
@@ -187,6 +203,9 @@ const (
 	LowballTriple  Type = 'L'<<8 | '3' // L3
 	Razz           Type = 'R'<<8 | 'a' // Ra
 	Badugi         Type = 'B'<<8 | 'a' // Ba
+	Kuhn           Type = 'K'<<8 | 'u' // Ku
+	Leduc          Type = 'L'<<8 | 'e' // Le
+	RhodeIsland    Type = 'R'<<8 | 'I' // RI
 )
 
 // DefaultTypes returns the default type descriptions. The returned
@@ -235,6 +254,9 @@ func DefaultTypes() []TypeDesc {
 		{"L3", LowballTriple, "LowballTriple", WithLowball(true)},
 		{"Ra", Razz, "Razz", WithRazz()},
 		{"Ba", Badugi, "Badugi", WithBadugi()},
+		{"Ku", Kuhn, "Kuhn", WithKuhn()},
+		{"Le", Leduc, "Leduc", WithLeduc()},
+		{"RI", RhodeIsland, "RhodeIsland", WithRhodeIsland()},
 	} {
 		desc, err := NewType(d.id, d.typ, d.name, d.opt)
 		if err != nil {
@@ -688,7 +710,7 @@ func WithDallas(low bool, opts ...StreetOption) TypeOption {
 		desc.Low = low
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
-		desc.Eval = EvalDallas
+		desc.Eval = EvalOmaha
 		desc.Apply(opts...)
 	}
 }
@@ -700,7 +722,7 @@ func WithHouston(low bool, opts ...StreetOption) TypeOption {
 		desc.Low = low
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(3, 1, 2, 1, 1)
-		desc.Eval = EvalHouston
+		desc.Eval = EvalOmaha
 		desc.Apply(opts...)
 	}
 }
@@ -788,7 +810,7 @@ func WithOmahaFive(low bool, opts ...StreetOption) TypeOption {
 		desc.Low = low
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(5, 0, 3, 1, 1)
-		desc.Eval = EvalOmahaFive
+		desc.Eval = EvalOmaha
 		desc.Apply(opts...)
 	}
 }
@@ -800,7 +822,7 @@ func WithOmahaSix(low bool, opts ...StreetOption) TypeOption {
 		desc.Low = low
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(6, 0, 3, 1, 1)
-		desc.Eval = EvalOmahaSix
+		desc.Eval = EvalOmaha
 		desc.Apply(opts...)
 	}
 }
@@ -812,7 +834,7 @@ func WithCourchevel(low bool, opts ...StreetOption) TypeOption {
 		desc.Low = low
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(5, 0, 3, 1, 1)
-		desc.Eval = EvalOmahaFive
+		desc.Eval = EvalOmaha
 		// pre-flop
 		desc.Streets[0].Pocket = 5
 		desc.Streets[0].Board = 1
@@ -891,6 +913,63 @@ func WithBadugi(opts ...StreetOption) TypeOption {
 		for i := 1; i < 4; i++ {
 			desc.Streets[i].PocketDraw = 4
 		}
+		desc.Apply(opts...)
+	}
+}
+
+// WithKuhn is a type description option to set [Kuhn] definitions.
+func WithKuhn(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 2
+		desc.Deck = DeckKuhn
+		desc.Blinds = StudBlinds()
+		desc.Streets = []StreetDesc{
+			{
+				Id:     'p',
+				Name:   "Pre-Flop",
+				Pocket: 1,
+			},
+		}
+		desc.Deck = DeckKuhn
+		desc.Eval = EvalHigh
+		desc.HiDesc = DescHigh
+		desc.Apply(opts...)
+	}
+}
+
+// WithLeduc is a type description option to set [Leduc] definitions.
+func WithLeduc(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 2
+		desc.Deck = DeckLeduc
+		desc.Blinds = StudBlinds()
+		desc.Streets = []StreetDesc{
+			{
+				Id:     'p',
+				Name:   "Pre-Flop",
+				Pocket: 1,
+			},
+			{
+				Id:    'f',
+				Name:  "Flop",
+				Board: 1,
+			},
+		}
+		desc.Eval = EvalHigh
+		desc.HiDesc = DescHigh
+		desc.Apply(opts...)
+	}
+}
+
+// WithRhodeIsland is a type description option to set [RhodeIsland] definitions.
+func WithRhodeIsland(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 2
+		desc.Blinds = HoldemBlinds()
+		streets := HoldemStreets(1, 1, 1, 1, 0)
+		desc.Streets = streets[:3]
+		desc.Eval = EvalThree
+		desc.HiDesc = DescThree
 		desc.Apply(opts...)
 	}
 }
@@ -1034,15 +1113,13 @@ const (
 	EvalShort         EvalType = 't'
 	EvalManila        EvalType = 'm'
 	EvalSpanish       EvalType = 'p'
-	EvalDallas        EvalType = 'a'
-	EvalHouston       EvalType = 'u'
 	EvalOmaha         EvalType = 'o'
-	EvalOmahaFive     EvalType = 'v'
-	EvalOmahaSix      EvalType = 'i'
 	EvalSoko          EvalType = 'k'
 	EvalLowball       EvalType = 'l'
 	EvalRazz          EvalType = 'r'
 	EvalBadugi        EvalType = 'b'
+	EvalHigh          EvalType = 'h'
+	EvalThree         EvalType = '3'
 )
 
 // New creates a eval func for the type.
@@ -1053,21 +1130,13 @@ func (typ EvalType) New(normalize, low bool) EvalFunc {
 	case EvalJacksOrBetter:
 		return NewJacksOrBetterEval(normalize)
 	case EvalShort:
-		return NewShortEval(normalize)
+		return NewModifiedEval(RankShort, Rank(DeckShort), EvalRank.FromFlushOver, normalize, false)
 	case EvalManila:
-		return NewManilaEval(normalize)
+		return NewOmahaEval(RankManila, Rank(DeckManila), EvalRank.FromFlushOver, normalize, false)
 	case EvalSpanish:
-		return NewSpanishEval(normalize)
-	case EvalDallas:
-		return NewOmahaEval(normalize, low)
-	case EvalHouston:
-		return NewOmahaEval(normalize, low)
+		return NewOmahaEval(RankSpanish, Rank(DeckSpanish), EvalRank.FromFlushOver, normalize, false)
 	case EvalOmaha:
-		return NewOmahaEval(normalize, low)
-	case EvalOmahaFive:
-		return NewOmahaEval(normalize, low)
-	case EvalOmahaSix:
-		return NewOmahaEval(normalize, low)
+		return NewOmahaEval(RankCactus, Rank(DeckFrench), nil, normalize, low)
 	case EvalSoko:
 		return NewSokoEval(normalize, low)
 	case EvalLowball:
@@ -1076,6 +1145,10 @@ func (typ EvalType) New(normalize, low bool) EvalFunc {
 		return NewRazzEval(normalize)
 	case EvalBadugi:
 		return NewBadugiEval(normalize)
+	case EvalHigh:
+		return NewHighEval()
+	case EvalThree:
+		return NewThreeEval()
 	}
 	return nil
 }
@@ -1087,11 +1160,7 @@ func (typ EvalType) Cactus() bool {
 		EvalShort,
 		EvalManila,
 		EvalSpanish,
-		EvalDallas,
-		EvalHouston,
 		EvalOmaha,
-		EvalOmahaFive,
-		EvalOmahaSix,
 		EvalSoko:
 		return true
 	}
@@ -1123,15 +1192,13 @@ func (typ EvalType) Byte() byte {
 		EvalShort,
 		EvalManila,
 		EvalSpanish,
-		EvalDallas,
-		EvalHouston,
 		EvalOmaha,
-		EvalOmahaFive,
-		EvalOmahaSix,
 		EvalSoko,
 		EvalLowball,
 		EvalRazz,
-		EvalBadugi:
+		EvalBadugi,
+		EvalHigh,
+		EvalThree:
 		return byte(typ)
 	}
 	return ' '
@@ -1150,16 +1217,8 @@ func (typ EvalType) Name() string {
 		return "Manila"
 	case EvalSpanish:
 		return "Spanish"
-	case EvalDallas:
-		return "Dallas"
-	case EvalHouston:
-		return "Houston"
 	case EvalOmaha:
 		return "Omaha"
-	case EvalOmahaFive:
-		return "OmahaFive"
-	case EvalOmahaSix:
-		return "OmahaSix"
 	case EvalSoko:
 		return "Soko"
 	case EvalLowball:
@@ -1168,6 +1227,10 @@ func (typ EvalType) Name() string {
 		return "Razz"
 	case EvalBadugi:
 		return "Badugi"
+	case EvalHigh:
+		return "High"
+	case EvalThree:
+		return "Three"
 	}
 	return ""
 }
@@ -1183,6 +1246,8 @@ const (
 	DescLow       DescType = 'l'
 	DescLowball   DescType = 'b'
 	DescRazz      DescType = 'r'
+	DescHigh      DescType = 'h'
+	DescThree     DescType = '3'
 )
 
 // Format satisfies the [fmt.Formatter] interface.
@@ -1210,7 +1275,9 @@ func (typ DescType) Byte() byte {
 		DescSoko,
 		DescLow,
 		DescLowball,
-		DescRazz:
+		DescRazz,
+		DescHigh,
+		DescThree:
 		return byte(typ)
 	}
 	return ' '
@@ -1231,6 +1298,10 @@ func (typ DescType) Name() string {
 		return "Lowball"
 	case DescRazz:
 		return "Razz"
+	case DescHigh:
+		return "High"
+	case DescThree:
+		return "Three"
 	}
 	return ""
 }
@@ -1265,6 +1336,10 @@ func (typ DescType) Desc(f fmt.State, verb rune, rank EvalRank, best, unused []C
 			LowballDesc(f, verb, rank, best, unused)
 		case DescSoko:
 			SokoDesc(f, verb, rank, best, unused)
+		case DescHigh:
+			HighDesc(f, verb, rank, best, unused)
+		case DescThree:
+			ThreeDesc(f, verb, rank, best, unused)
 		}
 	}
 }
@@ -1438,6 +1513,21 @@ func RazzDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	default:
 		CactusDesc(f, verb, Invalid-rank, best, unused)
 	}
+}
+
+// HighDesc writes a [High] description to f for the rank, best, and unused
+// cards.
+func HighDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+	if rank == 0 || rank == Invalid {
+		fmt.Fprintf(f, "%s", Invalid)
+	} else {
+		fmt.Fprintf(f, "%s", Ace-Rank(rank)+1)
+	}
+}
+
+// ThreeDesc writes a [Three] description to f for the rank, best, and unused
+// cards.
+func ThreeDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 }
 
 // ordinal returns the ordinal string for n (1st, 2nd, ...).

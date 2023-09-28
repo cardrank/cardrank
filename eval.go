@@ -487,58 +487,11 @@ func NewJacksOrBetterEval(normalize bool) EvalFunc {
 	}
 }
 
-// NewShortEval creates a [Short] eval func.
-func NewShortEval(normalize bool) EvalFunc {
-	return NewModifiedEval(RankShort, Rank(DeckShort), EvalRank.FromFlushOver, normalize, false)
-}
-
-// NewManilaEval creates a [Manila] eval func.
-func NewManilaEval(normalize bool) EvalFunc {
-	return NewDallasEval(RankManila, Rank(DeckManila), EvalRank.FromFlushOver, normalize, false)
-}
-
-// NewSpanishEval creates a [Spanish] eval func.
-func NewSpanishEval(normalize bool) EvalFunc {
-	return NewDallasEval(RankSpanish, Rank(DeckSpanish), EvalRank.FromFlushOver, normalize, false)
-}
-
-// NewDallasEval creates a [Dallas] eval func.
-//
-// Uses pocket of 2 and any 3 from a board of 3, 4, or 5 to make a best-5.
-func NewDallasEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize, low bool) EvalFunc {
-	lo, max := RankFunc(nil), Invalid
-	if low {
-		lo, max = RankEightOrBetter, eightOrBetterMax
-	}
-	return func(ev *Eval, p, b []Card) {
-		if len(p) < 2 {
-			return
-		}
-		var f func(RankFunc, RankFunc, Card, Card, []Card, EvalRank)
-		switch len(b) {
-		case 3:
-			f = ev.HiLo23
-		case 4:
-			f = ev.HiLo24
-		case 5:
-			f = ev.HiLo25
-		}
-		f(hi, lo, p[0], p[1], b, max)
-		if normalize {
-			bestCactus(ev.HiRank, ev.HiBest, ev.HiUnused, base, inv)
-			if low {
-				bestAceLow(ev.LoUnused)
-				bestAceHigh(ev.LoUnused)
-			}
-		}
-	}
-}
-
 // NewOmahaEval creates a [Omaha] eval func.
 //
 // Uses any 2 from 2, 3, 4, 5, or 6 pocket cards, and any 3 from 3, 4 or 5
 // board cards to make a best-5.
-func NewOmahaEval(normalize, low bool) EvalFunc {
+func NewOmahaEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize, low bool) EvalFunc {
 	return func(ev *Eval, p, b []Card) {
 		np, nb := len(p), len(b)
 		if np < 2 || 6 < np || nb < 3 || 5 < nb {
@@ -576,7 +529,7 @@ func NewOmahaEval(normalize, low bool) EvalFunc {
 		for i, r := 0, EvalRank(0); i < ip; i++ {
 			for j := 0; j < ib; j++ {
 				c0, c1, c2, c3, c4 = vp[i][0], vp[i][1], vb[j][0], vb[j][1], vb[j][2]
-				if r = RankCactus(c0, c1, c2, c3, c4); r < ev.HiRank {
+				if r = hi(c0, c1, c2, c3, c4); r < ev.HiRank {
 					ev.HiRank = r
 					ev.HiBest = []Card{c0, c1, c2, c3, c4}
 					ev.HiUnused = append(ev.HiUnused[:0], vp[i][2:]...)
@@ -596,7 +549,15 @@ func NewOmahaEval(normalize, low bool) EvalFunc {
 			ev.LoBest, ev.LoUnused = loBest, loUnused
 		}
 		if normalize {
-			bestOmaha(ev, low)
+			bestCactus(ev.HiRank, ev.HiBest, nil, base, inv)
+			bestAceHigh(ev.HiUnused)
+			switch {
+			case low && ev.LoRank < eightOrBetterMax:
+				bestAceLow(ev.LoBest)
+				bestAceHigh(ev.LoUnused)
+			case low:
+				ev.LoBest, ev.LoUnused = nil, nil
+			}
 		}
 	}
 }
@@ -698,6 +659,43 @@ func NewBadugiEval(normalize bool) EvalFunc {
 			bestAceHigh(unused)
 		}
 		ev.HiRank, ev.HiBest, ev.HiUnused = EvalRank(count<<13|rank), best, unused
+	}
+}
+
+// NewHighEval creates a high card eval func.
+func NewHighEval() EvalFunc {
+	return func(ev *Eval, p, b []Card) {
+		np, nb := len(p), len(b)
+		if 0 < np+nb && p[0].Rank() <= Ace {
+			v := make([]Card, np+nb)
+			copy(v, p)
+			copy(v[np:], b)
+			bestAceHigh(v)
+			ev.HiRank = EvalRank(Ace-v[0].Rank()) + 1
+			ev.HiBest = []Card{v[0]}
+			if 1 < np+nb {
+				ev.HiUnused = v[1:]
+			}
+		}
+	}
+}
+
+// NewThreeEval creates a best-3 eval func.
+//
+//	Straight Flush
+//	Three of a Kind
+//	Straight
+//	Flush
+//	One Pair
+//	High Card
+func NewThreeEval() EvalFunc {
+	return func(ev *Eval, p, b []Card) {
+	}
+}
+
+// NewLeducEval creates a matching high card eval func.
+func NewLeducEval() EvalFunc {
+	return func(ev *Eval, p, b []Card) {
 	}
 }
 
@@ -1153,19 +1151,6 @@ func bestAceLow(v []Card) {
 		}
 		return v[i].Suit() < v[j].Suit()
 	})
-}
-
-// bestOmaha sets the best Omaha on the eval.
-func bestOmaha(ev *Eval, low bool) {
-	bestCactus(ev.HiRank, ev.HiBest, nil, 0, nil)
-	bestAceHigh(ev.HiUnused)
-	switch {
-	case low && ev.LoRank < eightOrBetterMax:
-		bestAceLow(ev.LoBest)
-		bestAceHigh(ev.LoUnused)
-	case low:
-		ev.LoBest, ev.LoUnused = nil, nil
-	}
 }
 
 // bestSoko sets the best Soko in v.

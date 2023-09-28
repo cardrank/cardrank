@@ -28,6 +28,12 @@ const (
 	DeckSpanish = DeckType(Eight)
 	// DeckRoyal is a deck of 20 playing cards of rank 10+ (see [Royal]).
 	DeckRoyal = DeckType(Ten)
+	// DeckKuhn is a deck of 3 playing cards, a [King], [Queen], and a [Jack]
+	// (see [Kuhn]).
+	DeckKuhn = DeckType(^uint8(0) - 1)
+	// DeckLeduc is a deck of 6 playing cards, a [King], [Queen], and a [Jack]
+	// of the [Spade] and [Heart] suits (see [Leduc]).
+	DeckLeduc = DeckType(^uint8(0) - 2)
 )
 
 // Name returns the deck name.
@@ -43,6 +49,10 @@ func (typ DeckType) Name() string {
 		return "Spanish"
 	case DeckRoyal:
 		return "Royal"
+	case DeckKuhn:
+		return "Kuhn"
+	case DeckLeduc:
+		return "Leduc"
 	}
 	return ""
 }
@@ -52,7 +62,7 @@ func (typ DeckType) Desc(short bool) string {
 	switch french := typ == DeckFrench; {
 	case french && short:
 		return ""
-	case french:
+	case french, typ == DeckKuhn, typ == DeckLeduc:
 		return typ.Name()
 	}
 	return typ.Name() + " (" + strconv.Itoa(int(typ+2)) + "+)"
@@ -96,6 +106,15 @@ func (typ DeckType) Unshuffled() []Card {
 			}
 		}
 		return v
+	case DeckKuhn:
+		return []Card{
+			New(King, Spade), New(Queen, Spade), New(Jack, Spade),
+		}
+	case DeckLeduc:
+		return []Card{
+			New(King, Spade), New(Queen, Spade), New(Jack, Spade),
+			New(King, Heart), New(Queen, Heart), New(Jack, Heart),
+		}
 	}
 	return nil
 }
@@ -107,6 +126,8 @@ var (
 	deckManila  []Card
 	deckSpanish []Card
 	deckRoyal   []Card
+	deckKuhn    []Card
+	deckLeduc   []Card
 )
 
 func init() {
@@ -115,6 +136,8 @@ func init() {
 	deckManila = DeckManila.Unshuffled()
 	deckSpanish = DeckSpanish.Unshuffled()
 	deckRoyal = DeckRoyal.Unshuffled()
+	deckKuhn = DeckKuhn.Unshuffled()
+	deckLeduc = DeckLeduc.Unshuffled()
 }
 
 // v returns the cards for the type.
@@ -130,6 +153,10 @@ func (typ DeckType) v() []Card {
 		return deckSpanish
 	case DeckRoyal:
 		return deckRoyal
+	case DeckKuhn:
+		return deckKuhn
+	case DeckLeduc:
+		return deckLeduc
 	}
 	return nil
 }
@@ -250,8 +277,8 @@ func (d *Deck) Shuffle(shuffler Shuffler, shuffles int) {
 // [package example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package
 type Dealer struct {
 	TypeDesc
-	Count   int
 	Deck    *Deck
+	Count   int
 	Active  map[int]bool
 	Runs    []*Run
 	Results []*Result
@@ -266,8 +293,8 @@ type Dealer struct {
 func NewDealer(desc TypeDesc, deck *Deck, count int) *Dealer {
 	d := &Dealer{
 		TypeDesc: desc,
-		Count:    count,
 		Deck:     deck,
+		Count:    count,
 	}
 	d.init()
 	return d

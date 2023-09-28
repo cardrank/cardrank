@@ -5,11 +5,13 @@ var (
 	unique5       map[uint32]EvalRank
 	sokoFlush4    map[uint32]EvalRank
 	sokoStraight4 map[uint32]EvalRank
+	bestThree     map[uint32]EvalRank
 )
 
 func init() {
 	flush5, unique5 = cactusMaps()
 	sokoFlush4, sokoStraight4 = sokoMaps()
+	bestThree = bestThreeMaps()
 	cactus = Cactus
 }
 
@@ -179,6 +181,12 @@ func sokoMaps() (map[uint32]EvalRank, map[uint32]EvalRank) {
 		straight4[0xf<<r] = 1 + TwoPair + EvalRank(13*len(flush4)) + 13*EvalRank(i)
 	}
 	return flush4, straight4
+}
+
+// bestThreeMaps
+func bestThreeMaps() map[uint32]EvalRank {
+	m := make(map[uint32]EvalRank)
+	return m
 }
 
 // nextBitPermutation calculates the lexicographical next bit permutation.
