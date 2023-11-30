@@ -268,6 +268,18 @@ func TestOddsCalc(t *testing.T) {
 			[]int{1, 2, 3, 4, 5},
 		},
 		{
+			Omaha,
+			[]string{
+				"Ks Kh 6s 2d",
+				"Ah Th 8d 7h",
+				"Qc Tc 7c 7d",
+			},
+			"4s Td 8c",
+			[]int{208, 318, 151},
+			677,
+			nil,
+		},
+		{
 			OmahaFive,
 			[]string{
 				"Kh Qh 2c 2h 2c",
