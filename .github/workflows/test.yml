@@ -2,16 +2,12 @@ on: [push, pull_request]
 name: Test
 jobs:
   test:
-    strategy:
-      matrix:
-        go-version: [stable]
-        platform: [ubuntu-latest]
-    runs-on: ${{ matrix.platform }}
+    runs-on: ubuntu-latest
     steps:
     - name: Install Go
       uses: actions/setup-go@v4
       with:
-        go-version: ${{ matrix.go-version }}
+        go-version: stable
     - name: Checkout code
       uses: actions/checkout@v3
     - name: Test
