@@ -114,6 +114,9 @@ import (
 // [Courchevel] is a [OmahaFive] variant, where 1 board card is dealt on the
 // Pre-Flop, and only 2 board cards dealt on the Flop.
 //
+// [CourchevelHiLo] is the Hi/Lo variant of [Courchevel], using a
+// [Eight]-or-better qualifier (see [RankEightOrBetter]) for the Lo.
+//
 // [Fusion] is a [Holdem]/[Omaha] variant where only 2 pocket cards are dealt
 // on the Pre-Flop, with 1 additional pocket card dealt on the Flop and Turn.
 //
