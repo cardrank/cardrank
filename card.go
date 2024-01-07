@@ -294,7 +294,7 @@ func (suit Suit) UnicodeWhite() rune {
 func (suit Suit) Emoji() string {
 	switch suit {
 	case Spade, Heart, Diamond, Club:
-		return string(suit.UnicodeBlack()) + "\ufe0f"
+		return string([]rune{suit.UnicodeBlack(), '\ufe0f'})
 	}
 	return ""
 }
@@ -555,6 +555,8 @@ func (c Card) String() string {
 //	B - black unicode pip rune (as in b) without rank (♠♥♦♣)
 //	h - rank (as in s) and the white unicode pip rune (♤♡♢♧) (ex: K♤ A♡)
 //	H - white unicode pip rune (as in h) without rank (♤♡♢♧)
+//	e - rank (as in s) and the emoji pip (♠️ ❤️ ♦️ ♣️ ) (ex: K♠️ A❤️ )
+//	E - emoji pip (as in e) without rank (♠️ ❤️ ♦️ ♣️ )
 //	c - playing card rune (ex: 🂡  🂱  🃁  🃑)
 //	C - playing card rune (as in c), substituting knights for jacks (ex: 🂬  🂼  🃌  🃜)
 //	n - rank name, lower cased (ex: one two jack queen king ace)
@@ -589,6 +591,10 @@ func (c Card) Format(f fmt.State, verb rune) {
 		buf = append(buf, (string(c.RankByte()) + string(c.Suit().UnicodeWhite()))...)
 	case 'H':
 		buf = append(buf, string(c.Suit().UnicodeWhite())...)
+	case 'e':
+		buf = append(buf, (string(c.RankByte()) + string(c.Suit().Emoji()))...)
+	case 'E':
+		buf = append(buf, string(c.Suit().Emoji())...)
 	case 'c':
 		buf = append(buf, string(c.Rune())...)
 	case 'C':
