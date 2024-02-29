@@ -127,7 +127,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 			t.Fatalf("expected no error, got: %v", err)
 		}
 		p := strconv.Itoa(int(typ.Top() * 100))
-		if s, exp := string(buf), fmt.Sprintf(`{"a":"top`+p+`"}`); s != exp {
+		if s, exp := string(buf), `{"a":"top`+p+`"}`; s != exp {
 			t.Errorf("expected:\n%s\ngot:\n%s", exp, s)
 		}
 		var v map[string]Type

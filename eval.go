@@ -773,6 +773,8 @@ func (ev *Eval) Format(f fmt.State, verb rune) {
 		fmt.Fprintf(f, "%s %s", ev.Desc(false), ev.HiBest)
 	case 'e':
 		fmt.Fprintf(f, "%s %e", ev.Desc(false), ev.HiBest)
+	case 'a':
+		fmt.Fprintf(f, "%s %a", ev.Desc(false), Formatter(ev.HiBest))
 	case 'q':
 		fmt.Fprintf(f, "\"%s %s\"", ev.Desc(false), ev.HiBest)
 	case 'S':

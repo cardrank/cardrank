@@ -9,6 +9,14 @@ import (
 	"unicode"
 )
 
+// AlternateEmoji are alternate emoji pips.
+var AlternateEmoji = [4]string{
+	"♠️",
+	"♥️",
+	"🔷",
+	"☘️",
+}
+
 // Rank is a card rank.
 type Rank uint8
 
@@ -299,6 +307,21 @@ func (suit Suit) Emoji() string {
 	return ""
 }
 
+// ALterEmoji returns the card suit alternate pip emoji.
+func (suit Suit) AlternateEmoji() string {
+	switch suit {
+	case Spade:
+		return AlternateEmoji[0]
+	case Heart:
+		return AlternateEmoji[1]
+	case Diamond:
+		return AlternateEmoji[2]
+	case Club:
+		return AlternateEmoji[3]
+	}
+	return ""
+}
+
 // Card is a card consisting of a [Rank] (23456789TJQKA) and [Suit] (shdc).
 type Card uint32
 
@@ -557,6 +580,8 @@ func (c Card) String() string {
 //	H - white unicode pip rune (as in h) without rank (♤♡♢♧)
 //	e - rank (as in s) and the emoji pip (♠️ ❤️ ♦️ ♣️ ) (ex: K♠️ A❤️ )
 //	E - emoji pip (as in e) without rank (♠️ ❤️ ♦️ ♣️ )
+//	a - rank (as in s) and the alternate emoji pip (see [AlternateEmoji])
+//	A - alternate emoji pip (see [AlternateEmoji])
 //	c - playing card rune (ex: 🂡  🂱  🃁  🃑)
 //	C - playing card rune (as in c), substituting knights for jacks (ex: 🂬  🂼  🃌  🃜)
 //	n - rank name, lower cased (ex: one two jack queen king ace)
@@ -592,9 +617,13 @@ func (c Card) Format(f fmt.State, verb rune) {
 	case 'H':
 		buf = append(buf, string(c.Suit().UnicodeWhite())...)
 	case 'e':
-		buf = append(buf, (string(c.RankByte()) + string(c.Suit().Emoji()))...)
+		buf = append(buf, (string(c.RankByte()) + c.Suit().Emoji())...)
 	case 'E':
-		buf = append(buf, string(c.Suit().Emoji())...)
+		buf = append(buf, c.Suit().Emoji()...)
+	case 'a':
+		buf = append(buf, (string(c.RankByte()) + c.Suit().AlternateEmoji())...)
+	case 'A':
+		buf = append(buf, c.Suit().AlternateEmoji()...)
 	case 'c':
 		buf = append(buf, string(c.Rune())...)
 	case 'C':
