@@ -195,6 +195,7 @@ func TestDealerRuns(t *testing.T) {
 		{OmahaHiLo, 4, 72},
 		{FusionHiLo, 5, 256},
 		{Manila, 3, 768},
+		{OmahaRoyal, 2, 101},
 	}
 	for _, tt := range tests {
 		test := tt

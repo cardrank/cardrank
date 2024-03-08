@@ -111,6 +111,9 @@ import (
 // use of 2 of the 6 pocket cards and any 3 of the 5 board cards to make the
 // best-5.
 //
+// [OmahaRoyal] is a [Omaha] variant using a Royal deck of 20 cards, having
+// only cards with ranks of 10+ (see [DeckRoyal]).
+//
 // [Courchevel] is a [OmahaFive] variant, where 1 board card is dealt on the
 // Pre-Flop, and only 2 board cards dealt on the Flop.
 //
@@ -196,6 +199,7 @@ const (
 	OmahaDouble    Type = 'O'<<8 | 'd' // Od
 	OmahaFive      Type = 'O'<<8 | '5' // O5
 	OmahaSix       Type = 'O'<<8 | '6' // O6
+	OmahaRoyal     Type = 'O'<<8 | 'r' // Or
 	Courchevel     Type = 'O'<<8 | 'c' // Oc
 	CourchevelHiLo Type = 'O'<<8 | 'e' // Oe
 	Fusion         Type = 'O'<<8 | 'f' // Of
@@ -247,6 +251,7 @@ func DefaultTypes() []TypeDesc {
 		{"Od", OmahaDouble, "OmahaDouble", WithOmahaDouble()},
 		{"O5", OmahaFive, "OmahaFive", WithOmahaFive(false)},
 		{"O6", OmahaSix, "OmahaSix", WithOmahaSix(false)},
+		{"Or", OmahaRoyal, "OmahaRoyal", WithOmahaRoyal()},
 		{"Oc", Courchevel, "Courchevel", WithCourchevel(false)},
 		{"Oe", CourchevelHiLo, "CourchevelHiLo", WithCourchevel(true)},
 		{"Of", Fusion, "Fusion", WithFusion(false)},
@@ -826,6 +831,18 @@ func WithOmahaSix(low bool, opts ...StreetOption) TypeOption {
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(6, 0, 3, 1, 1)
 		desc.Eval = EvalOmaha
+		desc.Apply(opts...)
+	}
+}
+
+// WithOmahaRoyal is a type description option to set [OmahaRoyal] definitions.
+func WithOmahaRoyal(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 2
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(4, 0, 3, 1, 1)
+		desc.Eval = EvalOmaha
+		desc.Deck = DeckRoyal
 		desc.Apply(opts...)
 	}
 }
