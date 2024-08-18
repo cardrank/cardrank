@@ -678,6 +678,59 @@ func (v Formatter) Format(f fmt.State, verb rune) {
 	_, _ = f.Write([]byte{']'})
 }
 
+// Combine combines the cards in v.
+func (v Formatter) Combine() Card {
+	n := len(v)
+	if n == 0 {
+		return InvalidCard
+	}
+	return v.combine(n)
+}
+
+// comibne combines the cards in v.
+func (v Formatter) combine(n int) Card {
+	c := v[0]
+	for i := 1; i < n; i++ {
+		c |= v[i]
+	}
+	return c
+}
+
+// Suits returns unused suits in v.
+func (v Formatter) Suits() []Suit {
+	n := len(v)
+	if n == 0 {
+		return []Suit{Spade, Heart, Diamond, Club}
+	}
+	s := v.combine(n).Suit()
+	var suits []Suit
+	for _, suit := range []Suit{Spade, Heart, Diamond, Club} {
+		if s&suit == 0 {
+			suits = append(suits, suit)
+		}
+	}
+	return suits
+}
+
+// Ranks returns unused ranks in v.
+func (v Formatter) Ranks() []Rank {
+	n := len(v)
+	if n == 0 {
+		return []Rank{Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Three, Two}
+	}
+	m := make(map[Rank]bool, len(v))
+	for i := 0; i < n; i++ {
+		m[v[i].Rank()] = true
+	}
+	var ranks []Rank
+	for rank := Ace; rank >= Two && rank != InvalidRank; rank-- {
+		if !m[rank] {
+			ranks = append(ranks, rank)
+		}
+	}
+	return ranks
+}
+
 // ParseError is a parse error.
 type ParseError struct {
 	S   string

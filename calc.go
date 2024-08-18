@@ -606,9 +606,12 @@ func (g *BinGen[T]) Unused() {
 // calculations.
 var startingExpValue map[string]ExpValue
 
+// startingCactus is the preloaded map of starting cactus values.
+var startingCactus map[string]EvalRank
+
 func init() {
 	var err error
-	if startingExpValue, err = holdemStarting(); err != nil {
+	if startingExpValue, startingCactus, err = holdemStarting(); err != nil {
 		panic(err)
 	}
 }
@@ -639,6 +642,66 @@ func StartingExpValue(pocket []Card) *ExpValue {
 	return expv
 }
 
+// StartingEvalRank returns the worst (highest) possible resulting 5-card rank
+// for the pocket.
+//
+// For example, a single [King] would be the highest non-[Straight] and
+// non-[Flush] value between [Pair] and [HighCard].
+func StartingEvalRank(pocket []Card) EvalRank {
+	var f func([]Card) ([][]Card, int)
+	switch n := len(pocket); n {
+	case 0:
+		return Nothing
+	case 1:
+		switch pocket[0].Rank() {
+		case Ace:
+			return cactusAce
+		case King:
+			return cactusKing
+		case Queen:
+			return cactusQueen
+		case Jack:
+			return cactusJack
+		case Ten:
+			return cactusTen
+		case Nine:
+			return cactusNine
+		case Eight:
+			return cactusEight
+		case Seven:
+			return cactusSeven
+		case Six:
+			return cactusSix
+		case Five:
+			return cactusFive
+		case Four:
+			return cactusFour
+		case Three:
+			return cactusThree
+		case Two:
+			return cactusTwo
+		}
+	case 2:
+		return startingCactus[HashKey(pocket[0], pocket[1])]
+	case 3:
+		f = take3c2
+	case 4:
+		f = take4c2
+	case 5:
+		f = take5c2
+	case 6:
+		f = take6c2
+	default:
+		panic(fmt.Sprintf("invalid pocket len %d", n))
+	}
+	pockets, n := f(pocket)
+	r := Invalid
+	for i := 0; i < n; i++ {
+		r = min(r, startingCactus[HashKey(pockets[i][0], pockets[i][1])])
+	}
+	return r
+}
+
 // HashKey returns the hash key of the pocket cards.
 func HashKey(c0, c1 Card) string {
 	r0, r1 := c0.Rank(), c1.Rank()
@@ -655,36 +718,36 @@ func HashKey(c0, c1 Card) string {
 }
 
 // HoldemStarting returns the starting Holdem pockets.
-func HoldemStarting() map[string]ExpValue {
-	m, err := holdemStarting()
+func HoldemStarting() (map[string]ExpValue, map[string]EvalRank) {
+	m, v, err := holdemStarting()
 	if err != nil {
 		panic(fmt.Sprintf("unable to load starting pockets: %v", err))
 	}
-	return m
+	return m, v
 }
 
 // holdemStarting returns the starting Holdem pockets.
-func holdemStarting() (map[string]ExpValue, error) {
+func holdemStarting() (map[string]ExpValue, map[string]EvalRank, error) {
 	r := csv.NewReader(bytes.NewReader(starting))
-	r.FieldsPerRecord = 5
+	r.FieldsPerRecord = 6
 	lines, err := r.ReadAll()
 	switch {
 	case err != nil:
-		return nil, fmt.Errorf("unable to read starting pockets: %w", err)
+		return nil, nil, fmt.Errorf("unable to read starting pockets: %w", err)
 	case len(lines) != 170:
-		return nil, fmt.Errorf("invalid starting pocket length %d", len(lines))
+		return nil, nil, fmt.Errorf("invalid starting pocket length %d", len(lines))
 	}
 	re := regexp.MustCompile(`^[2-9AKQJT]{2}[os]?$`)
-	m := make(map[string]ExpValue)
+	m, v := make(map[string]ExpValue), make(map[string]EvalRank)
 	for i, line := range lines[1:] {
 		if !re.MatchString(line[0]) {
-			return nil, fmt.Errorf("line %d: invalid key %q", i+1, line[0])
+			return nil, nil, fmt.Errorf("line %d: invalid key %q", i+1, line[0])
 		}
 		w, _ := strconv.ParseUint(line[1], 10, 64)
 		s, _ := strconv.ParseUint(line[2], 10, 64)
 		l, _ := strconv.ParseUint(line[3], 10, 64)
 		if w+s+l != startingTotal {
-			return nil, fmt.Errorf("line %d: wins, splits, losses do not total %d: %d + %d + %d", i+1, startingTotal, w, s, l)
+			return nil, nil, fmt.Errorf("line %d: wins, splits, losses do not total %d: %d + %d + %d", i+1, startingTotal, w, s, l)
 		}
 		expv := ExpValue{
 			Opponents: 1,
@@ -694,11 +757,16 @@ func holdemStarting() (map[string]ExpValue, error) {
 			Total:     startingTotal,
 		}
 		if fmt.Sprintf("%f", expv.Float64()) != line[4] {
-			return nil, fmt.Errorf("line %d: calculated %f does not equal %s", i+1, expv.Float64(), line[4])
+			return nil, nil, fmt.Errorf("line %d: calculated %f does not equal %s", i+1, expv.Float64(), line[4])
 		}
-		m[line[0]] = expv
+		// parse cactus
+		r, _ := strconv.ParseUint(line[5], 10, 64)
+		if r == 0 || uint64(Nothing) < r {
+			return nil, nil, fmt.Errorf("line %d: invalid cactus rank parsed from %q", i+1, line[5])
+		}
+		m[line[0]], v[line[0]] = expv, EvalRank(r)
 	}
-	return m, nil
+	return m, v, nil
 }
 
 // starting is the embedded starting pocket data.

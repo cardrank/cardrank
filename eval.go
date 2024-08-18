@@ -35,6 +35,19 @@ const (
 	sokoFlush         EvalRank = TwoPair + 13*715
 	sokoStraight      EvalRank = sokoFlush + 13*10
 	sokoNothing       EvalRank = sokoStraight + (Nothing - TwoPair)
+	cactusAce         EvalRank = 6678
+	cactusKing        EvalRank = 7007
+	cactusQueen       EvalRank = 7216
+	cactusJack        EvalRank = 7341
+	cactusTen         EvalRank = 7410
+	cactusNine        EvalRank = 7444
+	cactusEight       EvalRank = 7458
+	cactusSeven       EvalRank = 7462 // seven, five, four, three, two all same as Nothing
+	cactusSix         EvalRank = 7461
+	cactusFive        EvalRank = 7462
+	cactusFour        EvalRank = 7462
+	cactusThree       EvalRank = 7462
+	cactusTwo         EvalRank = 7462
 )
 
 // Fixed converts a relative eval rank to a fixed eval rank.
@@ -123,6 +136,8 @@ func (r EvalRank) Title() string {
 // Format satisfies the [fmt.Formatter] interface.
 func (r EvalRank) Format(f fmt.State, verb rune) {
 	switch verb {
+	case 'd':
+		fmt.Fprint(f, uint16(r))
 	case 'e', 's', 'S', 'v':
 		fmt.Fprint(f, r.Title())
 	case 'n':
@@ -769,6 +784,8 @@ func (ev *Eval) Desc(low bool) *EvalDesc {
 // Format satisfies the [fmt.Formatter] interface.
 func (ev *Eval) Format(f fmt.State, verb rune) {
 	switch verb {
+	case 'd':
+		fmt.Fprintf(f, "%d", uint16(ev.HiRank))
 	case 's', 'v':
 		fmt.Fprintf(f, "%s %s", ev.Desc(false), ev.HiBest)
 	case 'e':

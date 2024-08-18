@@ -226,3 +226,55 @@ func TestCardFormat(t *testing.T) {
 		}
 	}
 }
+
+func TestFormatterSuits(t *testing.T) {
+	tests := []struct {
+		s   string
+		exp string
+	}{
+		{"", "s h d c"},
+		{"As", "h d c"},
+		{"Ah", "s d c"},
+		{"Ad", "s h c"},
+		{"Ac", "s h d"},
+		{"As Ks Qd Jc", "h"},
+		{"As Kh Qd Jc", ""},
+	}
+	for i, test := range tests {
+		v := Formatter(Must(test.s)).Suits()
+		if s := strings.Trim(fmt.Sprintf("%v", v), "[]"); s != test.exp {
+			t.Errorf("test %d %s expected %q, got: %q", i, test.s, test.exp, s)
+		}
+	}
+}
+
+func TestFormatterRanks(t *testing.T) {
+	tests := []struct {
+		s   string
+		exp string
+	}{
+		{"", "A K Q J T 9 8 7 6 5 4 3 2"},
+		{"As", "K Q J T 9 8 7 6 5 4 3 2"},
+		{"Ks", "A Q J T 9 8 7 6 5 4 3 2"},
+		{"Qs", "A K J T 9 8 7 6 5 4 3 2"},
+		{"Js", "A K Q T 9 8 7 6 5 4 3 2"},
+		{"Ts", "A K Q J 9 8 7 6 5 4 3 2"},
+		{"9s", "A K Q J T 8 7 6 5 4 3 2"},
+		{"8s", "A K Q J T 9 7 6 5 4 3 2"},
+		{"7s", "A K Q J T 9 8 6 5 4 3 2"},
+		{"6s", "A K Q J T 9 8 7 5 4 3 2"},
+		{"5s", "A K Q J T 9 8 7 6 4 3 2"},
+		{"4s", "A K Q J T 9 8 7 6 5 3 2"},
+		{"3s", "A K Q J T 9 8 7 6 5 4 2"},
+		{"2s", "A K Q J T 9 8 7 6 5 4 3"},
+		{"As Ks", "Q J T 9 8 7 6 5 4 3 2"},
+		{"9s 9h", "A K Q J T 8 7 6 5 4 3 2"},
+		{"2s 3h 4s", "A K Q J T 9 8 7 6 5"},
+	}
+	for i, test := range tests {
+		v := Formatter(Must(test.s)).Ranks()
+		if s := strings.Trim(fmt.Sprintf("%v", v), "[]"); s != test.exp {
+			t.Errorf("test %d %s expected %q, got: %q", i, test.s, test.exp, s)
+		}
+	}
+}

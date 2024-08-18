@@ -39,6 +39,35 @@ func TestStartingExpValue(t *testing.T) {
 	}
 }
 
+func TestStartingEvalRank(t *testing.T) {
+	tests := []struct {
+		s   string
+		exp EvalRank
+	}{
+		{"", Nothing},
+		{"As", 6678},
+		{"Ks", 7007},
+		{"9h", 7444},
+		{"Js Jh", jacksOrBetterMax},
+		{"Js Jh Jd", jacksOrBetterMax},
+		{"Js Jh Th", jacksOrBetterMax},
+		{"Js Jh Th Td", jacksOrBetterMax},
+		{"Js Jh Th Td 9h 9d", jacksOrBetterMax},
+		{"Qh Qd", 3985},
+		{"Qs Qc", 3985},
+		{"Kd Qh", 6797},
+		{"Kh Qh", 6797},
+		{"Ac As", 3545},
+		{"Ah Ad Kh Kd", 3545},
+		{"2h 2d 3h", 6185},
+	}
+	for i, test := range tests {
+		if r := StartingEvalRank(Must(test.s)); r != test.exp {
+			t.Errorf("test %d (%s) expected %d, got: %d", i, test.s, test.exp, r)
+		}
+	}
+}
+
 func TestStartingExpValueOmaha(t *testing.T) {
 	expv, ok := Omaha.ExpValue(context.Background(), Must("Ah Kh 9s Jd"))
 	if !ok {
@@ -525,7 +554,7 @@ func testExpValueCalc(t *testing.T, ctx context.Context, typ Type, pocket, board
 	}
 }
 
-func TestExpValueCalcStartingPockets(t *testing.T) {
+func TestStartingCSV(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	if s := os.Getenv("TESTS"); !strings.Contains(s, "starting") {
@@ -573,16 +602,16 @@ func TestExpValueCalcStartingPockets(t *testing.T) {
 	}()
 	var v []*expValueRes
 	for res := range ch {
-		t.Logf("%v/%v: %v %f", res.c0, res.c1, res, res.Float64())
+		t.Logf("%v/%v: %v %f %d", res.c0, res.c1, &res.ev, res.ev.Float64(), int(res.cactus))
 		v = append(v, res)
 	}
 	sort.Slice(v, func(i, j int) bool {
-		return v[j].Float64() < v[i].Float64()
+		return v[j].ev.Float64() < v[i].ev.Float64()
 	})
 	buf := new(bytes.Buffer)
-	fmt.Fprintf(buf, "%s,%s,%s,%s,%s\n", "name", "wins", "splits", "losses", "calc")
+	fmt.Fprintf(buf, "%s,%s,%s,%s,%s,%s\n", "name", "wins", "splits", "losses", "calc", "cactus")
 	for _, res := range v {
-		fmt.Fprintf(buf, "%s,%d,%d,%d,%f\n", HashKey(res.c0, res.c1), res.Wins, res.Splits, res.Losses, res.Float64())
+		fmt.Fprintf(buf, "%s,%d,%d,%d,%f,%d\n", HashKey(res.c0, res.c1), res.ev.Wins, res.ev.Splits, res.ev.Losses, res.ev.Float64(), int(res.cactus))
 	}
 	if err := os.WriteFile("starting.csv", buf.Bytes(), 0o644); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
@@ -593,18 +622,49 @@ func testExpValue(t *testing.T, ctx context.Context, c0, c1 Card, wait *int64, c
 	t.Helper()
 	expv, ok := NewExpValueCalc(Holdem, []Card{c0, c1}).Calc(ctx)
 	ch <- &expValueRes{
-		c0:       c0,
-		c1:       c1,
-		ExpValue: *expv,
-		ok:       ok,
+		c0:     c0,
+		c1:     c1,
+		ev:     *expv,
+		ok:     ok,
+		cactus: calcStartingCactus(c0, c1),
 	}
 	atomic.AddInt64(wait, -1)
 }
 
+func calcStartingCactus(c0, c1 Card) EvalRank {
+	if r0 := c0.Rank(); r0 == c1.Rank() {
+		return calcStartingCactusPair(r0)
+	}
+	f, ev := calcs[Holdem], EvalOf(Holdem)
+	r, z := EvalRank(0), []Card{c0, c1, InvalidCard, InvalidCard, InvalidCard}
+	for g, v := NewCombinGen(Formatter([]Card{c0, c1}).Ranks(), 3); g.Next(); {
+		for i := 0; i < 3; i++ {
+			z[2], z[3], z[4] = New(v[0], Spade), New(v[1], Heart), New(v[2], Club)
+		}
+		f(ev, z, nil)
+		r = max(r, ev.HiRank)
+	}
+	return r
+}
+
+func calcStartingCactusPair(rank Rank) EvalRank {
+	var v []Card
+	for r := Two; r <= Five && len(v) != 3; r++ {
+		if r == rank {
+			continue
+		}
+		v = append(v, New(r, Club))
+	}
+	ev := EvalOf(Holdem)
+	calcs[Holdem](ev, []Card{New(rank, Heart), New(rank, Spade)}, v)
+	return ev.HiRank
+}
+
 type expValueRes struct {
 	c0, c1 Card
-	ExpValue
-	ok bool
+	ev     ExpValue
+	ok     bool
+	cactus EvalRank
 }
 
 func TestHashKey(t *testing.T) {
