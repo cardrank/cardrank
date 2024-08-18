@@ -5,10 +5,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: stable
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Test
-      run: TESTS=all GOEXPERIMENT=loopvar go test -tags portable -timeout=1h -v -bench=. ./...
+      run: TESTS=all go test -tags portable -timeout=1h -v -bench=. ./...
