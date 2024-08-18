@@ -692,7 +692,7 @@ func StartingEvalRank(pocket []Card) EvalRank {
 	case 6:
 		f = take6c2
 	default:
-		panic(fmt.Sprintf("invalid pocket len %d", n))
+		return Invalid
 	}
 	pockets, n := f(pocket)
 	r := Invalid

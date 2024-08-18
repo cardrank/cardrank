@@ -1144,10 +1144,10 @@ const (
 )
 
 // New creates a eval func for the type.
-func (typ EvalType) New(normalize, low bool) EvalFunc {
+func (typ EvalType) New(board int, normalize, low bool) EvalFunc {
 	switch typ {
 	case EvalCactus:
-		return NewCactusEval(normalize, low)
+		return NewCactusEval(board, normalize, low)
 	case EvalJacksOrBetter:
 		return NewJacksOrBetterEval(normalize)
 	case EvalShort:

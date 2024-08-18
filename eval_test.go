@@ -267,7 +267,7 @@ func TestLowballCards(t *testing.T) {
 		t.Skip("skipping: $ENV{TESTS} does not contain 'lowball' or 'all'")
 	}
 	t.Parallel()
-	u, c, l, ev, uv := shuffled(DeckFrench), NewCactusEval(false, false), NewLowballEval(false), EvalOf(Holdem), EvalOf(Lowball)
+	u, c, l, ev, uv := shuffled(DeckFrench), NewCactusEval(0, false, false), NewLowballEval(false), EvalOf(Holdem), EvalOf(Lowball)
 	for c0 := 0; c0 < 52; c0++ {
 		for c1 := c0 + 1; c1 < 52; c1++ {
 			for c2 := c1 + 1; c2 < 52; c2++ {

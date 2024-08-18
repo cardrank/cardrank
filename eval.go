@@ -449,7 +449,7 @@ func NewHybridEval(normalize, low bool) EvalFunc {
 }
 
 // NewCactusEval creates a Cactus eval func.
-func NewCactusEval(normalize, low bool) EvalFunc {
+func NewCactusEval(board int, normalize, low bool) EvalFunc {
 	var f EvalFunc
 	switch {
 	case twoPlusTwo != nil:
@@ -460,6 +460,12 @@ func NewCactusEval(normalize, low bool) EvalFunc {
 		f = NewEval(RankCactus)
 	}
 	return func(ev *Eval, p, b []Card) {
+		if len(p) < 3 && len(b) < board {
+			if r := StartingEvalRank(p); r != 0 && r != Invalid {
+				ev.HiRank, ev.HiBest = r, p
+				return
+			}
+		}
 		f(ev, p, b)
 		if normalize && twoPlusTwo == nil {
 			bestCactus(ev.HiRank, ev.HiBest, ev.HiUnused, 0, nil)
