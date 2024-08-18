@@ -1372,6 +1372,24 @@ func Example_computerHand() {
 	// expected value: 51.8% (1046780178,78084287/2097572400)
 }
 
+func Example_holdemPreflop() {
+	pocket := cardrank.Must("2h 2d")
+	ev := cardrank.EvalOf(cardrank.Holdem)
+	ev.Eval(pocket, nil)
+	fmt.Println("rank:", ev.HiRank)
+	// Output:
+	// rank: Pair
+}
+
+func Example_omahaPreflop() {
+	pocket := cardrank.Must("Ah 7h Ad Jh")
+	ev := cardrank.EvalOf(cardrank.Omaha)
+	ev.Eval(pocket, nil)
+	fmt.Println("rank:", ev.HiRank)
+	// Output:
+	// rank: Pair
+}
+
 /*
 func ExampleType_calc() {
 	board := cardrank.Must("Ah Ks 3c Qh")

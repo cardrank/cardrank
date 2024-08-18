@@ -333,8 +333,8 @@ type EvalFunc func(*Eval, []Card, []Card)
 func NewEval(f RankFunc) EvalFunc {
 	return func(ev *Eval, p, b []Card) {
 		var eval func(RankFunc, []Card)
-		n, m := len(p), len(b)
-		switch n + m {
+		np, nb := len(p), len(b)
+		switch np + nb {
 		default:
 			return
 		case 5:
@@ -344,9 +344,9 @@ func NewEval(f RankFunc) EvalFunc {
 		case 7:
 			eval = ev.Hi7
 		}
-		v := make([]Card, n+m)
+		v := make([]Card, np+nb)
 		copy(v, p)
-		copy(v[n:], b)
+		copy(v[np:], b)
 		eval(f, v)
 	}
 }
@@ -358,8 +358,8 @@ func NewEval(f RankFunc) EvalFunc {
 func NewMaxEval(f RankFunc, max EvalRank, low bool) EvalFunc {
 	return func(ev *Eval, p, b []Card) {
 		var eval func(RankFunc, []Card, EvalRank, bool)
-		n, m := len(p), len(b)
-		switch n + m {
+		np, nb := len(p), len(b)
+		switch np + nb {
 		default:
 			return
 		case 5:
@@ -369,9 +369,9 @@ func NewMaxEval(f RankFunc, max EvalRank, low bool) EvalFunc {
 		case 7:
 			eval = ev.Max7
 		}
-		v := make([]Card, n+m)
+		v := make([]Card, np+nb)
 		copy(v, p)
-		copy(v[n:], b)
+		copy(v[np:], b)
 		eval(f, v, max, low)
 	}
 }
@@ -385,8 +385,8 @@ func NewMaxEval(f RankFunc, max EvalRank, low bool) EvalFunc {
 func NewSplitEval(hi, lo RankFunc, max EvalRank) EvalFunc {
 	return func(ev *Eval, p, b []Card) {
 		var eval func(RankFunc, RankFunc, []Card, EvalRank)
-		n, m := len(p), len(b)
-		switch n + m {
+		np, nb := len(p), len(b)
+		switch np + nb {
 		default:
 			return
 		case 5:
@@ -396,9 +396,9 @@ func NewSplitEval(hi, lo RankFunc, max EvalRank) EvalFunc {
 		case 7:
 			eval = ev.HiLo7
 		}
-		v := make([]Card, n+m)
+		v := make([]Card, np+nb)
 		copy(v, p)
-		copy(v[n:], b)
+		copy(v[np:], b)
 		eval(hi, lo, v, max)
 	}
 }
@@ -416,7 +416,7 @@ func NewHybridEval(normalize, low bool) EvalFunc {
 		f = NewEval(RankCactus)
 	}
 	return func(ev *Eval, p, b []Card) {
-		switch n, m := len(p), len(b); n + m {
+		switch np, nb := len(p), len(b); np + nb {
 		case 5, 6:
 			f(ev, p, b)
 			if normalize {
@@ -427,17 +427,17 @@ func NewHybridEval(normalize, low bool) EvalFunc {
 				}
 			}
 		case 7:
-			v := make([]Card, n+m)
+			v := make([]Card, np+nb)
 			copy(v, p)
-			copy(v[n:], b)
+			copy(v[np:], b)
 			ev.HiRank = twoPlusTwo(v)
 			if normalize {
 				ev.HiBest, ev.HiUnused = bestCactusSplit(ev.HiRank, v, 0)
 			}
 			if low {
-				u := make([]Card, n+m)
+				u := make([]Card, np+nb)
 				copy(u, p)
-				copy(u[n:], b)
+				copy(u[np:], b)
 				ev.Max7(RankEightOrBetter, u, eightOrBetterMax, true)
 				if normalize && ev.LoRank < eightOrBetterMax {
 					bestAceLow(ev.LoBest)

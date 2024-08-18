@@ -687,7 +687,7 @@ func (v Formatter) Combine() Card {
 	return v.combine(n)
 }
 
-// comibne combines the cards in v.
+// combine combines the cards in v.
 func (v Formatter) combine(n int) Card {
 	c := v[0]
 	for i := 1; i < n; i++ {
