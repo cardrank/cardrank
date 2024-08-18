@@ -509,7 +509,13 @@ func NewJacksOrBetterEval(normalize bool) EvalFunc {
 func NewOmahaEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize, low bool) EvalFunc {
 	return func(ev *Eval, p, b []Card) {
 		np, nb := len(p), len(b)
-		if np < 2 || 6 < np || nb < 3 || 5 < nb {
+		switch {
+		case 6 < np:
+			return
+		case nb < 3:
+			ev.HiRank, ev.HiBest = StartingEvalRank(p), p
+			return
+		case 5 < nb:
 			return
 		}
 		var fp, fb func([]Card) ([][]Card, int)
