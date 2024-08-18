@@ -211,9 +211,6 @@ const (
 	LowballTriple  Type = 'L'<<8 | '3' // L3
 	Razz           Type = 'R'<<8 | 'a' // Ra
 	Badugi         Type = 'B'<<8 | 'a' // Ba
-	// Kuhn           Type = 'K'<<8 | 'u' // Ku
-	// Leduc          Type = 'L'<<8 | 'e' // Le
-	// RhodeIsland    Type = 'R'<<8 | 'I' // RI
 )
 
 // DefaultTypes returns the default type descriptions. The returned
@@ -313,6 +310,11 @@ func (typ *Type) UnmarshalText(buf []byte) error {
 // Id returns the type's id.
 func (typ Type) Id() string {
 	return string([]byte{byte(typ >> 8), byte(typ)})
+}
+
+// Examples returns the example hand ranks in order of low to high for the type.
+func (typ Type) Examples() []Eval {
+	return nil
 }
 
 // Format satisfies the [fmt.Formatter] interface.
@@ -470,6 +472,11 @@ func (typ Type) Deal(shuffler Shuffler, shuffles, count int) ([][]Card, []Card) 
 // Cactus returns true when the type's eval is a Cactus eval.
 func (typ Type) Cactus() bool {
 	return descs[typ].Eval.Cactus()
+}
+
+// FlushOver returns true when the type's eval is a FlushOver eval.
+func (typ Type) FlushOver() bool {
+	return descs[typ].Eval.FlushOver()
 }
 
 // Eval creates a new eval for the type, evaluating the pocket and board.
@@ -1139,7 +1146,6 @@ const (
 	EvalRazz          EvalType = 'r'
 	EvalBadugi        EvalType = 'b'
 	EvalHigh          EvalType = 'h'
-	// EvalThree         EvalType = '3'
 )
 
 // New creates a eval func for the type.
@@ -1184,6 +1190,15 @@ func (typ EvalType) Cactus() bool {
 		EvalSpanish,
 		EvalOmaha,
 		EvalSoko:
+		return true
+	}
+	return false
+}
+
+// FlushOver returns true when a cactus eval's [Flush] ranks over a [FullHouse].
+func (typ EvalType) FlushOver() bool {
+	switch typ {
+	case EvalShort, EvalManila, EvalSpanish:
 		return true
 	}
 	return false

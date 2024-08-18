@@ -25,6 +25,8 @@ linters:
     - varnamelen
     - wastedassign
     - wsl
+    - execinquery
+    - exportloopref
 linters-settings:
   gosec:
     excludes:
