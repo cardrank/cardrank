@@ -483,6 +483,13 @@ func TestExpValueCalc(t *testing.T) {
 			953, 3, 34, 990,
 		},
 		{
+			Holdem,
+			"Qh 7s",
+			"",
+			1,
+			1046780178, 78084287, 972707935, 2097572400,
+		},
+		{
 			Omaha,
 			"2s 2h Ad Js",
 			"3h 4d 5s",
@@ -504,6 +511,13 @@ func TestExpValueCalc(t *testing.T) {
 			103699, 3677, 16034, 123410,
 		},
 		{
+			Omaha,
+			"Ah As Kd 9s",
+			"",
+			1,
+			8206494643, 250537061, 4128402696, 12585434400,
+		},
+		{
 			OmahaFive,
 			"2s 2h Kd Js Ks",
 			"3h 4d 5s Kh",
@@ -517,26 +531,18 @@ func TestExpValueCalc(t *testing.T) {
 			1,
 			35839274, 0, 739450, 36578724,
 		},
-		{
-			Holdem,
-			"Qh 7s",
-			"",
-			1,
-			1046780178, 78084287, 972707935, 2097572400,
-		},
-		{
-			Omaha,
-			"Ah As Kd 9s",
-			"",
-			1,
-			8206494643, 250537061, 4128402696, 12585434400,
-		},
 	}
-	for i, test := range tests {
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
+	m, skip := make(map[Type]int), !strings.Contains(os.Getenv("TESTS"), "all")
+	for _, test := range tests {
+		i := m[test.typ]
+		t.Run(fmt.Sprintf("%s/%d", test.typ, i), func(t *testing.T) {
 			t.Parallel()
+			if skip {
+				t.Skip("skipping: $ENV{TESTS} does not contain 'all'")
+			}
 			testExpValueCalc(t, ctx, test.typ, Must(test.pocket), Must(test.board), test.opp, test.wins, test.splits, test.losses, test.total)
 		})
+		m[test.typ]++
 	}
 }
 
@@ -584,13 +590,13 @@ func TestStartingCSV(t *testing.T) {
 				if key := HashKey(c0, c1); !m[key] {
 					m[key], count = true, count+1
 					atomic.AddInt64(&wait, 1)
-					go testExpValue(t, ctx, c0, c1, &wait, ch)
+					go testStartingCSV(t, ctx, c0, c1, &wait, ch)
 				}
 			}
 			if key := HashKey(c0, c2); !m[key] {
 				m[key], count = true, count+1
 				atomic.AddInt64(&wait, 1)
-				go testExpValue(t, ctx, c0, c2, &wait, ch)
+				go testStartingCSV(t, ctx, c0, c2, &wait, ch)
 			}
 		}
 	}
@@ -630,7 +636,7 @@ func TestStartingCSV(t *testing.T) {
 	}
 }
 
-func testExpValue(t *testing.T, ctx context.Context, c0, c1 Card, wait *int64, ch chan *expValueRes) {
+func testStartingCSV(t *testing.T, ctx context.Context, c0, c1 Card, wait *int64, ch chan *expValueRes) {
 	t.Helper()
 	expv, ok := NewExpValueCalc(Holdem, []Card{c0, c1}).Calc(ctx)
 	ch <- &expValueRes{
