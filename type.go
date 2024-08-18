@@ -483,7 +483,7 @@ func (typ Type) Eval(pocket, board []Card) *Eval {
 // and board.
 func (typ Type) EvalPockets(pockets [][]Card, board []Card) []*Eval {
 	evs := make([]*Eval, len(pockets))
-	for i := 0; i < len(pockets); i++ {
+	for i := range len(pockets) {
 		evs[i] = typ.Eval(pockets[i], board)
 	}
 	return evs
@@ -766,7 +766,7 @@ func WithStudFive(low bool, opts ...StreetOption) TypeOption {
 		desc.Low = low
 		desc.Blinds = StudBlinds()
 		desc.Streets = NumberedStreets(2, 1, 1, 1)
-		for i := 0; i < 4; i++ {
+		for i := range 4 {
 			desc.Streets[i].PocketUp = 1
 		}
 		desc.Apply(opts...)
@@ -1086,7 +1086,7 @@ func HoldemStreets(pocket, discard, flop, turn, river int) []StreetDesc {
 // StudStreets creates [Stud] streets (Ante, 3rd, 4th, 5th, 6th, and River).
 func StudStreets() []StreetDesc {
 	v := NumberedStreets(3, 1, 1, 1, 1)
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		v[i].PocketUp = 1
 	}
 	return v
@@ -1096,11 +1096,8 @@ func StudStreets() []StreetDesc {
 // each of the pockets.
 func NumberedStreets(pockets ...int) []StreetDesc {
 	var v []StreetDesc
-	var count, total int
-	for i := 0; i < len(pockets); i++ {
-		total += pockets[i]
-	}
-	for i := 0; i < len(pockets); i++ {
+	var count int
+	for i := range len(pockets) {
 		count += pockets[i]
 		name, id := ordinal(count), '0'+byte(count)
 		switch {
@@ -1494,7 +1491,7 @@ func LowDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	case rank == 0, rank == Invalid:
 		_, _ = f.Write([]byte("None"))
 	default:
-		for i := 0; i < len(best); i++ {
+		for i := range len(best) {
 			if i != 0 {
 				_, _ = f.Write([]byte(", "))
 			}

@@ -9,17 +9,15 @@ import (
 
 func TestMax(t *testing.T) {
 	rnd := rand.New(rand.NewSource(0))
-	for _, v := range Types() {
-		typ := v
+	for _, typ := range Types() {
 		for n := 2; n <= typ.Max(); n++ {
-			count := n
-			t.Run(fmt.Sprintf("%s/%d", typ, count), func(t *testing.T) {
-				pockets, _ := typ.Deal(rnd, 1, count)
-				if l := len(pockets); l != count {
-					t.Fatalf("expected %d, got: %d", count, l)
+			t.Run(fmt.Sprintf("%s/%d", typ, n), func(t *testing.T) {
+				pockets, _ := typ.Deal(rnd, 1, n)
+				if l := len(pockets); l != n {
+					t.Fatalf("expected %d, got: %d", n, l)
 				}
 				exp := typ.Pocket()
-				for i := 0; i < count; i++ {
+				for i := range n {
 					if l := len(pockets[i]); l != exp {
 						t.Errorf("expected %d, got: %d", exp, l)
 					}
@@ -386,7 +384,7 @@ func TestNumberedStreets(t *testing.T) {
 		"101st", "102nd", "River",
 	}
 	streets := NumberedStreets(0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 10, 1, 71, 1, 7, 1, 1)
-	for i := 0; i < len(streets); i++ {
+	for i := range len(streets) {
 		if s, exp := streets[i].Name, exp[i]; s != exp {
 			t.Errorf("expected %q, got: %v", exp, s)
 		}

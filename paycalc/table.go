@@ -47,17 +47,17 @@ func New(name string, top float64, levels, entries []int, amounts [][]float64) (
 	}
 	// calc sums
 	sums := make([]float64, cols)
-	for i := 0; i < rows; i++ {
+	for i := range rows {
 		n := 1
 		if 0 < i {
 			n = levels[i] - levels[i-1]
 		}
-		for j := 0; j < cols; j++ {
+		for j := range cols {
 			sums[j] += float64(n) * amounts[i][j]
 		}
 	}
 	// check entries
-	for i := 0; i < cols; i++ {
+	for i := range cols {
 		// check column sum
 		if !Equal(1.0, sums[i]) {
 			return nil, fmt.Errorf("entries %s sum %f != 1.0", EntriesTitle(entries[i+1], entries[i]), sums[i])
@@ -226,7 +226,7 @@ func (t *Table) WriteTo(w io.Writer, f func(interface{}, int, bool) string, divi
 		return fmt.Errorf("unable to write table: %w", err)
 	}
 	// write headers
-	for i := 0; i < len(t.entries); i++ {
+	for i := range len(t.entries) {
 		if _, err = fmt.Fprint(w, f(v[i], maxlen, i == len(t.entries)-1)); err != nil {
 			return fmt.Errorf("unable to write table: %w", err)
 		}
@@ -241,13 +241,13 @@ func (t *Table) WriteTo(w io.Writer, f func(interface{}, int, bool) string, divi
 		}
 	}
 	// write levels/entries
-	for i := 0; i < len(t.levels); i++ {
+	for i := range len(t.levels) {
 		// write ranking
 		if _, err = fmt.Fprint(w, f(t.LevelTitle(t.levels[i]-1), maxlen, false)); err != nil {
 			return fmt.Errorf("unable to write table: %w", err)
 		}
 		// write entries
-		for j := 0; j < len(t.entries); j++ {
+		for j := range len(t.entries) {
 			last := j == len(t.entries)-1 || (early && t.amounts[i][j+1] == 0)
 			if _, err = fmt.Fprint(w, f(t.amounts[i][j], maxlen, last)); err != nil {
 				return fmt.Errorf("unable to write table: %w", err)
@@ -448,7 +448,7 @@ func markdownFormat(v any, n int, last bool) string {
 // markdownDivider returns a divider for Markdown tables.
 func markdownDivider(count, n int) string {
 	s, div := "", strings.Repeat("-", n+2)
-	for i := 0; i < count; i++ {
+	for range count {
 		s += "|" + div
 	}
 	return s + "|"

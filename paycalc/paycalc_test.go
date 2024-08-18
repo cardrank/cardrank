@@ -81,10 +81,8 @@ func TestLevel(t *testing.T) {
 
 func TestPayouts(t *testing.T) {
 	t.Parallel()
-	for _, tt := range []Type{simpleTyp, Top10, Top15, Top20} {
-		typ := tt
-		for _, gg := range []int64{7, 10, 20} {
-			gtd := gg
+	for _, typ := range []Type{simpleTyp, Top10, Top15, Top20} {
+		for _, gtd := range []int64{7, 10, 20} {
 			t.Run(fmt.Sprintf("%s/%d", typ.Name(), gtd), func(t *testing.T) {
 				t.Parallel()
 				testPayouts(t, typ, 158, 10000, gtd*100000, 0.15)

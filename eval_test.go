@@ -32,8 +32,7 @@ func TestOrder(t *testing.T) {
 		{56867, 2, 1, []int{0, 1}},
 		{91981, 6, 6, []int{0, 1, 2, 3, 4, 5}},
 	}
-	for n, tt := range tests {
-		i, test := n, tt
+	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			d := NewDeck()
 			// note: use a real random source
@@ -41,7 +40,7 @@ func TestOrder(t *testing.T) {
 			board := d.Draw(5)
 			t.Logf("board: %b", board)
 			var evals []*Eval
-			for i := 0; i < test.n; i++ {
+			for i := range test.n {
 				pocket := d.Draw(2)
 				ev := Holdem.Eval(pocket, board)
 				desc := ev.Desc(false)
@@ -135,15 +134,14 @@ func TestEvalComp(t *testing.T) {
 }
 
 func TestEval(t *testing.T) {
-	for _, rr := range cactusTests(true, true) {
+	for _, r := range cactusTests(true, true) {
 		for i, f := range []func() []cardTest{
 			fiveCardTests,
 			sixCardTests,
 			sevenCardTests,
 		} {
-			r, tests := rr, f()
 			t.Run(fmt.Sprintf("%s/%d", r.name, i+5), func(t *testing.T) {
-				for j, test := range tests {
+				for j, test := range f() {
 					v := Must(test.v)
 					ev := EvalOf(0)
 					r.eval(ev, v[:2], v[2:])
@@ -197,7 +195,7 @@ func TestRankEightOrBetter(t *testing.T) {
 	for i := Nine; i <= King; i++ {
 		p1 := Must(i.String() + "h 4h 3h 2h Ah")
 		r1 := RankEightOrBetter(p1[0], p1[1], p1[2], p1[3], p1[4])
-		for c0 := 0; c0 < len(p0); c0++ {
+		for c0 := range len(p0) {
 			for c1 := c0 + 1; c1 < len(p0); c1++ {
 				for c2 := c1 + 1; c2 < len(p0); c2++ {
 					for c3 := c2 + 1; c3 < len(p0); c3++ {
@@ -268,7 +266,7 @@ func TestLowballCards(t *testing.T) {
 	}
 	t.Parallel()
 	u, c, l, ev, uv := shuffled(DeckFrench), NewCactusEval(0, false, false), NewLowballEval(false), EvalOf(Holdem), EvalOf(Lowball)
-	for c0 := 0; c0 < 52; c0++ {
+	for c0 := range 52 {
 		for c1 := c0 + 1; c1 < 52; c1++ {
 			for c2 := c1 + 1; c2 < 52; c2++ {
 				for c3 := c2 + 1; c3 < 52; c3++ {

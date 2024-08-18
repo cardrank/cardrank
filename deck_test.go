@@ -24,8 +24,7 @@ func TestDeck(t *testing.T) {
 		{28, DeckSpanish, "89TJQKA"},
 		{20, DeckRoyal, "TJQKA"},
 	}
-	for _, tt := range tests {
-		test := tt
+	for _, test := range tests {
 		t.Run(test.typ.Name(), func(t *testing.T) {
 			testDeckNew(t, test.exp, test.typ, test.r)
 			testDeckDraw(t, test.exp, test.typ)
@@ -75,7 +74,7 @@ func testDeckNew(t *testing.T, exp int, typ DeckType, r string) {
 	if n, exp := len(d2.v), exp; n != exp {
 		t.Fatalf("expected len(d2.v) == %d, got: %d", exp, n)
 	}
-	for i := 0; i < exp; i++ {
+	for i := range exp {
 		if !slices.Contains(d1.v, v[i]) {
 			t.Errorf("d1.v does not contain %s", v[i])
 		}
@@ -106,7 +105,7 @@ func testDeckDraw(t *testing.T, exp int, typ DeckType) {
 	if n, exp := len(v), exp; n != exp {
 		t.Errorf("expected len(v) == %d, got: %d", exp, n)
 	}
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		_ = d.Draw(1)
 		if n, exp := len(v), exp; n != exp {
 			t.Errorf("expected len(v) == %d, got: %d", exp, n)
@@ -164,17 +163,17 @@ func TestDealer(t *testing.T) {
 	seed := int64(1677109206437341728)
 	t.Logf("seed: %d", seed)
 	r := rand.New(rand.NewSource(seed))
-	for _, tt := range Types() {
-		if max := tt.Max(); max != 1 {
-			for i := 2; i <= max; i++ {
-				typ, count, s := tt, i, r.Int63()
+	for _, typ := range Types() {
+		if maximum := typ.Max(); maximum != 1 {
+			for i := 2; i <= maximum; i++ {
+				count, s := i, r.Int63()
 				t.Run(fmt.Sprintf("%s/%d", typ, count), func(t *testing.T) {
 					testDealer(t, typ, count, s, nil)
 				})
 			}
 		} else {
 			for i := 1; i <= 8; i++ {
-				typ, s := tt, r.Int63()
+				s := r.Int63()
 				t.Run(fmt.Sprintf("%s/%d", typ, i), func(t *testing.T) {
 					testDealer(t, typ, 1, s, nil)
 				})
@@ -198,8 +197,7 @@ func TestDealerRuns(t *testing.T) {
 		{Manila, 3, 768},
 		{OmahaRoyal, 2, 101},
 	}
-	for _, tt := range tests {
-		test := tt
+	for _, test := range tests {
 		t.Run(test.typ.Name(), func(t *testing.T) {
 			testDealer(t, test.typ, test.count, test.seed, func(r *rand.Rand, d *Dealer) {
 				switch run, _ := d.Run(); {
@@ -241,7 +239,7 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 		last = i
 		t.Logf("  %s", d)
 		if d.HasPocket() {
-			for i := 0; i < count; i++ {
+			for i := range count {
 				t.Logf("    %d: %v", i, run.Pockets[i])
 			}
 		}
@@ -257,7 +255,7 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 		if d.HasCalc() {
 			if hi, lo, ok := d.Calc(ctx, false); ok && hi != nil {
 				t.Log("    Calc:")
-				for i := 0; i < len(hi.Counts); i++ {
+				for i := range len(hi.Counts) {
 					t.Logf("      %d: %*s", i, i, hi)
 					if lo != nil {
 						t.Logf("         %*s", i, lo)
@@ -281,12 +279,12 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 		}
 		if d.Type.Pocket() != 0 {
 			t.Log("    Pockets:")
-			for i := 0; i < count; i++ {
+			for i := range count {
 				t.Logf("      %d: %v", i, d.Runs[run].Pockets[i])
 			}
 		}
 		t.Log("    Evals:")
-		for i := 0; i < count; i++ {
+		for i := range count {
 			if d.Active[i] {
 				hi := res.Evals[i].Desc(false)
 				t.Logf("      %d: %v %v %s", i, hi.Best, hi.Unused, hi)
@@ -308,10 +306,9 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 }
 
 func TestHasNext(t *testing.T) {
-	for _, tt := range Types() {
-		typ := tt
-		if max := typ.Max(); max != 1 {
-			for i := 2; i <= max; i++ {
+	for _, typ := range Types() {
+		if maximum := typ.Max(); maximum != 1 {
+			for i := 2; i <= maximum; i++ {
 				t.Run(fmt.Sprintf("%s/%d", typ, i), func(t *testing.T) {
 					testHasNext(t, typ, len(typ.Streets()), i)
 				})
@@ -358,14 +355,13 @@ func TestRunOut(t *testing.T) {
 	// seed := time.Now().UnixNano()
 	const seed = 1679273183508957122
 	t.Logf("seed: %d", seed)
-	for _, tt := range Types() {
-		if tt.Board() == 0 || tt.Draw() {
+	for _, typ := range Types() {
+		if typ.Board() == 0 || typ.Draw() {
 			continue
 		}
-		for n := 2; n <= tt.Max()-6; n++ {
-			typ, count := tt, n
-			t.Run(fmt.Sprintf("%s/%d", typ, count), func(t *testing.T) {
-				testRunOut(t, seed, typ, count)
+		for n := 2; n <= typ.Max()-6; n++ {
+			t.Run(fmt.Sprintf("%s/%d", typ, n), func(t *testing.T) {
+				testRunOut(t, seed, typ, n)
 			})
 		}
 	}
@@ -383,7 +379,7 @@ func testRunOut(t *testing.T, seed int64, typ Type, count int) {
 		t.Logf("%v", deck[i:min(i+8, len(deck))])
 	}
 	v := make([]string, runOuts)
-	for i := 0; i < runOuts; i++ {
+	for i := range runOuts {
 		buf := new(bytes.Buffer)
 		fmt.Fprintf(buf, "-- %d --\n", i)
 		d.Reset()
@@ -407,7 +403,7 @@ func testRunOut(t *testing.T, seed int64, typ Type, count int) {
 	}
 	t.Log("")
 	sidebyside(t, "", "  ", v...)
-	for i := 0; i < runOuts-1; i++ {
+	for i := range runOuts - 1 {
 		t.Log("")
 		for j := i + 1; j < runOuts; j++ {
 			t.Logf("--- %d :: %d ---", i, j)
@@ -418,7 +414,7 @@ func testRunOut(t *testing.T, seed int64, typ Type, count int) {
 					t.Errorf("  expected discard prefix %v, got: %v / %v", discard[j-1], discard[j][:n], discard[j][n:])
 				}
 			*/
-			for k := 0; k < len(runs[i]); k++ {
+			for k := range len(runs[i]) {
 				t.Logf("%d:", k)
 				dumpRuns(t, runs[i][k], runs[j][k])
 				if !reflect.DeepEqual(runs[i][k], runs[j][k]) {
@@ -460,17 +456,17 @@ func sidebyside(t *testing.T, pad, gap string, v ...string) {
 		return
 	}
 	n, lines, widths := 0, make([][]string, len(v)), make([]int, len(v))
-	for i := 0; i < len(v); i++ {
+	for i := range len(v) {
 		lines[i] = strings.Split(strings.TrimSuffix(v[i], "\n"), "\n")
-		for j := 0; j < len(lines[i]); j++ {
+		for j := range len(lines[i]) {
 			widths[i] = max(widths[i], len(lines[i][j]))
 		}
 		n = max(n, len(lines[i]))
 	}
 	var x string
-	for i := 0; i < n; i++ {
+	for i := range n {
 		s := pad
-		for j := 0; j < len(v); j++ {
+		for j := range len(v) {
 			if j != 0 {
 				s += gap
 			}

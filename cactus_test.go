@@ -21,7 +21,7 @@ func TestCactus(t *testing.T) {
 	u, f, tests, exp, ev := shuffled(DeckFrench), NewEval(cactus), cactusTests(false, true), EvalOf(Holdem), EvalOf(Holdem)
 	v := make([]Card, 7)
 	var i int
-	for c0 := 0; c0 < 52; c0++ {
+	for c0 := range 52 {
 		for c1 := c0 + 1; c1 < 52; c1++ {
 			for c2 := c1 + 1; c2 < 52; c2++ {
 				for c3 := c2 + 1; c3 < 52; c3++ {
@@ -197,7 +197,7 @@ func TestSokoCards(t *testing.T) {
 	}
 	t.Parallel()
 	u, f, ev, uv := shuffled(DeckFrench), NewSokoEval(true, false), EvalOf(Soko), EvalOf(Soko)
-	for c0 := 0; c0 < 52; c0++ {
+	for c0 := range 52 {
 		for c1 := c0 + 1; c1 < 52; c1++ {
 			for c2 := c1 + 1; c2 < 52; c2++ {
 				for c3 := c2 + 1; c3 < 52; c3++ {
@@ -221,7 +221,7 @@ func TestSokoCards(t *testing.T) {
 						}
 						u := make([]Card, 5)
 						copy(u, v)
-						for k := 0; k < 3; k++ {
+						for range 3 {
 							r.Shuffle(5, func(i, j int) {
 								u[i], u[j] = u[j], u[i]
 							})
@@ -263,7 +263,7 @@ func TestRankSoko(t *testing.T) {
 }
 
 func hasFlush4(v []Card) bool {
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		c0, c1, c2, c3 := v[i%5], v[(i+1)%5], v[(i+2)%5], v[(i+3)%5]
 		if c0&c1&c2&c3&0xf000 != 0 {
 			return true
@@ -282,7 +282,7 @@ func init() {
 }
 
 func hasStraight4(v []Card) bool {
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		c0, c1, c2, c3 := v[i%5], v[(i+1)%5], v[(i+2)%5], v[(i+3)%5]
 		if straight4[(c0|c1|c2|c3)>>16] {
 			return true

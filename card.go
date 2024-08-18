@@ -719,7 +719,7 @@ func (v Formatter) Ranks() []Rank {
 		return []Rank{Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Three, Two}
 	}
 	m := make(map[Rank]bool, len(v))
-	for i := 0; i < n; i++ {
+	for i := range n {
 		m[v[i].Rank()] = true
 	}
 	var ranks []Rank
@@ -801,7 +801,7 @@ func runeCardRank(rank, ace rune) Rank {
 
 func init() {
 	s, h, d, c := make([]rune, 14), make([]rune, 14), make([]rune, 14), make([]rune, 14)
-	for i := 0; i < 14; i++ {
+	for i := range 14 {
 		s[i] = UnicodeSpadeAce + rune(i)
 		h[i] = UnicodeHeartAce + rune(i)
 		d[i] = UnicodeDiamondAce + rune(i)

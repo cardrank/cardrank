@@ -21,7 +21,7 @@ func BenchmarkCactus(b *testing.B) {
 func bench5(b *testing.B, f EvalFunc, n int) {
 	b.Helper()
 	u, count, ev, v := shuffled(DeckFrench), 0, EvalOf(Holdem), make([]Card, 5)
-	for c0 := 0; c0 < 52; c0++ {
+	for c0 := range 52 {
 		for c1 := c0 + 1; c1 < 52; c1++ {
 			for c2 := c1 + 1; c2 < 52; c2++ {
 				for c3 := c2 + 1; c3 < 52; c3++ {
@@ -47,7 +47,7 @@ func bench5(b *testing.B, f EvalFunc, n int) {
 func bench6(b *testing.B, f EvalFunc, n int) {
 	b.Helper()
 	u, count, ev, v := shuffled(DeckFrench), 0, EvalOf(Holdem), make([]Card, 6)
-	for c0 := 0; c0 < 52; c0++ {
+	for c0 := range 52 {
 		for c1 := c0 + 1; c1 < 52; c1++ {
 			for c2 := c1 + 1; c2 < 52; c2++ {
 				for c3 := c2 + 1; c3 < 52; c3++ {
@@ -75,7 +75,7 @@ func bench6(b *testing.B, f EvalFunc, n int) {
 func bench7(b *testing.B, f EvalFunc, n int) {
 	b.Helper()
 	u, count, ev, v := shuffled(DeckFrench), 0, EvalOf(Holdem), make([]Card, 7)
-	for c0 := 0; c0 < 52; c0++ {
+	for c0 := range 52 {
 		for c1 := c0 + 1; c1 < 52; c1++ {
 			for c2 := c1 + 1; c2 < 52; c2++ {
 				for c3 := c2 + 1; c3 < 52; c3++ {
@@ -104,8 +104,7 @@ func bench7(b *testing.B, f EvalFunc, n int) {
 
 func BenchmarkType(b *testing.B) {
 	e, l := make(map[EvalType]bool), make(map[EvalType]bool)
-	for _, t := range Types() {
-		typ := t
+	for _, typ := range Types() {
 		low, etyp := typ.Low(), typ.Desc().Eval
 		switch {
 		// skip already evaluated types and Jacks-or-better
@@ -144,7 +143,7 @@ func benchType(b *testing.B, typ Type, n int, eval bool) {
 		f = calcs[typ]
 	}
 	for {
-		for i := 0; i < len(v)-p-m; i++ {
+		for i := range len(v) - p - m {
 			ev.HiRank, ev.LoRank = Invalid, Invalid
 			f(ev, v[i:i+p], v[i+p:i+p+m])
 			if benchE = ev.HiRank; benchE == 0 || benchE == Invalid {

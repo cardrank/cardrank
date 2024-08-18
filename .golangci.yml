@@ -2,38 +2,33 @@ linters:
   enable-all: true
   disable:
     - cyclop
-    - deadcode
     - depguard
     - dupl
     - dupword
+    - err113
     - exhaustive
-    - exhaustivestruct
     - exhaustruct
     - funlen
     - gochecknoglobals
     - gochecknoinits
     - gocognit
-    - goerr113
-    - golint
     - gomnd
-    - ifshort
-    - interfacer
     - ireturn
     - makezero
-    - maligned
+    - mnd
     - musttag
     - nlreturn
-    - nosnakecase
+    - nolintlint
     - paralleltest
     - prealloc
-    - scopelint
-    - structcheck
     - testpackage
-    - varcheck
     - varnamelen
     - wastedassign
     - wsl
 linters-settings:
+  gosec:
+    excludes:
+      - G306
   goconst:
     min-occurrences: 4
   gocritic:

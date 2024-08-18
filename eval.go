@@ -355,7 +355,7 @@ func NewEval(f RankFunc) EvalFunc {
 //
 // The returned eval func will store results on an eval's Hi only when lower
 // than max.
-func NewMaxEval(f RankFunc, max EvalRank, low bool) EvalFunc {
+func NewMaxEval(f RankFunc, maximum EvalRank, low bool) EvalFunc {
 	return func(ev *Eval, p, b []Card) {
 		var eval func(RankFunc, []Card, EvalRank, bool)
 		np, nb := len(p), len(b)
@@ -372,7 +372,7 @@ func NewMaxEval(f RankFunc, max EvalRank, low bool) EvalFunc {
 		v := make([]Card, np+nb)
 		copy(v, p)
 		copy(v[np:], b)
-		eval(f, v, max, low)
+		eval(f, v, maximum, low)
 	}
 }
 
@@ -382,7 +382,7 @@ func NewMaxEval(f RankFunc, max EvalRank, low bool) EvalFunc {
 // The returned eval func will store results on an eval's Hi and Lo depending
 // on the result of hi and lo, respectively. Will store the Lo value only when
 // lower than max.
-func NewSplitEval(hi, lo RankFunc, max EvalRank) EvalFunc {
+func NewSplitEval(hi, lo RankFunc, maximum EvalRank) EvalFunc {
 	return func(ev *Eval, p, b []Card) {
 		var eval func(RankFunc, RankFunc, []Card, EvalRank)
 		np, nb := len(p), len(b)
@@ -399,7 +399,7 @@ func NewSplitEval(hi, lo RankFunc, max EvalRank) EvalFunc {
 		v := make([]Card, np+nb)
 		copy(v, p)
 		copy(v[np:], b)
-		eval(hi, lo, v, max)
+		eval(hi, lo, v, maximum)
 	}
 }
 
@@ -554,7 +554,7 @@ func NewOmahaEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize
 		}
 		var c0, c1, c2, c3, c4 Card
 		for i, r := 0, EvalRank(0); i < ip; i++ {
-			for j := 0; j < ib; j++ {
+			for j := range ib {
 				c0, c1, c2, c3, c4 = vp[i][0], vp[i][1], vb[j][0], vb[j][1], vb[j][2]
 				if r = hi(c0, c1, c2, c3, c4); r < ev.HiRank {
 					ev.HiRank = r
@@ -666,12 +666,12 @@ func NewBadugiEval(normalize bool) EvalFunc {
 		})
 		var best, unused []Card
 		count, rank := 4, 0
-		for i := 0; i < 4; i++ {
+		for i := range 4 {
 			sort.Slice(s[i], func(j, k int) bool {
 				return s[i][j].AceRank() < s[i][k].AceRank()
 			})
 			captured, r := false, 0
-			for j := 0; j < len(s[i]); j++ {
+			for j := range len(s[i]) {
 				if r = 1 << s[i][j].AceRank(); rank&r == 0 && !captured {
 					captured, best = true, append(best, s[i][j])
 					rank |= r
@@ -831,16 +831,16 @@ func (ev *Eval) Hi5(f RankFunc, v []Card) {
 }
 
 // HiLo5 evaluates the 5 cards in v, using hi, lo.
-func (ev *Eval) HiLo5(hi, lo RankFunc, v []Card, max EvalRank) {
+func (ev *Eval) HiLo5(hi, lo RankFunc, v []Card, maximum EvalRank) {
 	ev.HiRank, ev.HiBest = hi(v[0], v[1], v[2], v[3], v[4]), v
-	if r := lo(v[0], v[1], v[2], v[3], v[4]); r < max {
+	if r := lo(v[0], v[1], v[2], v[3], v[4]); r < maximum {
 		ev.LoRank, ev.LoBest = r, v
 	}
 }
 
 // Max5 evaluates the 5 cards in v, using f, storing only when below max.
-func (ev *Eval) Max5(f RankFunc, v []Card, max EvalRank, low bool) {
-	if r := f(v[0], v[1], v[2], v[3], v[4]); r < max {
+func (ev *Eval) Max5(f RankFunc, v []Card, maximum EvalRank, low bool) {
+	if r := f(v[0], v[1], v[2], v[3], v[4]); r < maximum {
 		if !low {
 			ev.HiRank, ev.HiBest = r, v
 		} else {
@@ -870,7 +870,7 @@ func (ev *Eval) Hi6(f RankFunc, v []Card) {
 }
 
 // Max6 evaluates the 6 cards in v, using f, storing only when below max.
-func (ev *Eval) Max6(f RankFunc, v []Card, max EvalRank, low bool) {
+func (ev *Eval) Max6(f RankFunc, v []Card, maximum EvalRank, low bool) {
 	rank, best, unused := Invalid, make([]Card, 5), make([]Card, 1)
 	for i, r := 0, EvalRank(0); i < 6; i++ {
 		if r = f(
@@ -879,7 +879,7 @@ func (ev *Eval) Max6(f RankFunc, v []Card, max EvalRank, low bool) {
 			v[t6c5[i][2]],
 			v[t6c5[i][3]],
 			v[t6c5[i][4]],
-		); r < rank && r < max {
+		); r < rank && r < maximum {
 			rank = r
 			best[0], best[1] = v[t6c5[i][0]], v[t6c5[i][1]]
 			best[2], best[3] = v[t6c5[i][2]], v[t6c5[i][3]]
@@ -887,7 +887,7 @@ func (ev *Eval) Max6(f RankFunc, v []Card, max EvalRank, low bool) {
 			unused[0] = v[t6c5[i][5]]
 		}
 	}
-	if rank < max {
+	if rank < maximum {
 		if !low {
 			ev.HiRank, ev.HiBest, ev.HiUnused = rank, best, unused
 		} else {
@@ -897,7 +897,7 @@ func (ev *Eval) Max6(f RankFunc, v []Card, max EvalRank, low bool) {
 }
 
 // HiLo6 evaluates the 6 cards in v, using hi, lo.
-func (ev *Eval) HiLo6(hi, lo RankFunc, v []Card, max EvalRank) {
+func (ev *Eval) HiLo6(hi, lo RankFunc, v []Card, maximum EvalRank) {
 	ev.HiRank, ev.HiBest, ev.HiUnused = Invalid, make([]Card, 5), make([]Card, 1)
 	rank, best, unused := Invalid, make([]Card, 5), make([]Card, 1)
 	for i, r := 0, EvalRank(0); i < 6; i++ {
@@ -920,7 +920,7 @@ func (ev *Eval) HiLo6(hi, lo RankFunc, v []Card, max EvalRank) {
 			v[t6c5[i][2]],
 			v[t6c5[i][3]],
 			v[t6c5[i][4]],
-		); r < rank && r < max {
+		); r < rank && r < maximum {
 			rank = r
 			best[0], best[1] = v[t6c5[i][0]], v[t6c5[i][1]]
 			best[2], best[3] = v[t6c5[i][2]], v[t6c5[i][3]]
@@ -928,7 +928,7 @@ func (ev *Eval) HiLo6(hi, lo RankFunc, v []Card, max EvalRank) {
 			unused[0] = v[t6c5[i][5]]
 		}
 	}
-	if rank < max {
+	if rank < maximum {
 		ev.LoRank, ev.LoBest, ev.LoUnused = rank, best, unused
 	}
 }
@@ -954,7 +954,7 @@ func (ev *Eval) Hi7(f RankFunc, v []Card) {
 }
 
 // Max7 evaluates the 7 cards in v, using f, storing only when below max.
-func (ev *Eval) Max7(f RankFunc, v []Card, max EvalRank, low bool) {
+func (ev *Eval) Max7(f RankFunc, v []Card, maximum EvalRank, low bool) {
 	rank, best, unused := Invalid, make([]Card, 5), make([]Card, 2)
 	for i, r := 0, EvalRank(0); i < 21; i++ {
 		if r = f(
@@ -963,7 +963,7 @@ func (ev *Eval) Max7(f RankFunc, v []Card, max EvalRank, low bool) {
 			v[t7c5[i][2]],
 			v[t7c5[i][3]],
 			v[t7c5[i][4]],
-		); r < rank && r < max {
+		); r < rank && r < maximum {
 			rank = r
 			best[0], best[1] = v[t7c5[i][0]], v[t7c5[i][1]]
 			best[2], best[3] = v[t7c5[i][2]], v[t7c5[i][3]]
@@ -971,7 +971,7 @@ func (ev *Eval) Max7(f RankFunc, v []Card, max EvalRank, low bool) {
 			unused[0], unused[1] = v[t7c5[i][5]], v[t7c5[i][6]]
 		}
 	}
-	if rank < max {
+	if rank < maximum {
 		if !low {
 			ev.HiRank, ev.HiBest, ev.HiUnused = rank, best, unused
 		} else {
@@ -981,7 +981,7 @@ func (ev *Eval) Max7(f RankFunc, v []Card, max EvalRank, low bool) {
 }
 
 // HiLo7 evaluates the 7 cards in v, using hi, lo.
-func (ev *Eval) HiLo7(hi, lo RankFunc, v []Card, max EvalRank) {
+func (ev *Eval) HiLo7(hi, lo RankFunc, v []Card, maximum EvalRank) {
 	ev.HiRank, ev.HiBest, ev.HiUnused = Invalid, make([]Card, 5), make([]Card, 2)
 	rank, best, unused := Invalid, make([]Card, 5), make([]Card, 2)
 	for i, r := 0, EvalRank(0); i < 21; i++ {
@@ -1004,7 +1004,7 @@ func (ev *Eval) HiLo7(hi, lo RankFunc, v []Card, max EvalRank) {
 			v[t7c5[i][2]],
 			v[t7c5[i][3]],
 			v[t7c5[i][4]],
-		); r < rank && r < max {
+		); r < rank && r < maximum {
 			rank = r
 			best[0], best[1] = v[t7c5[i][0]], v[t7c5[i][1]]
 			best[2], best[3] = v[t7c5[i][2]], v[t7c5[i][3]]
@@ -1012,29 +1012,29 @@ func (ev *Eval) HiLo7(hi, lo RankFunc, v []Card, max EvalRank) {
 			unused[0], unused[1] = v[t7c5[i][5]], v[t7c5[i][6]]
 		}
 	}
-	if rank < max {
+	if rank < maximum {
 		ev.LoRank, ev.LoBest, ev.LoUnused = rank, best, unused
 	}
 }
 
 // HiLo23 evaluates the 2 cards c0, c1 and the 3 in b, using hi, lo.
-func (ev *Eval) HiLo23(hi, lo RankFunc, c0, c1 Card, b []Card, max EvalRank) {
+func (ev *Eval) HiLo23(hi, lo RankFunc, c0, c1 Card, b []Card, maximum EvalRank) {
 	ev.HiRank, ev.HiBest = hi(c0, c1, b[0], b[1], b[2]), []Card{c0, c1, b[0], b[1], b[2]}
 	if lo != nil {
-		if r := lo(c0, c1, b[0], b[1], b[2]); r < max {
+		if r := lo(c0, c1, b[0], b[1], b[2]); r < maximum {
 			ev.LoRank, ev.LoBest = r, ev.HiBest
 		}
 	}
 }
 
 // HiLo24 evaluates the 2 cards c0, c1 and the 4 in b, using hi, lo.
-func (ev *Eval) HiLo24(hi, lo RankFunc, c0, c1 Card, b []Card, max EvalRank) {
+func (ev *Eval) HiLo24(hi, lo RankFunc, c0, c1 Card, b []Card, maximum EvalRank) {
 	ev.HiBest, ev.HiUnused = []Card{c0, c1, 0, 0, 0}, make([]Card, 1)
 	if lo != nil {
 		ev.LoBest, ev.LoUnused = []Card{c0, c1, 0, 0, 0}, make([]Card, 1)
 	}
 	v, r := make([]Card, 3), EvalRank(0)
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		v[0], v[1], v[2] = b[i], b[(i+1)%4], b[(i+2)%4]
 		if r = hi(c0, c1, v[0], v[1], v[2]); r < ev.HiRank {
 			ev.HiRank = r
@@ -1042,7 +1042,7 @@ func (ev *Eval) HiLo24(hi, lo RankFunc, c0, c1 Card, b []Card, max EvalRank) {
 			ev.HiUnused[0] = b[(i+3)%4]
 		}
 		if lo != nil {
-			if r = lo(c0, c1, v[0], v[1], v[2]); r < ev.LoRank && r < max {
+			if r = lo(c0, c1, v[0], v[1], v[2]); r < ev.LoRank && r < maximum {
 				ev.LoRank = r
 				copy(ev.LoBest[2:], v)
 				ev.LoUnused[0] = b[(i+3)%4]
@@ -1052,13 +1052,13 @@ func (ev *Eval) HiLo24(hi, lo RankFunc, c0, c1 Card, b []Card, max EvalRank) {
 }
 
 // HiLo25 evaluates the 2 cards c0, c1 and the 5 in b, using hi, lo.
-func (ev *Eval) HiLo25(hi, lo RankFunc, c0, c1 Card, b []Card, max EvalRank) {
+func (ev *Eval) HiLo25(hi, lo RankFunc, c0, c1 Card, b []Card, maximum EvalRank) {
 	ev.HiBest, ev.HiUnused = []Card{c0, c1, 0, 0, 0}, make([]Card, 2)
 	if lo != nil {
 		ev.LoBest, ev.LoUnused = []Card{c0, c1, 0, 0, 0}, make([]Card, 2)
 	}
 	v, r := make([]Card, 3), EvalRank(0)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		v[0], v[1], v[2] = b[t5c3[i][0]], b[t5c3[i][1]], b[t5c3[i][2]]
 		if r = hi(c0, c1, v[0], v[1], v[2]); r < ev.HiRank {
 			ev.HiRank = r
@@ -1066,7 +1066,7 @@ func (ev *Eval) HiLo25(hi, lo RankFunc, c0, c1 Card, b []Card, max EvalRank) {
 			ev.HiUnused[0], ev.HiUnused[1] = b[t5c3[i][3]], b[t5c3[i][4]]
 		}
 		if lo != nil {
-			if r = lo(c0, c1, v[0], v[1], v[2]); r < ev.LoRank && r < max {
+			if r = lo(c0, c1, v[0], v[1], v[2]); r < ev.LoRank && r < maximum {
 				ev.LoRank = r
 				copy(ev.LoBest[2:], v)
 				ev.LoUnused[0], ev.LoUnused[1] = b[t5c3[i][3]], b[t5c3[i][4]]
@@ -1193,7 +1193,7 @@ func bestSoko(rank EvalRank, v, u []Card) {
 		bestCactus(rank, v, u, 0, nil)
 	case rank <= sokoFlush:
 		suit := v[0].Suit()
-		for i := 0; i < 4; i++ {
+		for i := range 4 {
 			if v[i].Suit() != suit {
 				v[i], v[i+1] = v[i+1], v[i]
 			}
@@ -1380,7 +1380,7 @@ func take2c2(v []Card) ([][]Card, int) {
 // take3c2 generates the combinations of v.
 func take3c2(v []Card) ([][]Card, int) {
 	u := make([][]Card, 3)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		u[i] = []Card{v[i], v[(i+1)%3], v[(i+2)%3]}
 	}
 	return u, 3
@@ -1389,7 +1389,7 @@ func take3c2(v []Card) ([][]Card, int) {
 // take4c2 generates the combinations of v.
 func take4c2(v []Card) ([][]Card, int) {
 	u := make([][]Card, 6)
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		u[i] = []Card{
 			v[t4c2[i][0]],
 			v[t4c2[i][1]],
@@ -1403,7 +1403,7 @@ func take4c2(v []Card) ([][]Card, int) {
 // take5c2 generates the combinations of v.
 func take5c2(v []Card) ([][]Card, int) {
 	u := make([][]Card, 10)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		u[i] = []Card{
 			v[t5c2[i][0]],
 			v[t5c2[i][1]],
@@ -1418,7 +1418,7 @@ func take5c2(v []Card) ([][]Card, int) {
 // take6c2 generates the combinations of v.
 func take6c2(v []Card) ([][]Card, int) {
 	u := make([][]Card, 15)
-	for i := 0; i < 15; i++ {
+	for i := range 15 {
 		u[i] = []Card{
 			v[t6c2[i][0]],
 			v[t6c2[i][1]],
@@ -1439,7 +1439,7 @@ func take3c3(v []Card) ([][]Card, int) {
 // take4c3 generates the combinations of v.
 func take4c3(v []Card) ([][]Card, int) {
 	u := make([][]Card, 4)
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		u[i] = []Card{v[i], v[(i+1)%4], v[(i+2)%4], v[(i+3)%4]}
 	}
 	return u, 4
@@ -1448,7 +1448,7 @@ func take4c3(v []Card) ([][]Card, int) {
 // take5c3 generates the combinations of v.
 func take5c3(v []Card) ([][]Card, int) {
 	u := make([][]Card, 10)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		u[i] = []Card{
 			v[t5c3[i][0]],
 			v[t5c3[i][1]],

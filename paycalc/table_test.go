@@ -16,8 +16,7 @@ func TestLoad(t *testing.T) {
 		{"top15", .15, top15},
 		{"top20", .20, top20},
 	}
-	for _, tt := range tests {
-		test := tt
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testLoad(t, test.name, test.top, test.buf)
 		})

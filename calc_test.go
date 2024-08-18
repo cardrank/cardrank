@@ -170,6 +170,20 @@ func TestOddsCalc(t *testing.T) {
 		{
 			Holdem,
 			[]string{
+				"Ks Js",
+				"As Qh",
+				"Jh Ts",
+			},
+			"",
+			[]int{
+				439623, 679523, 282217,
+			},
+			1401363,
+			nil,
+		},
+		{
+			Holdem,
+			[]string{
 				"Ah Jc",
 				"Qh Jh",
 				"Qs 9c",
@@ -355,21 +369,20 @@ func TestOddsCalc(t *testing.T) {
 			nil,
 		},
 	}
-	for i, tt := range tests {
-		test := tt
+	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			t.Parallel()
 			pockets := make([][]Card, len(test.pockets))
-			for i := 0; i < len(test.pockets); i++ {
+			for i := range len(test.pockets) {
 				pockets[i] = Must(test.pockets[i])
 			}
 			var active map[int]bool
 			if len(test.inactive) != 0 {
 				active = make(map[int]bool)
-				for i := 0; i < len(test.pockets); i++ {
+				for i := range len(test.pockets) {
 					active[i] = true
 				}
-				for i := 0; i < len(test.inactive); i++ {
+				for i := range len(test.inactive) {
 					active[test.inactive[i]] = false
 				}
 			}
@@ -398,7 +411,7 @@ func testOddsCalc(t *testing.T, ctx context.Context, typ Type, pockets [][]Card,
 	}
 	t.Logf("board: %v", board)
 	total := 0
-	for i := 0; i < len(pockets); i++ {
+	for i := range len(pockets) {
 		total += odds.Counts[i]
 		t.Logf("%d: %v %*s", i, pockets[i], i, odds)
 	}
@@ -519,8 +532,7 @@ func TestExpValueCalc(t *testing.T) {
 			8206494643, 250537061, 4128402696, 12585434400,
 		},
 	}
-	for i, tt := range tests {
-		test := tt
+	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			t.Parallel()
 			testExpValueCalc(t, ctx, test.typ, Must(test.pocket), Must(test.board), test.opp, test.wins, test.splits, test.losses, test.total)
@@ -638,9 +650,7 @@ func calcStartingCactus(c0, c1 Card) EvalRank {
 	f, ev := calcs[Holdem], EvalOf(Holdem)
 	r, z := EvalRank(0), []Card{c0, c1, InvalidCard, InvalidCard, InvalidCard}
 	for g, v := NewCombinGen(Formatter([]Card{c0, c1}).Ranks(), 3); g.Next(); {
-		for i := 0; i < 3; i++ {
-			z[2], z[3], z[4] = New(v[0], Spade), New(v[1], Heart), New(v[2], Club)
-		}
+		z[2], z[3], z[4] = New(v[0], Spade), New(v[1], Heart), New(v[2], Club)
 		f(ev, z, nil)
 		r = max(r, ev.HiRank)
 	}

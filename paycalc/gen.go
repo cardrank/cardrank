@@ -94,7 +94,7 @@ type Table struct {
 func (t *Table) WriteTo(s string) error {
 	buf := new(bytes.Buffer)
 	fmt.Fprintf(buf, "r/e,%s\n", strings.Join(t.Entries, ","))
-	for i := 0; i < len(t.Amounts); i++ {
+	for i := range len(t.Amounts) {
 		fmt.Fprintf(buf, "%s,%s\n", t.Ranking[i], strings.Join(t.Amounts[i], ","))
 	}
 	re := regexp.MustCompile(`(?m),+$`)

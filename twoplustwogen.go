@@ -189,7 +189,7 @@ func (g *TwoPlusTwoGenerator) id(id int64, card uint32) (int, int64) {
 	// add first card. formats card to rrrr00ss
 	v[0] = (((card >> 2) + 1) << 4) + (card & 3) + 1
 	// can't have more than 6 cards!
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		// leave the 0 hole for new card
 		v[i+1] = uint32((id >> (8 * i)) & 0xff)
 	}
@@ -222,7 +222,7 @@ func (g *TwoPlusTwoGenerator) id(id int64, card uint32) (int, int64) {
 	// for suit to be significant, need to have n-2 of same suit if we don't
 	// have at least 2 cards of the same suit for 4, we make this card suit 0.
 	if required := n - 2; required > 1 {
-		for i := 0; i < n; i++ { // for each card
+		for i := range n { // for each card
 			if suits[v[i]&0xf] < required {
 				// check suitcount to the number I need to have suits
 				// significant if not enough - 0 out the suit - now this suit

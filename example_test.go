@@ -117,7 +117,7 @@ func Example() {
 			fmt.Printf("  %s\n", d)
 			// display pockets
 			if d.HasPocket() {
-				for i := 0; i < game.players; i++ {
+				for i := range game.players {
 					fmt.Printf("    %d %s: %v\n", i, game.names[i], run.Pockets[i])
 				}
 			}
@@ -147,7 +147,7 @@ func Example() {
 		for d.NextResult() {
 			n, res := d.Result()
 			fmt.Printf("  Run %d:\n", n)
-			for i := 0; i < game.players; i++ {
+			for i := range game.players {
 				if d.Active[i] {
 					hi := res.Evals[i].Desc(false)
 					fmt.Printf("    %d: %v %v %s\n", i, hi.Best, hi.Unused, hi)
@@ -466,7 +466,7 @@ func ExampleType_holdem() {
 		evs := cardrank.Holdem.EvalPockets(pockets, board)
 		fmt.Printf("------ Holdem %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
-		for j := 0; j < game.players; j++ {
+		for j := range game.players {
 			desc := evs[j].Desc(false)
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, pockets[j], desc, desc.Best, desc.Unused)
 		}
@@ -476,7 +476,7 @@ func ExampleType_holdem() {
 			fmt.Printf("Result:   Player %d wins with %s\n", order[0]+1, desc)
 		} else {
 			var s []string
-			for j := 0; j < pivot; j++ {
+			for j := range pivot {
 				s = append(s, strconv.Itoa(order[j]+1))
 			}
 			fmt.Printf("Result:   Players %s push with %s\n", strings.Join(s, ", "), desc)
@@ -586,7 +586,7 @@ func ExampleType_short() {
 		evs := cardrank.Short.EvalPockets(pockets, board)
 		fmt.Printf("------ Short %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
-		for j := 0; j < game.players; j++ {
+		for j := range game.players {
 			desc := evs[j].Desc(false)
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, pockets[j], desc, desc.Best, desc.Unused)
 		}
@@ -596,7 +596,7 @@ func ExampleType_short() {
 			fmt.Printf("Result:   Player %d wins with %s\n", order[0]+1, desc)
 		} else {
 			var s []string
-			for j := 0; j < pivot; j++ {
+			for j := range pivot {
 				s = append(s, strconv.Itoa(order[j]+1))
 			}
 			fmt.Printf("Result:   Players %s push with %s\n", strings.Join(s, ", "), desc)
@@ -679,7 +679,7 @@ func ExampleType_royal() {
 		evs := cardrank.Royal.EvalPockets(pockets, board)
 		fmt.Printf("------ Royal %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
-		for j := 0; j < game.players; j++ {
+		for j := range game.players {
 			desc := evs[j].Desc(false)
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, pockets[j], desc, desc.Best, desc.Unused)
 		}
@@ -689,7 +689,7 @@ func ExampleType_royal() {
 			fmt.Printf("Result:   Player %d wins with %s\n", order[0]+1, desc)
 		} else {
 			var s []string
-			for j := 0; j < pivot; j++ {
+			for j := range pivot {
 				s = append(s, strconv.Itoa(order[j]+1))
 			}
 			fmt.Printf("Result:   Players %s push with %s\n", strings.Join(s, ", "), desc)
@@ -767,7 +767,7 @@ func ExampleType_omaha() {
 		evs := cardrank.Omaha.EvalPockets(pockets, board)
 		fmt.Printf("------ Omaha %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
-		for j := 0; j < game.players; j++ {
+		for j := range game.players {
 			desc := evs[j].Desc(false)
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, pockets[j], desc, desc.Best, desc.Unused)
 		}
@@ -777,7 +777,7 @@ func ExampleType_omaha() {
 			fmt.Printf("Result:   Player %d wins with %s\n", order[0]+1, desc)
 		} else {
 			var s []string
-			for j := 0; j < pivot; j++ {
+			for j := range pivot {
 				s = append(s, strconv.Itoa(order[j]+1))
 			}
 			fmt.Printf("Result:   Players %s push with %s\n", strings.Join(s, ", "), desc)
@@ -843,7 +843,7 @@ func ExampleType_omahaHiLo() {
 		evs := cardrank.OmahaHiLo.EvalPockets(pockets, board)
 		fmt.Printf("------ OmahaHiLo %d ------\n", i+1)
 		fmt.Printf("Board: %b\n", board)
-		for j := 0; j < game.players; j++ {
+		for j := range game.players {
 			hi, lo := evs[j].Desc(false), evs[j].Desc(true)
 			fmt.Printf("Player %d: %b\n", j+1, pockets[j])
 			fmt.Printf("  Hi: %s %b %b\n", hi, hi.Best, hi.Unused)
@@ -860,7 +860,7 @@ func ExampleType_omahaHiLo() {
 			fmt.Printf("Result (Hi): Player %d %s with %s\n", hiOrder[0]+1, typ, desc)
 		} else {
 			var s []string
-			for j := 0; j < hiPivot; j++ {
+			for j := range hiPivot {
 				s = append(s, strconv.Itoa(hiOrder[j]+1))
 			}
 			fmt.Printf("Result (Hi): Players %s push with %s\n", strings.Join(s, ", "), desc)
@@ -870,7 +870,7 @@ func ExampleType_omahaHiLo() {
 			fmt.Printf("Result (Lo): Player %d wins with %s\n", loOrder[0]+1, desc)
 		} else if loPivot > 1 {
 			var s []string
-			for j := 0; j < loPivot; j++ {
+			for j := range loPivot {
 				s = append(s, strconv.Itoa(loOrder[j]+1))
 			}
 			desc := evs[loOrder[0]].Desc(true)
@@ -993,7 +993,7 @@ func ExampleType_stud() {
 		pockets, _ := cardrank.Stud.Deal(r, 1, game.players)
 		evs := cardrank.Stud.EvalPockets(pockets, nil)
 		fmt.Printf("------ Stud %d ------\n", i+1)
-		for j := 0; j < game.players; j++ {
+		for j := range game.players {
 			desc := evs[j].Desc(false)
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, pockets[j], desc, desc.Best, desc.Unused)
 		}
@@ -1003,7 +1003,7 @@ func ExampleType_stud() {
 			fmt.Printf("Result:   Player %d wins with %s\n", order[0]+1, desc)
 		} else {
 			var s []string
-			for j := 0; j < pivot; j++ {
+			for j := range pivot {
 				s = append(s, strconv.Itoa(order[j]+1))
 			}
 			fmt.Printf("Result:   Players %s push with %s\n", strings.Join(s, ", "), desc)
@@ -1063,7 +1063,7 @@ func ExampleType_studHiLo() {
 		pockets, _ := cardrank.StudHiLo.Deal(r, 1, game.players)
 		evs := cardrank.StudHiLo.EvalPockets(pockets, nil)
 		fmt.Printf("------ StudHiLo %d ------\n", i+1)
-		for j := 0; j < game.players; j++ {
+		for j := range game.players {
 			hi, lo := evs[j].Desc(false), evs[j].Desc(true)
 			fmt.Printf("Player %d: %b\n", j+1, pockets[j])
 			fmt.Printf("  Hi: %s %b %b\n", hi, hi.Best, hi.Unused)
@@ -1080,7 +1080,7 @@ func ExampleType_studHiLo() {
 			fmt.Printf("Result (Hi): Player %d %s with %s\n", hiOrder[0]+1, typ, desc)
 		} else {
 			var s []string
-			for j := 0; j < hiPivot; j++ {
+			for j := range hiPivot {
 				s = append(s, strconv.Itoa(hiOrder[j]+1))
 			}
 			fmt.Printf("Result (Hi): Players %s push with %s\n", strings.Join(s, ", "), desc)
@@ -1090,7 +1090,7 @@ func ExampleType_studHiLo() {
 			fmt.Printf("Result (Lo): Player %d wins with %s\n", loOrder[0]+1, desc)
 		} else if loPivot > 1 {
 			var s []string
-			for j := 0; j < loPivot; j++ {
+			for j := range loPivot {
 				s = append(s, strconv.Itoa(loOrder[j]+1))
 			}
 			desc := evs[loOrder[0]].Desc(true)
@@ -1208,7 +1208,7 @@ func ExampleType_razz() {
 		pockets, _ := cardrank.Razz.Deal(r, 1, game.players)
 		evs := cardrank.Razz.EvalPockets(pockets, nil)
 		fmt.Printf("------ Razz %d ------\n", i+1)
-		for j := 0; j < game.players; j++ {
+		for j := range game.players {
 			desc := evs[j].Desc(false)
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, pockets[j], desc, desc.Best, desc.Unused)
 		}
@@ -1218,7 +1218,7 @@ func ExampleType_razz() {
 			fmt.Printf("Result:   Player %d wins with %s\n", order[0]+1, desc)
 		} else {
 			var s []string
-			for j := 0; j < pivot; j++ {
+			for j := range pivot {
 				s = append(s, strconv.Itoa(order[j]+1))
 			}
 			fmt.Printf("Result:   Players %s push with %s\n", strings.Join(s, ", "), desc)
@@ -1278,7 +1278,7 @@ func ExampleType_badugi() {
 		pockets, _ := cardrank.Badugi.Deal(r, 1, game.players)
 		evs := cardrank.Badugi.EvalPockets(pockets, nil)
 		fmt.Printf("------ Badugi %d ------\n", i+1)
-		for j := 0; j < game.players; j++ {
+		for j := range game.players {
 			desc := evs[j].Desc(false)
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, pockets[j], desc, desc.Best, desc.Unused)
 		}
@@ -1288,7 +1288,7 @@ func ExampleType_badugi() {
 			fmt.Printf("Result:   Player %d wins with %s\n", order[0]+1, desc)
 		} else {
 			var s []string
-			for j := 0; j < pivot; j++ {
+			for j := range pivot {
 				s = append(s, strconv.Itoa(order[j]+1))
 			}
 			fmt.Printf("Result:   Players %s push with %s\n", strings.Join(s, ", "), desc)
@@ -1402,7 +1402,7 @@ func ExampleType_calc() {
 	if !ok {
 		panic("unable to finish calculating odds")
 	}
-	for i := 0; i < len(pockets); i++ {
+	for i := range len(pockets) {
 		fmt.Printf("%d: %*s - %*b\n", i, i, odds, i, odds)
 	}
 	// Output:

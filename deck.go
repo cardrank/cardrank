@@ -10,7 +10,7 @@ import (
 // Shuffler is an interface for a deck shuffler. Compatible with
 // math/rand.Rand's Shuffle method.
 type Shuffler interface {
-	Shuffle(int, func(int, int))
+	Shuffle(n int, swap func(int, int))
 }
 
 // DeckType is a deck type.
@@ -170,7 +170,7 @@ func (typ DeckType) Shoe(count int) *Deck {
 		v: make([]Card, n*count),
 		l: count * n,
 	}
-	for i := 0; i < count; i++ {
+	for i := range count {
 		copy(d.v[i*n:], v)
 	}
 	return d
@@ -263,7 +263,7 @@ func (d *Deck) Draw(count int) []Card {
 
 // Shuffle shuffles the deck's cards using the shuffler.
 func (d *Deck) Shuffle(shuffler Shuffler, shuffles int) {
-	for m := 0; m < shuffles; m++ {
+	for range shuffles {
 		shuffler.Shuffle(len(d.v), func(i, j int) {
 			d.v[i], d.v[j] = d.v[j], d.v[i]
 		})
@@ -316,7 +316,7 @@ func (d *Dealer) init() {
 	d.s = -1
 	d.r = -1
 	d.e = -1
-	for i := 0; i < d.Count; i++ {
+	for i := range d.Count {
 		d.Active[i] = true
 	}
 }
@@ -338,7 +338,7 @@ func (d *Dealer) Format(f fmt.State, verb rune) {
 // Inactive returns the inactive positions.
 func (d *Dealer) Inactive() []int {
 	var v []int
-	for i := 0; i < d.Count; i++ {
+	for i := range d.Count {
 		if !d.Active[i] {
 			v = append(v, i)
 		}
@@ -581,8 +581,8 @@ func (d *Dealer) NextResult() bool {
 			d.Results = []*Result{res}
 		case n > 1 || d.Max == 1:
 			d.Results = make([]*Result, d.runs)
-			for run := 0; run < d.runs; run++ {
-				d.Results[run] = NewResult(d.Type, d.Runs[run], d.Active, false)
+			for i := range d.runs {
+				d.Results[i] = NewResult(d.Type, d.Runs[i], d.Active, false)
 			}
 		}
 	}
@@ -602,8 +602,8 @@ func (d *Dealer) Deal(street int, run *Run) {
 		if n := desc.PocketDiscard; 0 < n {
 			run.Discard = append(run.Discard, d.Deck.Draw(n)...)
 		}
-		for j := 0; j < p; j++ {
-			for i := 0; i < d.Count; i++ {
+		for range p {
+			for i := range d.Count {
 				run.Pockets[i] = append(run.Pockets[i], d.Deck.Draw(1)...)
 			}
 		}
@@ -647,7 +647,7 @@ func (run *Run) Dupe() *Run {
 	r := new(Run)
 	if run.Pockets != nil {
 		r.Pockets = make([][]Card, len(run.Pockets))
-		for i := 0; i < len(run.Pockets); i++ {
+		for i := range len(run.Pockets) {
 			r.Pockets[i] = make([]Card, len(run.Pockets[i]))
 			copy(r.Pockets[i], run.Pockets[i])
 		}
@@ -774,7 +774,7 @@ func NewWin(evs []*Eval, order []int, pivot int, low, scoop bool, names []string
 // Desc returns the eval descriptions.
 func (win *Win) Desc() []*EvalDesc {
 	var v []*EvalDesc
-	for i := 0; i < win.Pivot; i++ {
+	for i := range win.Pivot {
 		if d := win.Evals[win.Order[i]].Desc(win.Low); d != nil && d.Rank != 0 && d.Rank != Invalid {
 			v = append(v, d)
 		}
@@ -798,7 +798,7 @@ func (win *Win) Format(f fmt.State, verb rune) {
 	switch verb {
 	case 'd':
 		var v []string
-		for i := 0; i < win.Pivot; i++ {
+		for i := range win.Pivot {
 			v = append(v, strconv.Itoa(win.Order[i]))
 		}
 		fmt.Fprint(f, strings.Join(v, ", ")+" "+win.Verb())
@@ -807,7 +807,7 @@ func (win *Win) Format(f fmt.State, verb rune) {
 	case 'S':
 		if !win.Invalid() {
 			var v []string
-			for i := 0; i < win.Pivot; i++ {
+			for i := range win.Pivot {
 				pos := win.Order[i]
 				if pos < len(win.Names) {
 					v = append(v, win.Names[win.Order[i]])
@@ -823,7 +823,7 @@ func (win *Win) Format(f fmt.State, verb rune) {
 		fmt.Fprint(f, win.Verb())
 	case 'v':
 		var v []string
-		for i := 0; i < win.Pivot; i++ {
+		for i := range win.Pivot {
 			desc := win.Evals[win.Order[i]].Desc(win.Low)
 			v = append(v, fmt.Sprintf("%v", desc.Best))
 		}

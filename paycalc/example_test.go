@@ -21,7 +21,7 @@ func Example() {
 		fmt.Printf("  total: %d\n", total)
 		var sum int64
 		var gsum, fsum float64
-		for i := 0; i < len(levels); i++ {
+		for i := range len(levels) {
 			title := paycalc.LevelTitle(levels[i][0], levels[i][1])
 			g := amounts[i] * float64(levels[i][1]-levels[i][0])
 			f := float64(payouts[i]) / float64(total) * float64(levels[i][1]-levels[i][0])
@@ -100,7 +100,7 @@ func Example_payouts() {
 		paid, _, _ := typ.Paid(entries)
 		fmt.Printf("%t (%d of %d):\n", typ, paid, entries)
 		payouts, total := typ.Payouts(entries, buyin, guaranteed, rake)
-		for i := 0; i < len(payouts); i++ {
+		for i := range len(payouts) {
 			fmt.Printf("   %2d: %5d\n", i+1, payouts[i])
 		}
 		fmt.Printf("Total: %5d\n\n", total)

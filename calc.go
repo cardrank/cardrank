@@ -44,7 +44,7 @@ func (c *OddsCalc) u() []Card {
 		if c.active == nil || c.folded {
 			ex = append(ex, run.Pockets...)
 		} else {
-			for i := 0; i < len(run.Pockets); i++ {
+			for i := range len(run.Pockets) {
 				if c.active[i] {
 					ex = append(ex, run.Pockets[i])
 				}
@@ -133,7 +133,7 @@ func NewOdds(count int, u []Card) *Odds {
 		Outs:   make([]map[Card]bool, count),
 		// Suits: make([][]Suit, count),
 	}
-	for i := 0; i < count; i++ {
+	for i := range count {
 		odds.Outs[i] = make(map[Card]bool)
 	}
 	return odds
@@ -144,9 +144,9 @@ func (odds *Odds) Add(evs []*Eval, suits [][4]int, v []Card, low bool) {
 	indices, pivot := Order(evs, low)
 	s := make([][4]int, len(suits))
 	copy(s, suits)
-	for i := 0; i < pivot; i++ {
+	for i := range pivot {
 		odds.Counts[indices[i]]++
-		for j := 0; j < len(v); j++ {
+		for j := range len(v) {
 			odds.Outs[indices[i]][v[j]] = true
 		}
 	}
@@ -157,7 +157,7 @@ func (odds *Odds) Add(evs []*Eval, suits [][4]int, v []Card, low bool) {
 func (odds *Odds) Float32() []float32 {
 	n := len(odds.Counts)
 	v := make([]float32, len(odds.Counts))
-	for i := 0; i < n; i++ {
+	for i := range n {
 		v[i] = float32(odds.Counts[i]) / float32(max(odds.Total, 1))
 	}
 	return v
@@ -239,7 +239,7 @@ func (odds *Odds) formatOuts(f fmt.State, verb rune, distinct bool) {
 			}
 			if m != 0 {
 				f.Write([]byte("any ["))
-				for i := 0; i < m; i++ {
+				for i := range m {
 					if i != 0 {
 						f.Write([]byte(", "))
 					}
@@ -295,7 +295,7 @@ func (c *ExpValueCalc) Calc(ctx context.Context) (*ExpValue, bool) {
 	}
 	v := make([]Card, b)
 	copy(v, c.board)
-	count, expv, g := int64(0), c.NewExpValue(), NewBinGenInit(u, b-nb, false, v[b-(b-nb):])
+	count, expv, g := int64(0), c.NewExpValue(), newBinGenInit(u, b-nb, false, v[b-(b-nb):])
 	for g.Next() {
 		select {
 		case <-ctx.Done():
@@ -323,7 +323,7 @@ func (c *ExpValueCalc) Calc(ctx context.Context) (*ExpValue, bool) {
 func (c *ExpValueCalc) do(_ context.Context, expv *ExpValue, board, avail []Card, wait *int64) {
 	// setup evals
 	evs := make([]*Eval, 2)
-	for i := 0; i < len(evs); i++ {
+	for i := range len(evs) {
 		evs[i] = EvalOf(c.typ)
 	}
 	// eval pocket
@@ -500,9 +500,9 @@ type BinGen[T any] struct {
 	d []T
 }
 
-// NewBinGen creates a uninitialized binomial combination generator. The
-// generator must be manually initialized by calling [Init].
-func NewBinGen[T any](s []T, k int) *BinGen[T] {
+// newBinGen creates a uninitialized binomial combination generator. The
+// generator must be manually initialized by setting f.
+func newBinGen[T any](s []T, k int) *BinGen[T] {
 	// calculate iterations
 	i, n, l := -1, len(s), k
 	if 0 <= n && 0 <= k && k < n {
@@ -523,31 +523,34 @@ func NewBinGen[T any](s []T, k int) *BinGen[T] {
 	}
 }
 
-// NewBinGenInit creates and initializes a binomial combination generator using
-// f and d.
-func NewBinGenInit[T any](s []T, k int, unused bool, d []T) *BinGen[T] {
-	g := NewBinGen(s, k)
+// newBinGenInit creates and initializes a binomial combination generator for k
+// elements in s, copying the values to d.
+func newBinGenInit[T any](s []T, k int, unused bool, d []T) *BinGen[T] {
+	g := newBinGen(s, k)
 	if !unused {
-		g.f = g.Copy
+		g.f = g.cpy
 	} else {
-		g.f = g.Unused
+		g.f = g.unused
 	}
 	g.d = d
 	return g
 }
 
-// NewCombinGen creates a binomial combination generator.
+// NewCombinGen creates a binomial combination generator for k elements in s.
+// Returns the generator and a slice where the values will be copied after each
+// to [BinGen.Next].
 func NewCombinGen[T any](s []T, k int) (*BinGen[T], []T) {
 	d := make([]T, k)
-	g := NewBinGenInit(s, k, false, d)
+	g := newBinGenInit(s, k, false, d)
 	return g, d
 }
 
-// NewCombinUnusedGen creates a binomial combination generator that also copies
-// the unused values.
+// NewCombinUnusedGen creates a binomial combination generator for k elements
+// in s, and len(s)-k unused elements. Returns the generator and a slice where
+// the values will be copied after each to [BinGen.Next].
 func NewCombinUnusedGen[T any](s []T, k int) (*BinGen[T], []T) {
 	d := make([]T, len(s))
-	g := NewBinGenInit(s, k, true, d)
+	g := newBinGenInit(s, k, true, d)
 	return g, d
 }
 
@@ -579,25 +582,24 @@ func (g *BinGen[T]) Next() bool {
 	return true
 }
 
-// Copy copies the next combination, storing in d.
-func (g *BinGen[T]) Copy() {
-	for i := 0; i < g.k; i++ {
+// cpy copies the next combination to d.
+func (g *BinGen[T]) cpy() {
+	for i := range g.k {
 		g.d[i] = g.s[g.v[i]]
 	}
 }
 
-// Unused copies the next combination, storing in d along with the unused
-// values.
-func (g *BinGen[T]) Unused() {
+// unused copies the next combination to d along with the unused values.
+func (g *BinGen[T]) unused() {
 	m := make(map[int]bool)
-	for i := 0; i < g.k; i++ {
+	for i := range g.k {
 		m[g.v[i]], g.d[i] = true, g.s[g.v[i]]
 	}
-	pos := g.k
-	for i := 0; i < g.n; i++ {
+	k := g.k
+	for i := range g.n {
 		if !m[i] {
-			g.d[pos] = g.s[i]
-			pos++
+			g.d[k] = g.s[i]
+			k++
 		}
 	}
 }
@@ -635,7 +637,7 @@ func StartingExpValue(pocket []Card) *ExpValue {
 	}
 	pockets, n := f(pocket)
 	expv := NewExpValue(1)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		v := startingExpValue[HashKey(pockets[i][0], pockets[i][1])]
 		expv.Add(&v)
 	}
@@ -696,7 +698,7 @@ func StartingEvalRank(pocket []Card) EvalRank {
 	}
 	pockets, n := f(pocket)
 	r := Invalid
-	for i := 0; i < n; i++ {
+	for i := range n {
 		r = min(r, startingCactus[HashKey(pockets[i][0], pockets[i][1])])
 	}
 	return r
@@ -796,7 +798,7 @@ func countCardSuits(pockets [][]Card, board []Card) [][4]int {
 	base := make([]int, 4)
 	countSuits(base, board)
 	v := make([][4]int, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		copy(v[i][:], base)
 	}
 	return v

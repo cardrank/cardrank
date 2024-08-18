@@ -1,5 +1,7 @@
 package cardrank
 
+import "slices"
+
 var (
 	flush5        map[uint32]EvalRank
 	unique5       map[uint32]EvalRank
@@ -56,16 +58,14 @@ func cactusMaps() (map[uint32]EvalRank, map[uint32]EvalRank) {
 			r = append(r, n)
 		}
 	}
-	for i, j := 0, len(r)-1; i < j; i, j = i+1, j-1 {
-		r[i], r[j] = r[j], r[i]
-	}
-	for i := 0; i < len(orders); i++ {
+	slices.Reverse(r)
+	for i := range len(orders) {
 		// straight flush
 		flush5[primeProductBits(orders[i])] = 1 + EvalRank(i)
 		// straight
 		unique5[primeProductBits(orders[i])] = 1 + Flush + EvalRank(i)
 	}
-	for i := 0; i < len(r); i++ {
+	for i := range len(r) {
 		// flush
 		flush5[primeProductBits(r[i])] = 1 + FullHouse + EvalRank(i)
 		// nothing (high cards)
@@ -92,7 +92,7 @@ func cactusMaps() (map[uint32]EvalRank, map[uint32]EvalRank) {
 			unique5[primes[v[i]]*primes[v[i]]*primes[v[i]]*primes[n]*primes[n]] = 1 + FourOfAKind + EvalRank(i*len(k)+j)
 		}
 		// three of a kind
-		for j := 0; j < len(k)-1; j++ {
+		for j := range len(k) - 1 {
 			for l := j + 1; l < len(k); l++ {
 				unique5[primes[v[i]]*primes[v[i]]*primes[v[i]]*primes[k[j]]*primes[k[l]]] = r3
 				r3++
@@ -106,7 +106,7 @@ func cactusMaps() (map[uint32]EvalRank, map[uint32]EvalRank) {
 			}
 		}
 		// pair
-		for l := 0; l < len(k)-2; l++ {
+		for l := range len(k) - 2 {
 			for m := l + 1; m < len(k)-1; m++ {
 				for n := m + 1; n < len(k); n++ {
 					unique5[primes[v[i]]*primes[v[i]]*primes[k[l]]*primes[k[m]]*primes[k[n]]] = r1
@@ -210,7 +210,7 @@ func primeProduct(c0, c1, c2, c3, c4 Card) uint32 {
 // primeProductBits returns the prime product of the rank bits.
 func primeProductBits(bits uint32) uint32 {
 	i := uint32(1)
-	for j := 0; j < 13; j++ {
+	for j := range 13 {
 		if bits&(1<<j) != 0 {
 			i *= primes[j]
 		}
