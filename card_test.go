@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -61,7 +62,7 @@ func TestCardUnmarshal(t *testing.T) {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 	for i, c := range Must("Ah Kh Qh Jh Th") {
-		if !slicesContains(v, c) {
+		if !slices.Contains(v, c) {
 			t.Errorf("test %d v does not contain %s", i, c)
 		}
 	}

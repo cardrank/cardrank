@@ -3,6 +3,7 @@ package cardrank
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -621,7 +622,7 @@ func WithManila(opts ...StreetOption) TypeOption {
 		desc.Eval = EvalManila
 		desc.HiDesc = DescFlushOver
 		desc.Streets[0].Board = 1
-		desc.Streets = slicesInsert(desc.Streets, 1, StreetDesc{
+		desc.Streets = slices.Insert(desc.Streets, 1, StreetDesc{
 			Id:    'd',
 			Name:  "Drop",
 			Board: 1,
@@ -640,7 +641,7 @@ func WithSpanish(opts ...StreetOption) TypeOption {
 		desc.Eval = EvalSpanish
 		desc.HiDesc = DescFlushOver
 		desc.Streets[0].Board = 1
-		desc.Streets = slicesInsert(desc.Streets, 1, StreetDesc{
+		desc.Streets = slices.Insert(desc.Streets, 1, StreetDesc{
 			Id:    'd',
 			Name:  "Drop",
 			Board: 1,
