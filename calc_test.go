@@ -75,6 +75,20 @@ func TestOddsCalc(t *testing.T) {
 		{
 			Holdem,
 			[]string{
+				"Ah As",
+				"Qd 7h",
+				"Ac Qh",
+			},
+			"Qs 7c 2d",
+			[]int{
+				207, 696, 2,
+			},
+			905,
+			nil,
+		},
+		{
+			Holdem,
+			[]string{
 				"Jc 9c",
 				"Ac 4h",
 			},
