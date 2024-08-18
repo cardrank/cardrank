@@ -40,9 +40,9 @@ Supports [evaluating and ranking][eval] the following [`Type`][type]'s:
 | [`Short`][type]    | [`OmahaDouble`][type]    | [`Fusion`][type]     | [`DrawHiLo`][type] | [`Lowball`][type]       |
 | [`Manila`][type]   | [`OmahaFive`][type]      | [`FusionHiLo`][type] | [`Stud`][type]     | [`LowballTriple`][type] |
 | [`Spanish`][type]  | [`OmahaSix`][type]       |                      | [`StudHiLo`][type] | [`Razz`][type]          |
-| [`Royal`][type]    | [`Courchevel`][type]     |                      | [`StudFive`][type] | [`Badugi`][type]        |
-| [`Double`][type]   | [`CourchevelHiLo`][type] |                      |                    |                         |
-| [`Showtime`][type] |                          |                      |                    |                         |
+| [`Royal`][type]    | [`Jakarta`][type]        |                      | [`StudFive`][type] | [`Badugi`][type]        |
+| [`Double`][type]   | [`Courchevel`][type]     |                      |                    |                         |
+| [`Showtime`][type] | [`CourchevelHiLo`][type] |                      |                    |                         |
 | [`Swap`][type]     |                          |                      |                    |                         |
 | [`River`][type]    |                          |                      |                    |                         |
 

@@ -707,6 +707,7 @@ func NewHighEval() EvalFunc {
 	}
 }
 
+/*
 // NewThreeEval creates a best-3 eval func.
 //
 //	Straight Flush
@@ -719,12 +720,15 @@ func NewThreeEval() EvalFunc {
 	return func(ev *Eval, p, b []Card) {
 	}
 }
+*/
 
+/*
 // NewLeducEval creates a matching high card eval func.
 func NewLeducEval() EvalFunc {
 	return func(ev *Eval, p, b []Card) {
 	}
 }
+*/
 
 // Eval contains the eval results of a type's Hi/Lo.
 type Eval struct {

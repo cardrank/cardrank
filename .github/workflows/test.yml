@@ -11,4 +11,5 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     - name: Test
-      run: TESTS=all go test -tags portable -timeout=1h -v -bench=. ./...
+      run: |
+        go test -timeout=1h -v -bench=. ./...

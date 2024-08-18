@@ -112,8 +112,8 @@ import (
 // use of 2 of the 6 pocket cards and any 3 of the 5 board cards to make the
 // best-5.
 //
-// [OmahaRoyal] is a [Omaha] variant using a Royal deck of 20 cards, having
-// only cards with ranks of 10+ (see [DeckRoyal]).
+// [Jakarta] is a [Omaha] variant using a Royal deck of 20 cards, having only
+// cards with ranks of 10+ (see [DeckRoyal]).
 //
 // [Courchevel] is a [OmahaFive] variant, where 1 board card is dealt on the
 // Pre-Flop, and only 2 board cards dealt on the Flop.
@@ -200,7 +200,7 @@ const (
 	OmahaDouble    Type = 'O'<<8 | 'd' // Od
 	OmahaFive      Type = 'O'<<8 | '5' // O5
 	OmahaSix       Type = 'O'<<8 | '6' // O6
-	OmahaRoyal     Type = 'O'<<8 | 'r' // Or
+	Jakarta        Type = 'O'<<8 | 'r' // Or
 	Courchevel     Type = 'O'<<8 | 'c' // Oc
 	CourchevelHiLo Type = 'O'<<8 | 'e' // Oe
 	Fusion         Type = 'O'<<8 | 'f' // Of
@@ -211,9 +211,9 @@ const (
 	LowballTriple  Type = 'L'<<8 | '3' // L3
 	Razz           Type = 'R'<<8 | 'a' // Ra
 	Badugi         Type = 'B'<<8 | 'a' // Ba
-	Kuhn           Type = 'K'<<8 | 'u' // Ku
-	Leduc          Type = 'L'<<8 | 'e' // Le
-	RhodeIsland    Type = 'R'<<8 | 'I' // RI
+	// Kuhn           Type = 'K'<<8 | 'u' // Ku
+	// Leduc          Type = 'L'<<8 | 'e' // Le
+	// RhodeIsland    Type = 'R'<<8 | 'I' // RI
 )
 
 // DefaultTypes returns the default type descriptions. The returned
@@ -252,7 +252,7 @@ func DefaultTypes() []TypeDesc {
 		{"Od", OmahaDouble, "OmahaDouble", WithOmahaDouble()},
 		{"O5", OmahaFive, "OmahaFive", WithOmahaFive(false)},
 		{"O6", OmahaSix, "OmahaSix", WithOmahaSix(false)},
-		{"Or", OmahaRoyal, "OmahaRoyal", WithOmahaRoyal()},
+		{"Or", Jakarta, "Jakarta", WithJakarta()},
 		{"Oc", Courchevel, "Courchevel", WithCourchevel(false)},
 		{"Oe", CourchevelHiLo, "CourchevelHiLo", WithCourchevel(true)},
 		{"Of", Fusion, "Fusion", WithFusion(false)},
@@ -263,9 +263,9 @@ func DefaultTypes() []TypeDesc {
 		{"L3", LowballTriple, "LowballTriple", WithLowball(true)},
 		{"Ra", Razz, "Razz", WithRazz()},
 		{"Ba", Badugi, "Badugi", WithBadugi()},
-		{"Ku", Kuhn, "Kuhn", WithKuhn()},
-		{"Le", Leduc, "Leduc", WithLeduc()},
-		{"RI", RhodeIsland, "RhodeIsland", WithRhodeIsland()},
+		// {"Ku", Kuhn, "Kuhn", WithKuhn()},
+		// {"Le", Leduc, "Leduc", WithLeduc()},
+		// {"RI", RhodeIsland, "RhodeIsland", WithRhodeIsland()},
 	} {
 		desc, err := NewType(d.id, d.typ, d.name, d.opt)
 		if err != nil {
@@ -836,8 +836,8 @@ func WithOmahaSix(low bool, opts ...StreetOption) TypeOption {
 	}
 }
 
-// WithOmahaRoyal is a type description option to set [OmahaRoyal] definitions.
-func WithOmahaRoyal(opts ...StreetOption) TypeOption {
+// WithJakarta is a type description option to set [Jakarta] definitions.
+func WithJakarta(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
 		desc.Max = 2
 		desc.Blinds = HoldemBlinds()
@@ -982,6 +982,7 @@ func WithLeduc(opts ...StreetOption) TypeOption {
 	}
 }
 
+/*
 // WithRhodeIsland is a type description option to set [RhodeIsland] definitions.
 func WithRhodeIsland(opts ...StreetOption) TypeOption {
 	return func(desc *TypeDesc) {
@@ -994,6 +995,7 @@ func WithRhodeIsland(opts ...StreetOption) TypeOption {
 		desc.Apply(opts...)
 	}
 }
+*/
 
 // StreetDesc is a type's street description.
 type StreetDesc struct {
@@ -1137,7 +1139,7 @@ const (
 	EvalRazz          EvalType = 'r'
 	EvalBadugi        EvalType = 'b'
 	EvalHigh          EvalType = 'h'
-	EvalThree         EvalType = '3'
+	// EvalThree         EvalType = '3'
 )
 
 // New creates a eval func for the type.
@@ -1165,8 +1167,10 @@ func (typ EvalType) New(board int, normalize, low bool) EvalFunc {
 		return NewBadugiEval(normalize)
 	case EvalHigh:
 		return NewHighEval()
-	case EvalThree:
-		return NewThreeEval()
+		/*
+			case EvalThree:
+				return NewThreeEval()
+		*/
 	}
 	return nil
 }
@@ -1215,8 +1219,8 @@ func (typ EvalType) Byte() byte {
 		EvalLowball,
 		EvalRazz,
 		EvalBadugi,
-		EvalHigh,
-		EvalThree:
+		EvalHigh:
+		// EvalThree:
 		return byte(typ)
 	}
 	return ' '
@@ -1247,8 +1251,10 @@ func (typ EvalType) Name() string {
 		return "Badugi"
 	case EvalHigh:
 		return "High"
-	case EvalThree:
-		return "Three"
+		/*
+			case EvalThree:
+				return "Three"
+		*/
 	}
 	return ""
 }

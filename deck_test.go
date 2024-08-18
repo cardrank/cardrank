@@ -195,7 +195,7 @@ func TestDealerRuns(t *testing.T) {
 		{OmahaHiLo, 4, 72},
 		{FusionHiLo, 5, 256},
 		{Manila, 3, 768},
-		{OmahaRoyal, 2, 101},
+		{Jakarta, 2, 101},
 	}
 	for _, test := range tests {
 		t.Run(test.typ.Name(), func(t *testing.T) {
