@@ -456,17 +456,17 @@ func sidebyside(t *testing.T, pad, gap string, v ...string) {
 		return
 	}
 	n, lines, widths := 0, make([][]string, len(v)), make([]int, len(v))
-	for i := range len(v) {
-		lines[i] = strings.Split(strings.TrimSuffix(v[i], "\n"), "\n")
-		for j := range len(lines[i]) {
-			widths[i] = max(widths[i], len(lines[i][j]))
+	for i, s := range v {
+		lines[i] = strings.Split(strings.TrimSuffix(s, "\n"), "\n")
+		for _, line := range lines[i] {
+			widths[i] = max(widths[i], len(line))
 		}
 		n = max(n, len(lines[i]))
 	}
 	var x string
 	for i := range n {
 		s := pad
-		for j := range len(v) {
+		for j := range v {
 			if j != 0 {
 				s += gap
 			}

@@ -411,9 +411,9 @@ func testOddsCalc(t *testing.T, ctx context.Context, typ Type, pockets [][]Card,
 	}
 	t.Logf("board: %v", board)
 	total := 0
-	for i := range len(pockets) {
+	for i, pocket := range pockets {
 		total += odds.Counts[i]
-		t.Logf("%d: %v %*s", i, pockets[i], i, odds)
+		t.Logf("%d: %v %*s", i, pocket, i, odds)
 	}
 	if total != n {
 		t.Errorf("expected %d, got: %d", n, total)

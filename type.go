@@ -490,8 +490,8 @@ func (typ Type) Eval(pocket, board []Card) *Eval {
 // and board.
 func (typ Type) EvalPockets(pockets [][]Card, board []Card) []*Eval {
 	evs := make([]*Eval, len(pockets))
-	for i := range len(pockets) {
-		evs[i] = typ.Eval(pockets[i], board)
+	for i, pocket := range pockets {
+		evs[i] = typ.Eval(pocket, board)
 	}
 	return evs
 }
@@ -1106,25 +1106,25 @@ func StudStreets() []StreetDesc {
 func NumberedStreets(pockets ...int) []StreetDesc {
 	var v []StreetDesc
 	var count int
-	for i := range len(pockets) {
-		count += pockets[i]
+	for i, pocket := range pockets {
+		count += pocket
 		name, id := ordinal(count), '0'+byte(count)
 		switch {
 		case i == 0:
 			name = "Ante"
 		case i == len(pockets)-1:
 			name = "River"
-			if pockets[i] == 0 && i != 0 {
+			if pocket == 0 && i != 0 {
 				id = v[i-1].Id + 1
 			}
-		case i != 0 && pockets[i] == 0:
+		case i != 0 && pocket == 0:
 			n := int(v[i-1].Id-'0') + 1
 			name, id = ordinal(n), '0'+byte(n)
 		}
 		v = append(v, StreetDesc{
 			Id:     id,
 			Name:   name,
-			Pocket: pockets[i],
+			Pocket: pocket,
 		})
 	}
 	return v
@@ -1512,11 +1512,11 @@ func LowDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	case rank == 0, rank == Invalid:
 		_, _ = f.Write([]byte("None"))
 	default:
-		for i := range len(best) {
+		for i, c := range best {
 			if i != 0 {
-				_, _ = f.Write([]byte(", "))
+				_, _ = f.Write(elemSep)
 			}
-			best[i].Format(f, 'N')
+			c.Format(f, 'N')
 			if verb == 'e' || verb == 'S' {
 				break
 			}
@@ -1581,3 +1581,6 @@ func ordinal(n int) string {
 	}
 	return fmt.Sprintf("%dth", n)
 }
+
+// elemSep is the element separator used for emitting slices.
+var elemSep = []byte{',', ' '}

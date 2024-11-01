@@ -44,9 +44,9 @@ func (c *OddsCalc) u() []Card {
 		if c.active == nil || c.folded {
 			ex = append(ex, run.Pockets...)
 		} else {
-			for i := range len(run.Pockets) {
+			for i, p := range run.Pockets {
 				if c.active[i] {
-					ex = append(ex, run.Pockets[i])
+					ex = append(ex, p)
 				}
 			}
 		}
@@ -146,8 +146,8 @@ func (odds *Odds) Add(evs []*Eval, suits [][4]int, v []Card, low bool) {
 	copy(s, suits)
 	for i := range pivot {
 		odds.Counts[indices[i]]++
-		for j := range len(v) {
-			odds.Outs[indices[i]][v[j]] = true
+		for _, c := range v {
+			odds.Outs[indices[i]][c] = true
 		}
 	}
 	odds.Total += pivot
@@ -234,14 +234,14 @@ func (odds *Odds) formatOuts(f fmt.State, verb rune, distinct bool) {
 			if n != 0 {
 				CardFormatter(v).Format(f, verb)
 				if m != 0 {
-					f.Write([]byte(", "))
+					f.Write(elemSep)
 				}
 			}
 			if m != 0 {
 				f.Write([]byte("any ["))
 				for i := range m {
 					if i != 0 {
-						f.Write([]byte(", "))
+						f.Write(elemSep)
 					}
 					switch verb {
 					case 'b':
@@ -323,7 +323,7 @@ func (c *ExpValueCalc) Calc(ctx context.Context) (*ExpValue, bool) {
 func (c *ExpValueCalc) do(_ context.Context, expv *ExpValue, board, avail []Card, wait *int64) {
 	// setup evals
 	evs := make([]*Eval, 2)
-	for i := range len(evs) {
+	for i := range 2 {
 		evs[i] = EvalOf(c.typ)
 	}
 	// eval pocket
@@ -562,7 +562,7 @@ func (g *BinGen[T]) Next() bool {
 		return false
 	case g.v == nil:
 		g.v = make([]int, g.k)
-		for i := range g.v {
+		for i := range g.k {
 			g.v[i] = i
 		}
 	default:

@@ -21,12 +21,12 @@ func Example() {
 		fmt.Printf("  total: %d\n", total)
 		var sum int64
 		var gsum, fsum float64
-		for i := range len(levels) {
-			title := paycalc.LevelTitle(levels[i][0], levels[i][1])
-			g := amounts[i] * float64(levels[i][1]-levels[i][0])
-			f := float64(payouts[i]) / float64(total) * float64(levels[i][1]-levels[i][0])
+		for i, level := range levels {
+			title := paycalc.LevelTitle(level[0], level[1])
+			g := amounts[i] * float64(level[1]-level[0])
+			f := float64(payouts[i]) / float64(total) * float64(level[1]-level[0])
 			fmt.Printf("  %5s: %8d (%6.2f%% -> %6.2f%%)\n", title, payouts[i], g*100.0, f*100.0)
-			sum, gsum, fsum = sum+payouts[i]*int64(levels[i][1]-levels[i][0]), gsum+g, fsum+f
+			sum, gsum, fsum = sum+payouts[i]*int64(level[1]-level[0]), gsum+g, fsum+f
 		}
 		fmt.Printf("  Total: %8d (%6.2f%%    %6.2f%%)\n\n", sum, gsum*100.0, fsum*100.0)
 	}
@@ -100,8 +100,8 @@ func Example_payouts() {
 		paid, _, _ := typ.Paid(entries)
 		fmt.Printf("%t (%d of %d):\n", typ, paid, entries)
 		payouts, total := typ.Payouts(entries, buyin, guaranteed, rake)
-		for i := range len(payouts) {
-			fmt.Printf("   %2d: %5d\n", i+1, payouts[i])
+		for i, payout := range payouts {
+			fmt.Printf("   %2d: %5d\n", i+1, payout)
 		}
 		fmt.Printf("Total: %5d\n\n", total)
 	}

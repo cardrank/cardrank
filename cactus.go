@@ -57,17 +57,17 @@ func cactusMaps() (map[uint32]EvalRank, map[uint32]EvalRank) {
 		}
 	}
 	slices.Reverse(r)
-	for i := range len(orders) {
+	for i, u := range orders {
 		// straight flush
-		flush5[primeProductBits(orders[i])] = 1 + EvalRank(i)
+		flush5[primeProductBits(u)] = 1 + EvalRank(i)
 		// straight
-		unique5[primeProductBits(orders[i])] = 1 + Flush + EvalRank(i)
+		unique5[primeProductBits(u)] = 1 + Flush + EvalRank(i)
 	}
-	for i := range len(r) {
+	for i, u := range r {
 		// flush
-		flush5[primeProductBits(r[i])] = 1 + FullHouse + EvalRank(i)
+		flush5[primeProductBits(u)] = 1 + FullHouse + EvalRank(i)
 		// nothing (high cards)
-		unique5[primeProductBits(r[i])] = 1 + Pair + EvalRank(i)
+		unique5[primeProductBits(u)] = 1 + Pair + EvalRank(i)
 	}
 	v := [13]int{12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0}
 	kickers := func(z []int, n int) []int {

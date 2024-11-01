@@ -384,8 +384,8 @@ func TestNumberedStreets(t *testing.T) {
 		"101st", "102nd", "River",
 	}
 	streets := NumberedStreets(0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 10, 1, 71, 1, 7, 1, 1)
-	for i := range len(streets) {
-		if s, exp := streets[i].Name, exp[i]; s != exp {
+	for i, street := range streets {
+		if s, exp := street.Name, exp[i]; s != exp {
 			t.Errorf("expected %q, got: %v", exp, s)
 		}
 	}

@@ -83,8 +83,8 @@ func Types() []Type {
 		return v[i].Num < v[j].Num
 	})
 	types := make([]Type, len(v))
-	for i := range len(types) {
-		types[i] = v[i].Type
+	for i, desc := range v {
+		types[i] = desc.Type
 	}
 	return types
 }

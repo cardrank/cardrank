@@ -195,7 +195,7 @@ func TestRankEightOrBetter(t *testing.T) {
 	for i := Nine; i <= King; i++ {
 		p1 := Must(i.String() + "h 4h 3h 2h Ah")
 		r1 := RankEightOrBetter(p1[0], p1[1], p1[2], p1[3], p1[4])
-		for c0 := range len(p0) {
+		for c0 := range p0 {
 			for c1 := c0 + 1; c1 < len(p0); c1++ {
 				for c2 := c1 + 1; c2 < len(p0); c2++ {
 					for c3 := c2 + 1; c3 < len(p0); c3++ {

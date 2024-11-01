@@ -6,8 +6,11 @@ linters:
     - dupl
     - dupword
     - err113
+    - execinquery
     - exhaustive
     - exhaustruct
+    - exportloopref
+    - recvcheck
     - funlen
     - gochecknoglobals
     - gochecknoinits
@@ -25,12 +28,11 @@ linters:
     - varnamelen
     - wastedassign
     - wsl
-    - execinquery
-    - exportloopref
 linters-settings:
   gosec:
     excludes:
       - G306
+      - G115
   goconst:
     min-occurrences: 4
   gocritic:
@@ -48,14 +50,57 @@ linters-settings:
         arguments:
           - ["ID"]
   stylecheck:
-    initialisms: ["ACL", "API", "ASCII", "CPU", "CSS", "DNS", "EOF", "GUID", "HTML", "HTTP", "HTTPS", "IP", "JSON", "QPS", "RAM", "RPC", "SLA", "SMTP", "SQL", "SSH", "TCP", "TLS", "TTL", "UDP", "UI", "GID", "UID", "UUID", "URI", "URL", "UTF8", "VM", "XML", "XMPP", "XSRF", "XSS", "SIP", "RTP", "AMQP", "DB", "TS"]
+    initialisms:
+      [
+        "ACL",
+        "API",
+        "ASCII",
+        "CPU",
+        "CSS",
+        "DNS",
+        "EOF",
+        "GUID",
+        "HTML",
+        "HTTP",
+        "HTTPS",
+        "IP",
+        "JSON",
+        "QPS",
+        "RAM",
+        "RPC",
+        "SLA",
+        "SMTP",
+        "SQL",
+        "SSH",
+        "TCP",
+        "TLS",
+        "TTL",
+        "UDP",
+        "UI",
+        "GID",
+        "UID",
+        "UUID",
+        "URI",
+        "URL",
+        "UTF8",
+        "VM",
+        "XML",
+        "XMPP",
+        "XSRF",
+        "XSS",
+        "SIP",
+        "RTP",
+        "AMQP",
+        "DB",
+        "TS",
+      ]
 issues:
   max-issues-per-linter: 0
   exclude-rules:
     - path: 'example_test\.go'
-      text: 'rewrite if-else to switch statement'
+      text: "rewrite if-else to switch statement"
     - path: '(.+)_test\.go'
-      text: 'Use of weak random number generator'
+      text: "Use of weak random number generator"
     - path: '(.+)_test\.go'
       linters:
         - lll
