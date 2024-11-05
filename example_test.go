@@ -12,6 +12,14 @@ import (
 	"github.com/cardrank/cardrank"
 )
 
+func ExampleType_Eval() {
+	pocket, board := cardrank.Must("2s 5d"), cardrank.Must("Ks As 7h")
+	ev := cardrank.Holdem.Eval(pocket, board)
+	fmt.Printf("%s\n", ev)
+	// Output:
+	// Ace-high, kickers King, Seven, Five, Two [As Ks 7h 5d 2s]
+}
+
 func ExampleFromRune() {
 	c := cardrank.FromRune('🂡')
 	fmt.Printf("%b\n", c)

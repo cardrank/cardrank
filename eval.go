@@ -460,9 +460,14 @@ func NewCactusEval(board int, normalize, low bool) EvalFunc {
 		f = NewEval(RankCactus)
 	}
 	return func(ev *Eval, p, b []Card) {
-		if len(p) < 3 && len(b) < board {
+		if nb := len(b); len(p) < 3 && nb < 4 {
 			if r := StartingEvalRank(p); r != 0 && r != Invalid {
-				ev.HiRank, ev.HiBest = r, p
+				ev.HiRank, ev.HiBest = r, make([]Card, 5)
+				copy(ev.HiBest, p)
+				if nb == 3 {
+					copy(ev.HiBest[2:], b[:3])
+				}
+				bestAceHigh(ev.HiBest)
 				return
 			}
 		}
