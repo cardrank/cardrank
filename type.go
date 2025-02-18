@@ -91,8 +91,8 @@ import (
 // [Video] is a best-5 card game, using a standard deck of 52 cards (see
 // [DeckFrench]), comprising a pocket of 5 cards, no community cards, with a
 // Ante and River. 5 pocket cards are dealt on the Ante, all up. Up to 5 pocket
-// cards can be drawn (exchanged) on the River. Uses a qualifier of a
-// [Jack]'s-or-better for Hi eval (see [NewJacksOrBetterEval]).
+// cards can be drawn (exchanged) on the River. Uses a qualifier of
+// [JacksOrBetter] for eval (see [NewJacksOrBetterEval]).
 //
 // [Omaha] is a [Holdem] variant with 4 pocket cards instead of 2, requiring
 // use of 2 of 4 the pocket cards and any 3 of the 5 board cards to make the
@@ -131,7 +131,8 @@ import (
 // (4 cards of the same suit), and a Four Straight (4 cards in sequential rank,
 // with no wrapping straights), besting [Pair] and [Nothing], with only a Ante
 // and River streets where 2 pocket cards are dealt on the Ante, and 3 pocket
-// cards are dealt, up, on the River.
+// cards are dealt, up, on the River. Uses additional [SokoFlush],
+// [SokoStraight], [SokoNothing] for evaluation.
 //
 // [SokoHiLo] is the Hi/Lo variant of [Soko], using a [Eight]-or-better
 // qualifier (see [RankEightOrBetter]) for the Lo.
@@ -1485,7 +1486,7 @@ func SokoDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	switch {
 	case rank <= TwoPair:
 		CactusDesc(f, verb, rank, best, unused)
-	case rank <= sokoFlush:
+	case rank <= SokoFlush:
 		fmt.Fprint(f, "Four Flush")
 		if verb != 'e' {
 			fmt.Fprintf(f, ", %N-high", best[0])
@@ -1493,7 +1494,7 @@ func SokoDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 				fmt.Fprintf(f, ", kickers %N, %N, %N, %N", best[1], best[2], best[3], best[4])
 			}
 		}
-	case rank <= sokoStraight:
+	case rank <= SokoStraight:
 		fmt.Fprint(f, "Four Straight")
 		if verb != 'e' {
 			fmt.Fprintf(f, ", %N-high", best[0])
@@ -1502,7 +1503,7 @@ func SokoDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 			}
 		}
 	default:
-		CactusDesc(f, verb, rank-sokoStraight+TwoPair, best, unused)
+		CactusDesc(f, verb, rank-SokoStraight+TwoPair, best, unused)
 	}
 }
 

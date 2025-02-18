@@ -155,7 +155,7 @@ func RankSoko(c0, c1, c2, c3, c4 Card) EvalRank {
 	if r != Invalid {
 		return r
 	}
-	return 1 + sokoStraight - TwoPair + rank
+	return 1 + SokoStraight - TwoPair + rank
 }
 
 // sokoMaps generates [Soko] flush4 and straight4 maps.

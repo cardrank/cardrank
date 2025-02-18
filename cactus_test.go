@@ -209,15 +209,15 @@ func TestSokoCards(t *testing.T) {
 							t.Fatalf("%v expected valid rank, got: %d", v, r)
 						case r <= TwoPair:
 						case hasFlush4(v):
-							if r <= TwoPair || sokoFlush < r {
-								t.Errorf("%v expected four flush %d < r <= %d, got: %d", v, TwoPair, sokoFlush, r)
+							if r <= TwoPair || SokoFlush < r {
+								t.Errorf("%v expected four flush %d < r <= %d, got: %d", v, TwoPair, SokoFlush, r)
 							}
 						case hasStraight4(v):
-							if r <= sokoFlush || sokoStraight < r {
-								t.Errorf("%v expected four straight %d < r <= %d, got: %d", v, sokoFlush, sokoStraight, r)
+							if r <= SokoFlush || SokoStraight < r {
+								t.Errorf("%v expected four straight %d < r <= %d, got: %d", v, SokoFlush, SokoStraight, r)
 							}
-						case sokoNothing < r:
-							t.Errorf("%v expected nothing r <= %d, got: %d", v, sokoNothing, r)
+						case SokoNothing < r:
+							t.Errorf("%v expected nothing r <= %d, got: %d", v, SokoNothing, r)
 						}
 						u := make([]Card, 5)
 						copy(u, v)

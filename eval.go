@@ -32,9 +32,9 @@ const (
 	flushOver         EvalRank = 1277
 	lowballAceFlush   EvalRank = 811
 	lowballAceNothing EvalRank = 6678
-	sokoFlush         EvalRank = TwoPair + 13*715
-	sokoStraight      EvalRank = sokoFlush + 13*10
-	sokoNothing       EvalRank = sokoStraight + (Nothing - TwoPair)
+	SokoFlush         EvalRank = TwoPair + 13*715
+	SokoStraight      EvalRank = SokoFlush + 13*10
+	SokoNothing       EvalRank = SokoStraight + (Nothing - TwoPair)
 	cactusAce         EvalRank = 6678
 	cactusKing        EvalRank = 7007
 	cactusQueen       EvalRank = 7216
@@ -1200,7 +1200,7 @@ func bestSoko(rank EvalRank, v, u []Card) {
 	switch {
 	case rank <= TwoPair:
 		bestCactus(rank, v, u, 0, nil)
-	case rank <= sokoFlush:
+	case rank <= SokoFlush:
 		suit := v[0].Suit()
 		for i := range 4 {
 			if v[i].Suit() != suit {
@@ -1216,7 +1216,7 @@ func bestSoko(rank EvalRank, v, u []Card) {
 			return v[i].Rank() > v[j].Rank()
 		})
 		bestAceHigh(u)
-	case rank <= sokoStraight:
+	case rank <= SokoStraight:
 		bestAceHigh(v)
 		if v[0].Rank()-v[1].Rank() != 1 {
 			c := v[0]
@@ -1225,7 +1225,7 @@ func bestSoko(rank EvalRank, v, u []Card) {
 		}
 		bestAceHigh(u)
 	default:
-		bestCactus(rank-sokoStraight+TwoPair, v, u, 0, nil)
+		bestCactus(rank-SokoStraight+TwoPair, v, u, 0, nil)
 	}
 }
 
