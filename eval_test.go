@@ -97,6 +97,8 @@ func TestEvalComp(t *testing.T) {
 		{Soko, "Ac Kc Tc Jc 6s 9s 4d", "Ah Kh Th Jh 6c 9c 4s", 0, 3461, "Four Flush, Ace-high, kickers King, Jack, Ten, Nine [Ac Kc Jc Tc 9s]"},
 		{Soko, "Ah Kh Qc Jh 6c 9c 4s", "Th Tc 8h 6c Kh Qc 2s", -1, 12626, "Four Straight, Ace-high, kicker Nine [Ah Kh Qc Jh 9c]"},
 		{Soko, "Th Tc 8h 6c Kh Qc 2s", "Ah Kh Qc Jh 6c 9c 4s", +1, 12626, "Four Straight, Ace-high, kicker Nine [Ah Kh Qc Jh 9c]"},
+		{Soko, "Jd Tc 9c 9h 8c Ah 2d", "Kh Kd Ts 9d 8d 2c 3c", -1, 12660, "Four Straight, Jack-high, kicker Ace [Jd Tc 9c 8c Ah]"},
+		{Soko, "Kh Kd Ts 9d 8d 2c 3c", "Jd Tc 9c 9h 8c Ah 2d", +1, 12660, "Four Straight, Jack-high, kicker Ace [Jd Tc 9c 8c Ah]"},
 		{Short, "5c 3c Ah Th 9h 8h 7h", "J♣ J♥ 6♣ 6♦ 6♥ 5♥ 3♣", -1, 535, "Flush, Ace-high, kickers Ten, Nine, Eight, Seven [Ah Th 9h 8h 7h]"},
 		{Short, "5♥ 3♣ 6♣ 6♦ 6♥ J♣ J♥", "8h 7h Ah Th 9h 5c 3c", +1, 535, "Flush, Ace-high, kickers Ten, Nine, Eight, Seven [Ah Th 9h 8h 7h]"},
 	}
@@ -257,6 +259,27 @@ func TestEvalRankTitle(t *testing.T) {
 		if s := test.r.Title(); s != test.exp {
 			t.Errorf("test %d expected %q, got: %q", i, test.exp, s)
 		}
+	}
+}
+
+func TestSoko(t *testing.T) {
+	tests := []struct {
+		s   string
+		exp string
+	}{
+		{"Jd Tc 9c 9h 8c", "Four Straight, Jack-high, kicker Nine [Jd Tc 9c 8c 9h]"},
+		{"Jd Jc Tc 8c 9c", "Four Flush, Jack-high, kickers Ten, Nine, Eight, Jack [Jc Tc 9c 8c Jd]"},
+		{"Ac Qh 4h 3c 2c", "Ace-high, kickers Queen, Four, Three, Two [Ac Qh 4h 3c 2c]"},
+		{"Ac Kc Qc Jc 9s", "Four Flush, Ace-high, kickers King, Queen, Jack, Nine [Ac Kc Qc Jc 9s]"},
+	}
+	for i, test := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			v := Must(test.s)
+			ev := Soko.Eval(v, nil)
+			if s := fmt.Sprintf("%s", ev); s != test.exp {
+				t.Errorf("expected %q, got: %q", test.exp, s)
+			}
+		})
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"slices"
+	"strconv"
 	"testing"
 )
 
@@ -483,12 +484,16 @@ func TestDescType(t *testing.T) {
 		{Soko, "5c Qh 4h 3c 2c", "%s", "Four Straight, Five-high, kicker Queen"},
 		{Soko, "5c Qh 4h 3c 2c", "%S", "Four Straight, Five-high"},
 		{Soko, "5c Qh 4h 3c 2c", "%e", "Four Straight"},
+		{Soko, "Jd Tc 9c 9h 8c", "%s", "Four Straight, Jack-high, kicker Nine"},
+		{Soko, "Ac Qh 4h 3c 2c", "%s", "Ace-high, kickers Queen, Four, Three, Two"},
 	}
 	for i, test := range tests {
-		ev := test.typ.Eval(Must(test.v), nil)
-		desc := ev.Desc(false)
-		if s, exp := fmt.Sprintf(test.s, desc), test.exp; s != test.exp {
-			t.Errorf("test %d %s %q expected %q, got: %q", i, test.typ, test.v, exp, s)
-		}
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			ev := test.typ.Eval(Must(test.v), nil)
+			desc := ev.Desc(false)
+			if s, exp := fmt.Sprintf(test.s, desc), test.exp; s != test.exp {
+				t.Errorf("%s %q expected %q, got: %q", test.typ, test.v, exp, s)
+			}
+		})
 	}
 }

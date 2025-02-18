@@ -1146,12 +1146,12 @@ func bestCactus(rank EvalRank, v, u []Card, base Rank, inv func(EvalRank) EvalRa
 		bestStraight(v, base)
 	case Straight:
 		bestStraight(v, base)
-		suitNormalize(v, u)
+		normalizeSuits(v, u)
 	case FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, Pair:
 		bestSet(v)
-		suitNormalize(v, u)
+		normalizeSuits(v, u)
 	case Nothing:
-		suitNormalize(v, u)
+		normalizeSuits(v, u)
 	}
 	bestAceHigh(u)
 }
@@ -1217,13 +1217,9 @@ func bestSoko(rank EvalRank, v, u []Card) {
 		})
 		bestAceHigh(u)
 	case rank <= SokoStraight:
-		bestAceHigh(v)
-		if v[0].Rank()-v[1].Rank() != 1 {
-			c := v[0]
-			copy(v, v[1:])
-			v[4] = c
-		}
+		bestSokoStraight(v, Two)
 		bestAceHigh(u)
+		normalizeSuits(v, u)
 	default:
 		bestCactus(rank-SokoStraight+TwoPair, v, u, 0, nil)
 	}
@@ -1294,6 +1290,38 @@ func bestStraight(v []Card, base Rank) {
 	copy(v[5:], d)
 }
 
+// bestSokoStraight sorts v by best-4 straight.
+func bestSokoStraight(v []Card, base Rank) {
+	m := make(map[Rank][]Card)
+	for _, c := range v {
+		r := c.Rank()
+		m[r] = append(m[r], c)
+	}
+	b := make([]Card, 4)
+	for h, i, j, k := Ace, King, Queen, Jack; base+Four <= h; h, i, j, k = h-1, i-1, j-1, k-1 {
+		if k == base-1 {
+			k = Ace
+		}
+		if m[h] != nil && m[i] != nil && m[j] != nil && m[k] != nil {
+			b[0], b[1], b[2], b[3] = m[h][0], m[i][0], m[j][0], m[k][0]
+			m[h], m[i], m[j], m[k] = m[h][1:], m[i][1:], m[j][1:], m[k][1:]
+			break
+		}
+		if k == base-1 {
+			break
+		}
+	}
+	copy(v, b)
+	// collect remaining
+	var d []Card
+	for i := Ace; i != InvalidRank; i-- {
+		if _, ok := m[i]; ok && m[i] != nil {
+			d = append(d, m[i]...)
+		}
+	}
+	copy(v[4:], d)
+}
+
 // bestSet sorts v by best matching sets in v.
 func bestSet(v []Card) {
 	m := make(map[Rank][]Card)
@@ -1354,9 +1382,9 @@ func orderSuits(v []Card) []Suit {
 	return suits
 }
 
-// suitNormalize normalizes the suits in v, swapping cards from v of the same
+// normalizeSuits normalizes the suits in v, swapping cards from v of the same
 // rank in u.
-func suitNormalize(v, u []Card) {
+func normalizeSuits(v, u []Card) {
 	m := make(map[Rank][]Card)
 	for _, c := range v {
 		r := c.Rank()
