@@ -25,7 +25,7 @@ const (
 	Nothing           EvalRank = 7462
 	HighCard          EvalRank = Nothing
 	Invalid           EvalRank = ^EvalRank(0)
-	jacksOrBetterMax  EvalRank = 4205
+	JacksOrBetter     EvalRank = 4205
 	eightOrBetterMax  EvalRank = 512
 	aceFiveMax        EvalRank = 16384
 	flushUnder        EvalRank = 156
@@ -504,7 +504,7 @@ func NewModifiedEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normal
 
 // NewJacksOrBetterEval creates a JacksOrBetter eval func, used for [Video].
 func NewJacksOrBetterEval(normalize bool) EvalFunc {
-	hi := NewMaxEval(RankCactus, jacksOrBetterMax, false)
+	hi := NewMaxEval(RankCactus, JacksOrBetter, false)
 	return func(ev *Eval, p, b []Card) {
 		hi(ev, p, b)
 		if normalize {
