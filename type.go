@@ -57,6 +57,10 @@ import (
 // any 3 of the 5 board cards to make the best-5. Comparable to [Omaha], but
 // with 2 pocket cards instead of 4.
 //
+// [DallasDouble] is a [Dallas]/[Holdem] variant that forces the use of the 2
+// pocket cards and any 3 of the 5 board cards to make the best-5, and with two
+// boards. Comparable to [OmahaDouble], but with 2 pocket cards instead of 4.
+//
 // [Houston] is a [Holdem]/[Dallas] variant with 3 pocket cards, instead of 2,
 // where only 2 board cards are dealt on the Flop, instead of 3. Requires using
 // 2 of the 3 pocket cards and any 3 of the 4 board cards to make the best-5.
@@ -189,6 +193,7 @@ const (
 	Swap           Type = 'H'<<8 | 'w' // Hw
 	River          Type = 'H'<<8 | 'v' // Hv
 	Dallas         Type = 'H'<<8 | 'a' // Ha
+	DallasDouble   Type = 'H'<<8 | 'A' // HA
 	Houston        Type = 'H'<<8 | 'u' // Hu
 	Draw           Type = 'D'<<8 | 'h' // Dh
 	DrawHiLo       Type = 'D'<<8 | 'l' // Dl
@@ -238,6 +243,7 @@ func DefaultTypes() []TypeDesc {
 		{"Hw", Swap, "Swap", WithSwap(false)},
 		{"Hv", River, "River", WithRiver(false)},
 		{"Ha", Dallas, "Dallas", WithDallas(false)},
+		{"HA", DallasDouble, "DallasDouble", WithDallasDouble()},
 		{"Hu", Houston, "Houston", WithHouston(false)},
 		{"Dh", Draw, "Draw", WithDraw(false)},
 		{"Dl", DrawHiLo, "DrawHiLo", WithDraw(true)},
@@ -728,6 +734,20 @@ func WithDallas(low bool, opts ...StreetOption) TypeOption {
 		desc.Blinds = HoldemBlinds()
 		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
 		desc.Eval = EvalOmaha
+		desc.Apply(opts...)
+	}
+}
+
+// WithDallasDouble is a type description option to set [DallasDouble]
+// definitions.
+func WithDallasDouble(opts ...StreetOption) TypeOption {
+	return func(desc *TypeDesc) {
+		desc.Max = 8
+		desc.Double = true
+		desc.Blinds = HoldemBlinds()
+		desc.Streets = HoldemStreets(2, 1, 3, 1, 1)
+		desc.Eval = EvalOmaha
+		desc.LoDesc = DescCactus
 		desc.Apply(opts...)
 	}
 }
