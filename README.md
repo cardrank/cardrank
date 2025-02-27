@@ -33,18 +33,18 @@ algorithms](#cactus-kev). [Evaluation][eval] of cards can be compared and
 
 Supports [evaluating and ranking][eval] the following [`Type`][type]'s:
 
-| Holdem Variants    | Omaha Variants           | Hybrid Variants      | Draw Variants      | Other                   |
-| ------------------ | ------------------------ | -------------------- | ------------------ | ----------------------- |
-| [`Holdem`][type]   | [`Omaha`][type]          | [`Dallas`][type]     | [`Video`][type]    | [`Soko`][type]          |
-| [`Split`][type]    | [`OmahaHiLo`][type]      | [`Houston`][type]    | [`Draw`][type]     | [`SokoHiLo`][type]      |
-| [`Short`][type]    | [`OmahaDouble`][type]    | [`Fusion`][type]     | [`DrawHiLo`][type] | [`Lowball`][type]       |
-| [`Manila`][type]   | [`OmahaFive`][type]      | [`FusionHiLo`][type] | [`Stud`][type]     | [`LowballTriple`][type] |
-| [`Spanish`][type]  | [`OmahaSix`][type]       |                      | [`StudHiLo`][type] | [`Razz`][type]          |
-| [`Royal`][type]    | [`Jakarta`][type]        |                      | [`StudFive`][type] | [`Badugi`][type]        |
-| [`Double`][type]   | [`Courchevel`][type]     |                      |                    |                         |
-| [`Showtime`][type] | [`CourchevelHiLo`][type] |                      |                    |                         |
-| [`Swap`][type]     |                          |                      |                    |                         |
-| [`River`][type]    |                          |                      |                    |                         |
+| Holdem Variants    | Omaha Variants           | Hybrid Variants        | Draw Variants      | Other                   |
+| ------------------ | ------------------------ | ---------------------- | ------------------ | ----------------------- |
+| [`Holdem`][type]   | [`Omaha`][type]          | [`Dallas`][type]       | [`Video`][type]    | [`Soko`][type]          |
+| [`Split`][type]    | [`OmahaHiLo`][type]      | [`DallasDouble`][type] | [`Draw`][type]     | [`SokoHiLo`][type]      |
+| [`Short`][type]    | [`OmahaDouble`][type]    | [`Houston`][type]      | [`DrawHiLo`][type] | [`Lowball`][type]       |
+| [`Manila`][type]   | [`OmahaFive`][type]      | [`Fusion`][type]       | [`Stud`][type]     | [`LowballTriple`][type] |
+| [`Spanish`][type]  | [`OmahaSix`][type]       | [`FusionHiLo`][type]   | [`StudHiLo`][type] | [`Razz`][type]          |
+| [`Royal`][type]    | [`Jakarta`][type]        |                        | [`StudFive`][type] | [`Badugi`][type]        |
+| [`Double`][type]   | [`Courchevel`][type]     |                        |                    |                         |
+| [`Showtime`][type] | [`CourchevelHiLo`][type] |                        |                    |                         |
+| [`Swap`][type]     |                          |                        |                    |                         |
+| [`River`][type]    |                          |                        |                    |                         |
 
 See the package's [`Type`][type] documentation for an overview of the above.
 

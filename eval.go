@@ -1217,7 +1217,7 @@ func bestSoko(rank EvalRank, v, u []Card) {
 		})
 		bestAceHigh(u)
 	case rank <= SokoStraight:
-		bestSokoStraight(v, Two)
+		bestSokoStraight(v, 0)
 		bestAceHigh(u)
 		normalizeSuits(v, u)
 	default:
