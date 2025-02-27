@@ -31,6 +31,8 @@ var (
 
 // Init inits the package level default variables. Must be manually called
 // prior to using the package when built with the [noinit] build tag.
+//
+// [noinit]: https://pkg.go.dev/github.com/cardrank/cardrank#readme-noinit
 func Init() {
 	if RankCactus == nil {
 		switch {
