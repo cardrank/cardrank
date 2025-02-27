@@ -657,31 +657,31 @@ func StartingEvalRank(pocket []Card) EvalRank {
 	case 1:
 		switch pocket[0].Rank() {
 		case Ace:
-			return cactusAce
+			return AceHigh
 		case King:
-			return cactusKing
+			return KingHigh
 		case Queen:
-			return cactusQueen
+			return QueenHigh
 		case Jack:
-			return cactusJack
+			return JackHigh
 		case Ten:
-			return cactusTen
+			return TenHigh
 		case Nine:
-			return cactusNine
+			return NineHigh
 		case Eight:
-			return cactusEight
+			return EightHigh
 		case Seven:
-			return cactusSeven
+			return SevenHigh
 		case Six:
-			return cactusSix
+			return SixHigh
 		case Five:
-			return cactusFive
+			return FiveHigh
 		case Four:
-			return cactusFour
+			return FourHigh
 		case Three:
-			return cactusThree
+			return ThreeHigh
 		case Two:
-			return cactusTwo
+			return TwoHigh
 		}
 	case 2:
 		return startingCactus[HashKey(pocket[0], pocket[1])]

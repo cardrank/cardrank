@@ -227,51 +227,50 @@ const (
 func DefaultTypes() []TypeDesc {
 	var v []TypeDesc
 	for _, d := range []struct {
-		id   string
 		typ  Type
 		name string
 		opt  TypeOption
 	}{
-		{"Hh", Holdem, "Holdem", WithHoldem(false)},
-		{"Hl", Split, "Split", WithHoldem(true)},
-		{"Hs", Short, "Short", WithShort()},
-		{"Hm", Manila, "Manila", WithManila()},
-		{"Hp", Spanish, "Spanish", WithSpanish()},
-		{"Hr", Royal, "Royal", WithRoyal()},
-		{"Hd", Double, "Double", WithDouble()},
-		{"Ht", Showtime, "Showtime", WithShowtime(false)},
-		{"Hw", Swap, "Swap", WithSwap(false)},
-		{"Hv", River, "River", WithRiver(false)},
-		{"Ha", Dallas, "Dallas", WithDallas(false)},
-		{"HA", DallasDouble, "DallasDouble", WithDallasDouble()},
-		{"Hu", Houston, "Houston", WithHouston(false)},
-		{"Dh", Draw, "Draw", WithDraw(false)},
-		{"Dl", DrawHiLo, "DrawHiLo", WithDraw(true)},
-		{"Sh", Stud, "Stud", WithStud(false)},
-		{"Sl", StudHiLo, "StudHiLo", WithStud(true)},
-		{"S5", StudFive, "StudFive", WithStudFive(false)},
-		{"Jh", Video, "Video", WithVideo(false)},
-		{"O4", Omaha, "Omaha", WithOmaha(false)},
-		{"Ol", OmahaHiLo, "OmahaHiLo", WithOmaha(true)},
-		{"Od", OmahaDouble, "OmahaDouble", WithOmahaDouble()},
-		{"O5", OmahaFive, "OmahaFive", WithOmahaFive(false)},
-		{"O6", OmahaSix, "OmahaSix", WithOmahaSix(false)},
-		{"Or", Jakarta, "Jakarta", WithJakarta()},
-		{"Oc", Courchevel, "Courchevel", WithCourchevel(false)},
-		{"Oe", CourchevelHiLo, "CourchevelHiLo", WithCourchevel(true)},
-		{"Of", Fusion, "Fusion", WithFusion(false)},
-		{"OF", FusionHiLo, "FusionHiLo", WithFusion(true)},
-		{"Kh", Soko, "Soko", WithSoko(false)},
-		{"Kl", SokoHiLo, "SokoHiLo", WithSoko(true)},
-		{"L1", Lowball, "Lowball", WithLowball(false)},
-		{"L3", LowballTriple, "LowballTriple", WithLowball(true)},
-		{"Ra", Razz, "Razz", WithRazz()},
-		{"Ba", Badugi, "Badugi", WithBadugi()},
-		// {"Ku", Kuhn, "Kuhn", WithKuhn()},
-		// {"Le", Leduc, "Leduc", WithLeduc()},
-		// {"RI", RhodeIsland, "RhodeIsland", WithRhodeIsland()},
+		{Holdem, "Holdem", WithHoldem(false)},
+		{Split, "Split", WithHoldem(true)},
+		{Short, "Short", WithShort()},
+		{Manila, "Manila", WithManila()},
+		{Spanish, "Spanish", WithSpanish()},
+		{Royal, "Royal", WithRoyal()},
+		{Double, "Double", WithDouble()},
+		{Showtime, "Showtime", WithShowtime(false)},
+		{Swap, "Swap", WithSwap(false)},
+		{River, "River", WithRiver(false)},
+		{Dallas, "Dallas", WithDallas(false)},
+		{DallasDouble, "DallasDouble", WithDallasDouble()},
+		{Houston, "Houston", WithHouston(false)},
+		{Draw, "Draw", WithDraw(false)},
+		{DrawHiLo, "DrawHiLo", WithDraw(true)},
+		{Stud, "Stud", WithStud(false)},
+		{StudHiLo, "StudHiLo", WithStud(true)},
+		{StudFive, "StudFive", WithStudFive(false)},
+		{Video, "Video", WithVideo(false)},
+		{Omaha, "Omaha", WithOmaha(false)},
+		{OmahaHiLo, "OmahaHiLo", WithOmaha(true)},
+		{OmahaDouble, "OmahaDouble", WithOmahaDouble()},
+		{OmahaFive, "OmahaFive", WithOmahaFive(false)},
+		{OmahaSix, "OmahaSix", WithOmahaSix(false)},
+		{Jakarta, "Jakarta", WithJakarta()},
+		{Courchevel, "Courchevel", WithCourchevel(false)},
+		{CourchevelHiLo, "CourchevelHiLo", WithCourchevel(true)},
+		{Fusion, "Fusion", WithFusion(false)},
+		{FusionHiLo, "FusionHiLo", WithFusion(true)},
+		{Soko, "Soko", WithSoko(false)},
+		{SokoHiLo, "SokoHiLo", WithSoko(true)},
+		{Lowball, "Lowball", WithLowball(false)},
+		{LowballTriple, "LowballTriple", WithLowball(true)},
+		{Razz, "Razz", WithRazz()},
+		{Badugi, "Badugi", WithBadugi()},
+		// {Kuhn, "Kuhn", WithKuhn()},
+		// {Leduc, "Leduc", WithLeduc()},
+		// {RhodeIsland, "RhodeIsland", WithRhodeIsland()},
 	} {
-		desc, err := NewType(d.id, d.typ, d.name, d.opt)
+		desc, err := NewType(d.typ.Id(), d.typ, d.name, d.opt)
 		if err != nil {
 			panic(err)
 		}
@@ -1568,7 +1567,7 @@ func LowballDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 // cards.
 func RazzDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	switch {
-	case rank < aceFiveMax:
+	case rank < AceFiveLow:
 		LowDesc(f, verb, rank, best, unused)
 	default:
 		CactusDesc(f, verb, Invalid-rank, best, unused)

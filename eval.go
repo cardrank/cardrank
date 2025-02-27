@@ -14,40 +14,45 @@ type EvalRank uint16
 //
 // See: https://archive.is/G6GZg
 const (
-	StraightFlush     EvalRank = 10
-	FourOfAKind       EvalRank = 166
-	FullHouse         EvalRank = 322
-	Flush             EvalRank = 1599
-	Straight          EvalRank = 1609
-	ThreeOfAKind      EvalRank = 2467
-	TwoPair           EvalRank = 3325
-	Pair              EvalRank = 6185
-	Nothing           EvalRank = 7462
-	HighCard          EvalRank = Nothing
-	Invalid           EvalRank = ^EvalRank(0)
+	RoyalFlush    EvalRank = 1
+	StraightFlush EvalRank = 10
+	FourOfAKind   EvalRank = 166
+	FullHouse     EvalRank = 322
+	Flush         EvalRank = 1599
+	Straight      EvalRank = 1609
+	ThreeOfAKind  EvalRank = 2467
+	TwoPair       EvalRank = 3325
+	Pair          EvalRank = 6185
+	Nothing       EvalRank = 7462
+	HighCard      EvalRank = Nothing
+
 	JacksOrBetter     EvalRank = 4205
-	eightOrBetterMax  EvalRank = 512
-	aceFiveMax        EvalRank = 16384
-	flushUnder        EvalRank = 156
-	flushOver         EvalRank = 1277
-	lowballAceFlush   EvalRank = 811
-	lowballAceNothing EvalRank = 6678
-	SokoFlush         EvalRank = TwoPair + 13*715
-	SokoStraight      EvalRank = SokoFlush + 13*10
-	SokoNothing       EvalRank = SokoStraight + (Nothing - TwoPair)
-	cactusAce         EvalRank = 6678
-	cactusKing        EvalRank = 7007
-	cactusQueen       EvalRank = 7216
-	cactusJack        EvalRank = 7341
-	cactusTen         EvalRank = 7410
-	cactusNine        EvalRank = 7444
-	cactusEight       EvalRank = 7458
-	cactusSeven       EvalRank = 7462 // seven, five, four, three, two all same as Nothing
-	cactusSix         EvalRank = 7461
-	cactusFive        EvalRank = 7462
-	cactusFour        EvalRank = 7462
-	cactusThree       EvalRank = 7462
-	cactusTwo         EvalRank = 7462
+	EightOrBetter     EvalRank = 512
+	AceFiveLow        EvalRank = 16384
+	FlushUnder        EvalRank = 156
+	FlushOver         EvalRank = 1277
+	LowballAceFlush   EvalRank = 811
+	LowballAceNothing EvalRank = 6678
+
+	SokoFlush    EvalRank = TwoPair + 13*715
+	SokoStraight EvalRank = SokoFlush + 13*10
+	SokoNothing  EvalRank = SokoStraight + (Nothing - TwoPair)
+
+	AceHigh   EvalRank = 6678
+	KingHigh  EvalRank = 7007
+	QueenHigh EvalRank = 7216
+	JackHigh  EvalRank = 7341
+	TenHigh   EvalRank = 7410
+	NineHigh  EvalRank = 7444
+	EightHigh EvalRank = 7458
+	SevenHigh EvalRank = 7462 // seven, five, four, three, two all same as Nothing
+	SixHigh   EvalRank = 7461
+	FiveHigh  EvalRank = 7462
+	FourHigh  EvalRank = 7462
+	ThreeHigh EvalRank = 7462
+	TwoHigh   EvalRank = 7462
+
+	Invalid EvalRank = ^EvalRank(0)
 )
 
 // Fixed converts a relative eval rank to a fixed eval rank.
@@ -145,31 +150,31 @@ func (r EvalRank) Format(f fmt.State, verb rune) {
 	}
 }
 
-// ToFlushOver changes a Cactus rank to a Flush Over a Full House rank.
+// ToFlushOver changes a Cactus rank to a [FlushOver] a Full House rank.
 //
 //	FullHouse: FullHouse(322) - FourOfAKind(166) == 156
 //	Flush:     Flush(1599)    - FullHouse(322)   == 1277
 func (r EvalRank) ToFlushOver() EvalRank {
 	switch {
 	case FourOfAKind < r && r <= FullHouse:
-		return r + flushOver
+		return r + FlushOver
 	case FullHouse < r && r <= Flush:
-		return r - flushUnder
+		return r - FlushUnder
 	}
 	return r
 }
 
-// FromFlushOver changes a rank from a Flush Over a Full House rank to a Cactus
+// FromFlushOver changes a rank from a [FlushOver] a Full House rank to a Cactus
 // rank.
 //
 //	FullHouse: FullHouse(322) - FourOfAKind(166) == 156
 //	Flush:     Flush(1599)    - FullHouse(322)   == 1277
 func (r EvalRank) FromFlushOver() EvalRank {
 	switch {
-	case FourOfAKind < r && r <= FourOfAKind+flushOver:
-		return r + flushUnder
-	case FourOfAKind+flushOver < r && r <= Flush:
-		return r - flushOver
+	case FourOfAKind < r && r <= FourOfAKind+FlushOver:
+		return r + FlushUnder
+	case FourOfAKind+FlushOver < r && r <= Flush:
+		return r - FlushOver
 	}
 	return r
 }
@@ -189,14 +194,14 @@ func (r EvalRank) ToLowball() EvalRank {
 	switch {
 	case r == StraightFlush:
 		// change lowest straight flush to lowest ace high flush
-		r = lowballAceFlush
-	case StraightFlush < r && r <= lowballAceFlush:
+		r = LowballAceFlush
+	case StraightFlush < r && r <= LowballAceFlush:
 		// move everything between 11 and 811 down 1
 		r--
 	case r == Straight:
 		// change lowest ace straight to lowest ace high nothing
-		r = lowballAceNothing
-	case Straight < r && r <= lowballAceNothing:
+		r = LowballAceNothing
+	case Straight < r && r <= LowballAceNothing:
 		// move everything between 1610 and 6678 down 1
 		r--
 	}
@@ -209,16 +214,16 @@ func (r EvalRank) ToLowball() EvalRank {
 func (r EvalRank) FromLowball() EvalRank {
 	r = Nothing - (r - 1)
 	switch {
-	case r == lowballAceFlush:
+	case r == LowballAceFlush:
 		// change lowest lowest ace high flush to lowest straight flush
 		r = StraightFlush
-	case StraightFlush <= r && r < lowballAceFlush:
+	case StraightFlush <= r && r < LowballAceFlush:
 		// move everything between 10 and 812 up 1
 		r++
-	case r == lowballAceNothing:
+	case r == LowballAceNothing:
 		// change lowest ace high nothing to lowest ace straight
 		r = Straight
-	case Straight <= r && r < lowballAceNothing:
+	case Straight <= r && r < LowballAceNothing:
 		// move everything between 1609 and 6679 up 1
 		r++
 	}
@@ -308,7 +313,7 @@ func RankSpanish(c0, c1, c2, c3, c4 Card) EvalRank {
 // When there is a [Pair] (or higher) of matching ranks, will be the inverted
 // Cactus value.
 func RankRazz(c0, c1, c2, c3, c4 Card) EvalRank {
-	if r := RankAceFiveLow(0, c0, c1, c2, c3, c4); r < aceFiveMax {
+	if r := RankAceFiveLow(0, c0, c1, c2, c3, c4); r < AceFiveLow {
 		return r
 	}
 	return Invalid - RankCactus(c0, c1, c2, c3, c4)
@@ -411,7 +416,7 @@ func NewSplitEval(hi, lo RankFunc, maximum EvalRank) EvalFunc {
 func NewHybridEval(normalize, low bool) EvalFunc {
 	var f EvalFunc
 	if low {
-		f = NewSplitEval(RankCactus, RankEightOrBetter, eightOrBetterMax)
+		f = NewSplitEval(RankCactus, RankEightOrBetter, EightOrBetter)
 	} else {
 		f = NewEval(RankCactus)
 	}
@@ -421,7 +426,7 @@ func NewHybridEval(normalize, low bool) EvalFunc {
 			f(ev, p, b)
 			if normalize {
 				bestCactus(ev.HiRank, ev.HiBest, ev.HiUnused, 0, nil)
-				if low && ev.LoRank < eightOrBetterMax {
+				if low && ev.LoRank < EightOrBetter {
 					bestAceLow(ev.LoBest)
 					bestAceHigh(ev.LoUnused)
 				}
@@ -438,8 +443,8 @@ func NewHybridEval(normalize, low bool) EvalFunc {
 				u := make([]Card, np+nb)
 				copy(u, p)
 				copy(u[np:], b)
-				ev.Max7(RankEightOrBetter, u, eightOrBetterMax, true)
-				if normalize && ev.LoRank < eightOrBetterMax {
+				ev.Max7(RankEightOrBetter, u, EightOrBetter, true)
+				if normalize && ev.LoRank < EightOrBetter {
 					bestAceLow(ev.LoBest)
 					bestAceHigh(ev.LoUnused)
 				}
@@ -455,7 +460,7 @@ func NewCactusEval(board int, normalize, low bool) EvalFunc {
 	case twoPlusTwo != nil:
 		f = NewHybridEval(normalize, low)
 	case low:
-		f = NewSplitEval(RankCactus, RankEightOrBetter, eightOrBetterMax)
+		f = NewSplitEval(RankCactus, RankEightOrBetter, EightOrBetter)
 	default:
 		f = NewEval(RankCactus)
 	}
@@ -486,7 +491,7 @@ func NewCactusEval(board int, normalize, low bool) EvalFunc {
 func NewModifiedEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize, low bool) EvalFunc {
 	var f EvalFunc
 	if low {
-		f = NewSplitEval(hi, RankEightOrBetter, eightOrBetterMax)
+		f = NewSplitEval(hi, RankEightOrBetter, EightOrBetter)
 	} else {
 		f = NewEval(hi)
 	}
@@ -568,7 +573,7 @@ func NewOmahaEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize
 					ev.HiUnused = append(ev.HiUnused, vb[j][3:]...)
 				}
 				if low {
-					if r = RankEightOrBetter(c0, c1, c2, c3, c4); r < eightOrBetterMax && r < ev.LoRank {
+					if r = RankEightOrBetter(c0, c1, c2, c3, c4); r < EightOrBetter && r < ev.LoRank {
 						ev.LoRank = r
 						loBest = []Card{c0, c1, c2, c3, c4}
 						loUnused = append(loUnused[:0], vp[i][2:]...)
@@ -584,7 +589,7 @@ func NewOmahaEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize
 			bestCactus(ev.HiRank, ev.HiBest, nil, base, inv)
 			bestAceHigh(ev.HiUnused)
 			switch {
-			case low && ev.LoRank < eightOrBetterMax:
+			case low && ev.LoRank < EightOrBetter:
 				bestAceLow(ev.LoBest)
 				bestAceHigh(ev.LoUnused)
 			case low:
@@ -598,7 +603,7 @@ func NewOmahaEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize
 func NewSokoEval(normalize, low bool) EvalFunc {
 	var f EvalFunc
 	if low {
-		f = NewSplitEval(RankSoko, RankEightOrBetter, eightOrBetterMax)
+		f = NewSplitEval(RankSoko, RankEightOrBetter, EightOrBetter)
 	} else {
 		f = NewEval(RankSoko)
 	}
@@ -632,7 +637,7 @@ func NewRazzEval(normalize bool) EvalFunc {
 	return func(ev *Eval, p, b []Card) {
 		f(ev, p, b)
 		if normalize {
-			if ev.HiRank < aceFiveMax {
+			if ev.HiRank < AceFiveLow {
 				bestAceLow(ev.HiBest)
 			} else {
 				switch (Invalid - ev.HiRank).Fixed() {

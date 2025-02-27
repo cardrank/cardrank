@@ -173,11 +173,11 @@ func TestNewSplitEval(t *testing.T) {
 		{RankRazz, Invalid, "Kh Qh Jh Th 9h 8h 7h", 2, 1984},
 		{RankShort, Invalid, "Kh Qh Jh Th 9h", 2, 2},
 		{RankRazz, Invalid, "Kh Qh Qc Jc Jh Th 9h", 2, 7936},
-		{RankEightOrBetter, eightOrBetterMax, "5h 4h 3h 2h Ah", 10, 31},
-		{RankEightOrBetter, eightOrBetterMax, "8h 7h 6h 5h 4h", 7, 248},
-		{RankEightOrBetter, eightOrBetterMax, "9h Th 8h 7h 6h 5h 4h", 5, 248},
-		{RankEightOrBetter, eightOrBetterMax, "9h 7h 6h 5h 4h", 1567, Invalid},
-		{RankEightOrBetter, eightOrBetterMax, "Ah Kh Qh Jh Th", 1, Invalid},
+		{RankEightOrBetter, EightOrBetter, "5h 4h 3h 2h Ah", 10, 31},
+		{RankEightOrBetter, EightOrBetter, "8h 7h 6h 5h 4h", 7, 248},
+		{RankEightOrBetter, EightOrBetter, "9h Th 8h 7h 6h 5h 4h", 5, 248},
+		{RankEightOrBetter, EightOrBetter, "9h 7h 6h 5h 4h", 1567, Invalid},
+		{RankEightOrBetter, EightOrBetter, "Ah Kh Qh Jh Th", 1, Invalid},
 	}
 	for i, test := range tests {
 		p, f := Must(test.v), NewSplitEval(RankCactus, test.f, test.max)
