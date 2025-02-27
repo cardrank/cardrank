@@ -29,7 +29,8 @@ func init() {
 // [TwoPlusTwoHandEvaluator]: https://github.com/tangentforks/TwoPlusTwoHandEvaluator
 func NewTwoPlusTwoEval() func([]Card) EvalRank {
 	const total, chunk, last = 32487834, 2621440, 1030554
-	tbl, pos := make([]uint32, total), 0
+	table, pos := make([]uint32, total), 0
+	var r bytes.Reader
 	for i, buf := range [][]byte{
 		twoplustwo00Dat,
 		twoplustwo01Dat,
@@ -52,7 +53,8 @@ func NewTwoPlusTwoEval() func([]Card) EvalRank {
 		if n%4 != 0 || n/4 != exp {
 			panic(fmt.Sprintf("twoplustwo%02d.dat is bad: expected %d uint32, has: %d", i, exp, n/4))
 		}
-		if err := binary.Read(bytes.NewReader(buf), binary.LittleEndian, tbl[pos:pos+n/4]); err != nil {
+		r.Reset(buf)
+		if err := binary.Read(&r, binary.LittleEndian, table[pos:pos+n/4]); err != nil {
 			panic(fmt.Sprintf("twoplustwo%02d.dat is bad: %v", i, err))
 		}
 		pos += n / 4
@@ -61,10 +63,10 @@ func NewTwoPlusTwoEval() func([]Card) EvalRank {
 		panic("short read twoplustwo*.dat")
 	}
 	// build card map
-	m := make(map[Card]uint32, 52)
+	card := make(map[Card]uint32, 52)
 	for i, r := uint32(0), Two; r <= Ace; r++ {
 		for _, s := range []Suit{Spade, Heart, Club, Diamond} {
-			m[New(r, s)] = i + 1
+			card[New(r, s)] = i + 1
 			i++
 		}
 	}
@@ -83,10 +85,10 @@ func NewTwoPlusTwoEval() func([]Card) EvalRank {
 	return func(v []Card) EvalRank {
 		i := uint32(53)
 		for _, c := range v {
-			i = tbl[i+m[c]]
+			i = table[i+card[c]]
 		}
 		if len(v) < 7 {
-			i = tbl[i]
+			i = table[i]
 		}
 		return EvalRank(ranks[i>>12] - i&0xfff + 1)
 	}
