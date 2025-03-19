@@ -34,6 +34,9 @@ const (
 	// DeckLeduc is a deck of 6 playing cards, a [King], [Queen], and a [Jack]
 	// of the [Spade] and [Heart] suits (see [Leduc]).
 	DeckLeduc = DeckType(^uint8(0) - 2)
+	// DeckFrenchJoker is a standard [DeckFrench] with two additional "wild"
+	// Joker cards (as represented by [InvalidCard]).
+	DeckFrenchJoker = DeckType(^uint8(8) - 3)
 )
 
 // Name returns the deck name.
@@ -106,6 +109,8 @@ func (typ DeckType) Unshuffled() []Card {
 			}
 		}
 		return v
+	case DeckFrenchJoker:
+		return append(DeckFrench.Unshuffled(), InvalidCard, InvalidCard)
 	case DeckKuhn:
 		return []Card{
 			New(King, Spade), New(Queen, Spade), New(Jack, Spade),
@@ -121,13 +126,14 @@ func (typ DeckType) Unshuffled() []Card {
 
 // deck cards.
 var (
-	deckFrench  []Card
-	deckShort   []Card
-	deckManila  []Card
-	deckSpanish []Card
-	deckRoyal   []Card
-	deckKuhn    []Card
-	deckLeduc   []Card
+	deckFrench      []Card
+	deckShort       []Card
+	deckManila      []Card
+	deckSpanish     []Card
+	deckRoyal       []Card
+	deckKuhn        []Card
+	deckLeduc       []Card
+	deckFrenchJoker []Card
 )
 
 func init() {
@@ -138,6 +144,7 @@ func init() {
 	deckRoyal = DeckRoyal.Unshuffled()
 	deckKuhn = DeckKuhn.Unshuffled()
 	deckLeduc = DeckLeduc.Unshuffled()
+	deckFrenchJoker = DeckFrenchJoker.Unshuffled()
 }
 
 // v returns the cards for the type.
@@ -157,6 +164,8 @@ func (typ DeckType) v() []Card {
 		return deckKuhn
 	case DeckLeduc:
 		return deckLeduc
+	case DeckFrenchJoker:
+		return deckFrenchJoker
 	}
 	return nil
 }
