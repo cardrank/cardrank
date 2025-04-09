@@ -4,8 +4,8 @@ linters:
   settings:
     gosec:
       excludes:
-        - G306
         - G115
+        - G306
         - G404
     goconst:
       min-occurrences: 4
@@ -81,28 +81,28 @@ linters:
         linters:
           - lll
   disable:
-    - wsl
+    - depguard
+    - dupl
+    - dupword
+    - err113
+    - errcheck
+    - exhaustive
+    - exhaustruct
+    - funlen
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - gocritic
+    - makezero
+    - mnd
+    - musttag
+    - nlreturn
+    - nolintlint
+    - paralleltest
+    - prealloc
+    - recvcheck
+    - staticcheck
+    - testpackage
     - varnamelen
     - wastedassign
-    - testpackage
-    - staticcheck
-    - recvcheck
-    - prealloc
-    - paralleltest
-    - nolintlint
-    - nlreturn
-    - musttag
-    - mnd
-    - makezero
-    - gochecknoglobals
-    - funlen
-    - exhaustruct
-    - exhaustive
-    - gocritic
-    - gocognit
-    - errcheck
-    - gochecknoinits
-    - depguard
-    - err113
-    - dupword
-    - dupl
+    - wsl
