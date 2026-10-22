@@ -278,3 +278,11 @@ func TestFormatterRanks(t *testing.T) {
 		}
 	}
 }
+
+func TestFromIndexInvalid(t *testing.T) {
+	for _, i := range []int{-1, -13, -14, -52, 52, 53} {
+		if c := FromIndex(i); c != InvalidCard {
+			t.Errorf("FromIndex(%d) expected InvalidCard, got: %d", i, c)
+		}
+	}
+}

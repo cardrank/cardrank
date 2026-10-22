@@ -19,7 +19,7 @@ func main() {
 	evs := cardrank.Holdem.EvalPockets(pockets, board)
 	fmt.Printf("------ Holdem %d ------\n", seed)
 	fmt.Printf("Board: %b\n", board)
-	for i := 0; i < players; i++ {
+	for i := range players {
 		desc := evs[i].Desc(false)
 		fmt.Printf("  %d: %b %b %b %s\n", i+1, pockets[i], desc.Best, desc.Unused, desc)
 	}
@@ -29,7 +29,7 @@ func main() {
 		fmt.Printf("Result: %d wins with %s %b\n", order[0]+1, desc, desc.Best)
 	} else {
 		var s, b []string
-		for j := 0; j < pivot; j++ {
+		for j := range pivot {
 			s = append(s, strconv.Itoa(order[j]+1))
 			b = append(b, fmt.Sprintf("%b", evs[order[j]].HiBest))
 		}

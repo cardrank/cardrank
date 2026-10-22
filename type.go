@@ -11,8 +11,7 @@ import (
 
 // Type wraps a registered type description (see [TypeDesc]), providing a
 // standard way to use the [DefaultTypes], or a custom type registered with
-// [RegisterType]. [DefaultTypes] are registered by default unless using the
-// [noinit] build tag.
+// [RegisterType]. [DefaultTypes] are registered automatically.
 //
 // # Standard Types
 //
@@ -23,7 +22,7 @@ import (
 // board card on the River. 1 card is discarded on the Flop, Turn, and River,
 // prior to the board cards being dealt.
 //
-// [Split] is the Hi/Lo variant of [Holdem], using a [Eight]-or-better
+// [Split] is the Hi/Lo variant of [Holdem], using an [Eight]-or-better
 // qualifier (see [RankEightOrBetter]) for the Lo.
 //
 // [Short] is a [Holdem] variant using a Short deck of 36 cards, having only
@@ -72,7 +71,7 @@ import (
 // Ante, 6th, and River streets. 5 cards are dealt on the Ante, and up to 5
 // pocket cards can be drawn (exchanged) on the 6th street.
 //
-// [DrawHiLo] is the Hi/Lo variant of [Draw], using a [Eight]-or-better
+// [DrawHiLo] is the Hi/Lo variant of [Draw], using an [Eight]-or-better
 // qualifier (see [RankEightOrBetter]) for the Lo.
 //
 // [Stud] is a best-5 card game, using a standard deck of 52 cards (see
@@ -82,7 +81,7 @@ import (
 // 4th, 5th, and 6th streets, with 1 final additional pocket card dealt down on
 // the 7th street.
 //
-// [StudHiLo] is the Hi/Lo variant of [Stud], using a [Eight]-or-better
+// [StudHiLo] is the Hi/Lo variant of [Stud], using an [Eight]-or-better
 // qualifier (see [RankEightOrBetter]) for the Lo.
 //
 // [StudFive] is a best-5 card game using a standard deck of 52 cards (see
@@ -102,10 +101,10 @@ import (
 // use of 2 of 4 the pocket cards and any 3 of the 5 board cards to make the
 // best-5.
 //
-// [OmahaHiLo] is the Hi/Lo variant of [Omaha], using a [Eight]-or-better
+// [OmahaHiLo] is the Hi/Lo variant of [Omaha], using an [Eight]-or-better
 // qualifier (see [RankEightOrBetter]) for the Lo.
 //
-// [OmahaDouble] is a [Omaha] variant having two separate Hi and Lo community
+// [OmahaDouble] is an [Omaha] variant having two separate Hi and Lo community
 // boards.
 //
 // [OmahaFive] is a [Holdem]/[Omaha] variant with 5 pocket cards, requiring the
@@ -116,10 +115,10 @@ import (
 // use of 2 of the 6 pocket cards and any 3 of the 5 board cards to make the
 // best-5.
 //
-// [Jakarta] is a [Omaha] variant using a Royal deck of 20 cards, having only
+// [Jakarta] is an [Omaha] variant using a Royal deck of 20 cards, having only
 // cards with ranks of 10+ (see [DeckRoyal]).
 //
-// [Courchevel] is a [OmahaFive] variant, where 1 board card is dealt on the
+// [Courchevel] is an [OmahaFive] variant, where 1 board card is dealt on the
 // Pre-Flop, and only 2 board cards dealt on the Flop.
 //
 // [CourchevelHiLo] is the Hi/Lo variant of [Courchevel], using a
@@ -128,31 +127,31 @@ import (
 // [Fusion] is a [Holdem]/[Omaha] variant where only 2 pocket cards are dealt
 // on the Pre-Flop, with 1 additional pocket card dealt on the Flop and Turn.
 //
-// [FusionHiLo] is the Hi/Lo variant of [Fusion], using a [Eight]-or-better
+// [FusionHiLo] is the Hi/Lo variant of [Fusion], using an [Eight]-or-better
 // qualifier (see [RankEightOrBetter]) for the Lo.
 //
 // [Soko] is a [Stud]/[StudFive] variant with 2 additional ranks, a Four Flush
 // (4 cards of the same suit), and a Four Straight (4 cards in sequential rank,
-// with no wrapping straights), besting [Pair] and [Nothing], with only a Ante
+// with no wrapping straights), besting [Pair] and [Nothing], with only an Ante
 // and River streets where 2 pocket cards are dealt on the Ante, and 3 pocket
 // cards are dealt, up, on the River. Uses additional [SokoFlush],
 // [SokoStraight], [SokoNothing] for evaluation.
 //
-// [SokoHiLo] is the Hi/Lo variant of [Soko], using a [Eight]-or-better
+// [SokoHiLo] is the Hi/Lo variant of [Soko], using an [Eight]-or-better
 // qualifier (see [RankEightOrBetter]) for the Lo.
 //
 // [Lowball] is a best-5 low card game using a standard deck of 52 cards (see
-// [DeckFrench]), comprising 5 pocket cards, no community cards, and a Ante,
+// [DeckFrench]), comprising 5 pocket cards, no community cards, and an Ante,
 // 6th, 7th, and River streets using a [Two]-to-[Seven] low inverted ranking
-// system, where [Ace]'s are always high, and non-[Flush], and non-[Straight]
+// system, where [Ace] cards are always high, and non-[Flush], and non-[Straight]
 // lows are best. Up to 5 pocket cards may be drawn (exchanged) exactly once on
 // either the 6th, 7th, or River streets.
 //
 // [LowballTriple] is a [Lowball] variant, where up to 5 pocket cards may be
 // drawn (exchanged) on any of the 6th, 7th, or River streets.
 //
-// [Razz] is a [Stud] low variant, using a [Ace]-to-[Five] ranking (see
-// [RankRazz]), where [Ace]'s play low, and [Flush]'s and [Straight]'s do not
+// [Razz] is a [Stud] low variant, using an [Ace]-to-[Five] ranking (see
+// [RankRazz]), where [Ace] cards play low, and [Flush] and [Straight] hands do not
 // affect ranking.
 //
 // [Badugi] is a best-4 low non-matching-suit card game, using a standard deck
@@ -174,7 +173,6 @@ import (
 // and 1 community board cards dealt each on the Flop and Turn. Useful for game
 // tree testing. See [Gilpin & Sandholm].
 //
-// [noinit]: https://pkg.go.dev/github.com/cardrank/cardrank#readme-noinit
 // [Kuhn poker]: https://en.wikipedia.org/wiki/Kuhn_poker
 // [Deepstack Leduc]: https://github.com/lifrordi/DeepStack-Leduc
 // [Gilpin & Sandholm]: https://www.cs.cmu.edu/~sandholm/RIHoldEmWithScreenShots.aaai05reviewed.pdf
@@ -220,10 +218,7 @@ const (
 )
 
 // DefaultTypes returns the default type descriptions. The returned
-// [TypeDesc]'s will be automatically registered, unless using the [noinit]
-// tag.
-//
-// [noinit]: https://pkg.go.dev/github.com/cardrank/cardrank#readme-noinit
+// [TypeDesc] values are registered automatically.
 func DefaultTypes() []TypeDesc {
 	var v []TypeDesc
 	for _, d := range []struct {
@@ -1150,7 +1145,7 @@ func NumberedStreets(pockets ...int) []StreetDesc {
 	return v
 }
 
-// EvalType is a eval type.
+// EvalType is an eval type.
 type EvalType uint8
 
 // Eval types.
@@ -1168,7 +1163,7 @@ const (
 	EvalHigh          EvalType = 'h'
 )
 
-// New creates a eval func for the type.
+// New creates an eval func for the type.
 func (typ EvalType) New(board int, normalize, low bool) EvalFunc {
 	switch typ {
 	case EvalCactus:

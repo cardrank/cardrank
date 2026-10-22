@@ -1,9 +1,7 @@
-//go:build !noinit
-
 package paycalc
 
 func init() {
-	if err := Init(); err != nil {
+	if err := registerTables(); err != nil {
 		panic(err)
 	}
 }

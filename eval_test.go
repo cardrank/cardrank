@@ -323,19 +323,15 @@ type cactusTest struct {
 
 func cactusTests(base, normalize bool) []cactusTest {
 	var tests []cactusTest
-	if base && cactus != nil {
-		tests = append(tests, cactusTest{"Cactus", wrapCactus(cactus, normalize)})
+	if base {
+		tests = append(tests, cactusTest{"Cactus", wrapCactus(Cactus, normalize)})
 	}
-	if cactusFast != nil {
-		tests = append(tests, cactusTest{"CactusFast", wrapCactus(cactusFast, normalize)})
-	}
-	if twoPlusTwo != nil {
-		tests = append(tests, cactusTest{"TwoPlusTwo", wrapTwoPlusTwo(normalize)})
-	}
-	if cactusFast != nil && twoPlusTwo != nil {
-		tests = append(tests, cactusTest{"Hybrid", NewHybridEval(normalize, false)})
-	}
-	return tests
+	return append(
+		tests,
+		cactusTest{"CactusFast", wrapCactus(CactusFast, normalize)},
+		cactusTest{"TwoPlusTwo", wrapTwoPlusTwo(normalize)},
+		cactusTest{"Hybrid", newHybridEval(normalize, false, testTwoPlusTwo)},
+	)
 }
 
 func wrapCactus(f RankFunc, normalize bool) EvalFunc {
@@ -356,7 +352,7 @@ func wrapTwoPlusTwo(normalize bool) EvalFunc {
 			v := make([]Card, n+m)
 			copy(v, p)
 			copy(v[n:], b)
-			ev.HiRank = twoPlusTwo(v)
+			ev.HiRank = testTwoPlusTwo(v)
 		}
 	}
 	return func(ev *Eval, p, b []Card) {
@@ -364,7 +360,7 @@ func wrapTwoPlusTwo(normalize bool) EvalFunc {
 		v := make([]Card, n+m)
 		copy(v, p)
 		copy(v[n:], b)
-		ev.HiRank = twoPlusTwo(v)
+		ev.HiRank = testTwoPlusTwo(v)
 		ev.HiBest, ev.HiUnused = bestCactusSplit(ev.HiRank, v, 0)
 	}
 }
@@ -447,5 +443,59 @@ func sevenCardTests() []cardTest {
 		{"J♦ T♦ 6♦ 5♦ 4♦ 3♦ 2♦", 0x0009, StraightFlush, "Straight Flush, Six-high, Aluminum Window [6♦ 5♦ 4♦ 3♦ 2♦] [J♦ T♦]"},
 		{"7♦ J♦ 9♦ 6♦ 8♦ 5♦ 2♦", 0x0006, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♦ 8♦ 7♦ 6♦ 5♦] [J♦ 2♦]"},
 		{"2d 3d As Ks Qs Js Ts", 0x0001, StraightFlush, "Straight Flush, Ace-high, Royal [A♠ K♠ Q♠ J♠ T♠] [3♦ 2♦]"},
+	}
+}
+
+func TestCactusEvalFlop(t *testing.T) {
+	tests := []struct {
+		typ    Type
+		pocket string
+		board  string
+		hi     string
+		lo     string
+	}{
+		{Holdem, "3d 6c", "4d 7h 4c", "Pair, Fours, kickers Seven, Six, Three [4c 4d 7h 6c 3d]", ""},
+		{Holdem, "Ah Kh", "Qh Jh Th", "Straight Flush, Ace-high, Royal [Ah Kh Qh Jh Th]", ""},
+		{Split, "Ah 2c", "3d 4s 8h", "Ace-high, kickers Eight, Four, Three, Two [Ah 8h 4s 3d 2c]", "Eight, Four, Three, Two, Ace-low [8h 4s 3d 2c Ah]"},
+		{DrawHiLo, "Ah 2c 3d 4s 8h", "", "Ace-high, kickers Eight, Four, Three, Two [Ah 8h 4s 3d 2c]", "Eight, Four, Three, Two, Ace-low [8h 4s 3d 2c Ah]"},
+	}
+	for i, test := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			ev := test.typ.Eval(Must(test.pocket), Must(test.board))
+			if s := fmt.Sprintf("%s %v", ev.Desc(false), ev.HiBest); s != test.hi {
+				t.Errorf("expected hi %q, got: %q", test.hi, s)
+			}
+			if test.lo != "" {
+				if s := fmt.Sprintf("%s %v", ev.Desc(true), ev.LoBest); s != test.lo {
+					t.Errorf("expected lo %q, got: %q", test.lo, s)
+				}
+			}
+		})
+	}
+	// pocket and flop evals must match the rank of all 5 cards
+	r := rand.New(rand.NewSource(0x7f10))
+	for range 1000 {
+		v := DeckFrench.Shuffle(r, 1).Draw(5)
+		exp := RankCactus(v[0], v[1], v[2], v[3], v[4])
+		for _, typ := range []Type{Holdem, Split} {
+			ev := typ.Eval(v[:2], v[2:])
+			if ev.HiRank != exp {
+				t.Fatalf("%s %v %v: expected hi rank %d, got: %d", typ, v[:2], v[2:], exp, ev.HiRank)
+			}
+			if typ.Low() {
+				lo := RankEightOrBetter(v[0], v[1], v[2], v[3], v[4])
+				if lo >= EightOrBetter {
+					lo = Invalid
+				}
+				if ev.LoRank != lo {
+					t.Fatalf("%s %v %v: expected lo rank %d, got: %d", typ, v[:2], v[2:], lo, ev.LoRank)
+				}
+			}
+		}
+	}
+	// pre-flop evals use the pocket's starting rank
+	pocket := Must("Ah Kh")
+	if r, exp := Holdem.Eval(pocket, nil).HiRank, StartingEvalRank(pocket); r != exp {
+		t.Errorf("expected pre-flop rank %d, got: %d", exp, r)
 	}
 }

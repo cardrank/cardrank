@@ -3,6 +3,7 @@ package cardrank
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -36,7 +37,7 @@ const (
 	DeckLeduc = DeckType(^uint8(0) - 2)
 	// DeckFrenchJoker is a standard [DeckFrench] with two additional "wild"
 	// Joker cards (as represented by [InvalidCard]).
-	DeckFrenchJoker = DeckType(^uint8(8) - 3)
+	DeckFrenchJoker = DeckType(^uint8(0) - 3)
 )
 
 // Name returns the deck name.
@@ -56,6 +57,8 @@ func (typ DeckType) Name() string {
 		return "Kuhn"
 	case DeckLeduc:
 		return "Leduc"
+	case DeckFrenchJoker:
+		return "French Joker"
 	}
 	return ""
 }
@@ -65,7 +68,7 @@ func (typ DeckType) Desc(short bool) string {
 	switch french := typ == DeckFrench; {
 	case french && short:
 		return ""
-	case french, typ == DeckKuhn, typ == DeckLeduc:
+	case french, typ == DeckKuhn, typ == DeckLeduc, typ == DeckFrenchJoker:
 		return typ.Name()
 	}
 	return typ.Name() + " (" + strconv.Itoa(int(typ+2)) + "+)"
@@ -228,9 +231,10 @@ func NewShoe(count int) *Deck {
 }
 
 // Limit limits the cards for the deck, for use with card shoes composed of
-// more than one deck of cards.
+// more than one deck of cards. The limit is clamped to the number of cards in
+// the deck.
 func (d *Deck) Limit(limit int) {
-	d.l = limit
+	d.l = max(0, min(limit, len(d.v)))
 }
 
 // Empty returns true when there are no cards remaining in the deck.
@@ -248,9 +252,7 @@ func (d *Deck) Remaining() int {
 
 // All returns a copy of all cards in the deck, without advancing.
 func (d *Deck) All() []Card {
-	v := make([]Card, d.l)
-	copy(v, d.v)
-	return v
+	return slices.Clone(d.v[:d.l])
 }
 
 // Reset resets the deck.
@@ -335,9 +337,11 @@ func (d *Dealer) Format(f fmt.State, verb rune) {
 	var buf []byte
 	switch verb {
 	case 'n': // name
-		buf = []byte(d.Streets[d.s].Name)
+		buf = []byte(d.Name())
 	case 's':
-		buf = []byte(d.Streets[d.s].Desc())
+		if 0 <= d.s && d.s < len(d.Streets) {
+			buf = []byte(d.Streets[d.s].Desc())
+		}
 	default:
 		buf = []byte(fmt.Sprintf("%%!%c(ERROR=unknown verb, dealer)", verb))
 	}
@@ -653,21 +657,15 @@ func NewRun(count int) *Run {
 // Dupe creates a duplicate of run, with a copy of the pockets and Hi and Lo
 // board.
 func (run *Run) Dupe() *Run {
-	r := new(Run)
+	r := &Run{
+		Hi: slices.Clone(run.Hi),
+		Lo: slices.Clone(run.Lo),
+	}
 	if run.Pockets != nil {
 		r.Pockets = make([][]Card, len(run.Pockets))
-		for i := range len(run.Pockets) {
-			r.Pockets[i] = make([]Card, len(run.Pockets[i]))
-			copy(r.Pockets[i], run.Pockets[i])
+		for i, pocket := range run.Pockets {
+			r.Pockets[i] = slices.Clone(pocket)
 		}
-	}
-	if run.Hi != nil {
-		r.Hi = make([]Card, len(run.Hi))
-		copy(r.Hi, run.Hi)
-	}
-	if run.Lo != nil {
-		r.Lo = make([]Card, len(run.Lo))
-		copy(r.Lo, run.Lo)
 	}
 	return r
 }
@@ -796,7 +794,7 @@ func (win *Win) Invalid() bool {
 	switch {
 	case win == nil, win.Pivot == 0,
 		len(win.Evals) == 0, len(win.Order) == 0:
-		return false
+		return true
 	}
 	d := win.Evals[win.Order[0]].Desc(win.Low)
 	return d == nil || d.Rank == 0 || d.Rank == Invalid

@@ -2,14 +2,16 @@ package cardrank
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"fmt"
 	"os"
 	"reflect"
-	"sort"
+	"runtime"
+	"slices"
 	"strconv"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"testing"
 	"time"
 )
@@ -578,7 +580,16 @@ func TestStartingCSV(t *testing.T) {
 	if s := os.Getenv("TESTS"); !strings.Contains(s, "starting") {
 		t.Skip("skipping: $ENV{TESTS} does not contain 'starting'")
 	}
-	m, ch, count, wait := make(map[string]bool), make(chan *expValueRes, 1), 0, int64(0)
+	m, ch := make(map[string]bool), make(chan *expValueRes, 1)
+	var wg sync.WaitGroup
+	calc := func(c0, c1 Card) {
+		if key := HashKey(c0, c1); !m[key] {
+			m[key] = true
+			wg.Go(func() {
+				ch <- testStartingCSV(t, ctx, c0, c1)
+			})
+		}
+	}
 	for r1 := Ace; r1 != InvalidRank; r1-- {
 		for r2 := Ace; r2 != InvalidRank; r2-- {
 			a, b := r1, r2
@@ -587,44 +598,23 @@ func TestStartingCSV(t *testing.T) {
 			}
 			c0, c1, c2 := New(a, Heart), New(b, Heart), New(b, Spade)
 			if a != b {
-				if key := HashKey(c0, c1); !m[key] {
-					m[key], count = true, count+1
-					atomic.AddInt64(&wait, 1)
-					go testStartingCSV(t, ctx, c0, c1, &wait, ch)
-				}
+				calc(c0, c1)
 			}
-			if key := HashKey(c0, c2); !m[key] {
-				m[key], count = true, count+1
-				atomic.AddInt64(&wait, 1)
-				go testStartingCSV(t, ctx, c0, c2, &wait, ch)
-			}
+			calc(c0, c2)
 		}
 	}
+	t.Logf("started: %d", len(m))
 	go func() {
-		start := time.Now()
-		t.Logf("started: %d", count)
-		tick := time.NewTicker(1 * time.Minute)
-		for {
-			w := atomic.LoadInt64(&wait)
-			if w == 0 {
-				close(ch)
-				return
-			}
-			select {
-			case <-ctx.Done():
-			case <-tick.C:
-				t.Logf("wait: %d elapsed: %v", w, time.Since(start).Round(time.Second))
-			case <-time.After(50 * time.Millisecond):
-			}
-		}
+		wg.Wait()
+		close(ch)
 	}()
 	var v []*expValueRes
 	for res := range ch {
 		t.Logf("%v/%v: %v %f %d", res.c0, res.c1, &res.ev, res.ev.Float64(), int(res.cactus))
 		v = append(v, res)
 	}
-	sort.Slice(v, func(i, j int) bool {
-		return v[j].ev.Float64() < v[i].ev.Float64()
+	slices.SortFunc(v, func(a, b *expValueRes) int {
+		return cmp.Compare(b.ev.Float64(), a.ev.Float64())
 	})
 	buf := new(bytes.Buffer)
 	fmt.Fprintf(buf, "%s,%s,%s,%s,%s,%s\n", "name", "wins", "splits", "losses", "calc", "cactus")
@@ -636,17 +626,16 @@ func TestStartingCSV(t *testing.T) {
 	}
 }
 
-func testStartingCSV(t *testing.T, ctx context.Context, c0, c1 Card, wait *int64, ch chan *expValueRes) {
+func testStartingCSV(t *testing.T, ctx context.Context, c0, c1 Card) *expValueRes {
 	t.Helper()
 	expv, ok := NewExpValueCalc(Holdem, []Card{c0, c1}).Calc(ctx)
-	ch <- &expValueRes{
+	return &expValueRes{
 		c0:     c0,
 		c1:     c1,
 		ev:     *expv,
 		ok:     ok,
 		cactus: calcStartingCactus(c0, c1),
 	}
-	atomic.AddInt64(wait, -1)
 }
 
 func calcStartingCactus(c0, c1 Card) EvalRank {
@@ -702,5 +691,25 @@ func TestHashKey(t *testing.T) {
 		if s := HashKey(v[1], v[0]); s != test.exp {
 			t.Errorf("test %d expected %q, got: %q", i, test.exp, s)
 		}
+	}
+}
+
+func TestExpValueCalcCancel(t *testing.T) {
+	before := runtime.NumGoroutine()
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	// pre-flop deep calc is far too large to finish before the timeout
+	expv, ok := NewExpValueCalc(Holdem, Must("Ah Kh"), WithDeep(true), WithBoard(Must("2c"))).Calc(ctx)
+	if ok {
+		t.Fatalf("expected calc to be canceled")
+	}
+	if expv == nil {
+		t.Fatalf("expected partial expected value")
+	}
+	if n := expv.Wins + expv.Splits + expv.Losses; n != expv.Total {
+		t.Errorf("expected wins + splits + losses == total, got: %d != %d", n, expv.Total)
+	}
+	if n := runtime.NumGoroutine(); before < n {
+		t.Errorf("expected no leaked goroutines after cancel, before: %d, after: %d", before, n)
 	}
 }

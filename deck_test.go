@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -476,5 +477,92 @@ func sidebyside(t *testing.T, pad, gap string, v ...string) {
 			s += fmt.Sprintf("%-*s", widths[j], x)
 		}
 		t.Log(s)
+	}
+}
+
+func TestDeckFrenchJoker(t *testing.T) {
+	typ := DeckFrenchJoker
+	for _, other := range []DeckType{DeckFrench, DeckShort, DeckManila, DeckSpanish, DeckRoyal, DeckKuhn, DeckLeduc} {
+		if typ == other {
+			t.Fatalf("expected DeckFrenchJoker to differ from %s", other.Name())
+		}
+	}
+	if s, exp := typ.Name(), "French Joker"; s != exp {
+		t.Errorf("expected Name() == %q, got: %q", exp, s)
+	}
+	if s, exp := typ.Desc(false), "French Joker"; s != exp {
+		t.Errorf("expected Desc(false) == %q, got: %q", exp, s)
+	}
+	if n, exp := len(typ.Unshuffled()), 54; n != exp {
+		t.Errorf("expected %d cards, got: %d", exp, n)
+	}
+}
+
+func TestDeckLimit(t *testing.T) {
+	tests := []struct {
+		limit int
+		exp   int
+	}{
+		{-1, 0},
+		{0, 0},
+		{10, 10},
+		{52, 52},
+		{60, 52},
+	}
+	for _, test := range tests {
+		t.Run(strconv.Itoa(test.limit), func(t *testing.T) {
+			d := NewDeck()
+			d.Limit(test.limit)
+			if n := d.Remaining(); n != test.exp {
+				t.Errorf("expected Remaining() == %d, got: %d", test.exp, n)
+			}
+			if n := len(d.Draw(100)); n != test.exp {
+				t.Errorf("expected to draw %d cards, got: %d", test.exp, n)
+			}
+			if n := len(d.All()); n != test.exp {
+				t.Errorf("expected All() to return %d cards, got: %d", test.exp, n)
+			}
+		})
+	}
+}
+
+func TestDealerFormatBeforeNext(t *testing.T) {
+	d := NewDealer(Holdem.Desc(), NewDeck(), 2)
+	for _, verb := range []string{"%n", "%s"} {
+		if s := fmt.Sprintf(verb, d); s != "" {
+			t.Errorf("expected %s to be empty before Next, got: %q", verb, s)
+		}
+	}
+	if !d.Next() {
+		t.Fatalf("expected Next() to return true")
+	}
+	if s, exp := fmt.Sprintf("%n", d), "Pre-Flop"; s != exp {
+		t.Errorf("expected %%n == %q, got: %q", exp, s)
+	}
+}
+
+func TestWinInvalid(t *testing.T) {
+	var nilWin *Win
+	if !nilWin.Invalid() {
+		t.Errorf("expected nil win to be invalid")
+	}
+	evs := []*Eval{EvalOf(Holdem)}
+	for _, win := range []*Win{
+		{},
+		{Evals: evs, Order: []int{0}, Pivot: 0},
+		{Evals: evs, Pivot: 1},
+		{Order: []int{0}, Pivot: 1},
+	} {
+		if !win.Invalid() {
+			t.Errorf("expected %+v to be invalid", win)
+		}
+		if s, exp := fmt.Sprintf("%S", win), "None"; s != exp {
+			t.Errorf("expected %%S == %q, got: %q", exp, s)
+		}
+	}
+	ev := Holdem.Eval(Must("Ah Kh"), Must("Qh Jh Th 2s 3s"))
+	win := NewWin([]*Eval{ev}, []int{0}, 1, false, false, nil)
+	if win.Invalid() {
+		t.Errorf("expected win to be valid")
 	}
 }

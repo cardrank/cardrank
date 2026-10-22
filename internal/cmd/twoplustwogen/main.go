@@ -1,7 +1,8 @@
-//go:build ignore
-
-// go implementation of the two-plus-two handrank table generator.
-// from https://github.com/tangentforks/TwoPlusTwoHandEvaluator
+// Command twoplustwogen generates the Two-Plus-Two lookup table, split into
+// the twoplustwo*.dat files embedded by the internal/tpt package.
+//
+// A Go implementation of the Two-Plus-Two hand rank table generator from
+// https://github.com/tangentforks/TwoPlusTwoHandEvaluator.
 package main
 
 import (
@@ -32,9 +33,9 @@ func main() {
 }
 
 func run(verbose bool, out, sum string) error {
-	logf := func(string, ...interface{}) {}
+	logf := func(string, ...any) {}
 	if verbose {
-		logf = func(s string, v ...interface{}) {
+		logf = func(s string, v ...any) {
 			fmt.Fprintf(os.Stdout, s, v...)
 		}
 	}
@@ -125,7 +126,7 @@ type TwoPlusTwoGenerator struct {
 	max   int64
 }
 
-func NewTwoPlusTwoGenerator(logf func(string, ...interface{})) []uint32 {
+func NewTwoPlusTwoGenerator(logf func(string, ...any)) []uint32 {
 	g := &TwoPlusTwoGenerator{
 		f:     cardrank.NewEval(cardrank.RankCactus),
 		ev:    cardrank.EvalOf(cardrank.Holdem),
@@ -255,7 +256,7 @@ func (g *TwoPlusTwoGenerator) id(id int64, card uint32) (int, int64) {
 	swap(3, 4)
 	swap(5, 6)
 
-	// put the pieces into a int64 -- cards in bytes -- 66554433221100
+	// put the pieces into an int64 -- cards in bytes -- 66554433221100
 	// id is a 64 bit value with each card represented by 8 bits.
 	return n, int64(v[0]) +
 		(int64(v[1]) << 8) +

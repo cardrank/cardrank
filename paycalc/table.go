@@ -209,7 +209,7 @@ func (t *Table) WriteMarkdown(w io.Writer, header int) error {
 
 // WriteTo writes the tournament payout table to w, formatting cells with f,
 // breaking line output when early is true.
-func (t *Table) WriteTo(w io.Writer, f func(interface{}, int, bool) string, divider func(int, int) string, early bool) error {
+func (t *Table) WriteTo(w io.Writer, f func(any, int, bool) string, divider func(int, int) string, early bool) error {
 	if f == nil {
 		f = tableFormat
 	}
@@ -447,11 +447,7 @@ func markdownFormat(v any, n int, last bool) string {
 
 // markdownDivider returns a divider for Markdown tables.
 func markdownDivider(count, n int) string {
-	s, div := "", strings.Repeat("-", n+2)
-	for range count {
-		s += "|" + div
-	}
-	return s + "|"
+	return strings.Repeat("|"+strings.Repeat("-", n+2), count) + "|"
 }
 
 // parseLevels parses levels title.

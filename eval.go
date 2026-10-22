@@ -1,11 +1,12 @@
 package cardrank
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 )
 
-// EvalRank is a eval rank.
+// EvalRank is an eval rank.
 //
 // Ranks are ordered low-to-high.
 type EvalRank uint16
@@ -233,8 +234,8 @@ func (r EvalRank) FromLowball() EvalRank {
 // RankFunc returns the eval rank of 5 cards.
 type RankFunc func(c0, c1, c2, c3, c4 Card) EvalRank
 
-// RankAceFiveLow is a A-to-5 low rank eval func. [Ace]'s are low, [Straight]'s
-// and [Flush]'s do not count.
+// RankAceFiveLow is an A-to-5 low rank eval func. [Ace] cards are low,
+// [Straight] and [Flush] hands do not count.
 func RankAceFiveLow(mask EvalRank, c0, c1, c2, c3, c4 Card) EvalRank {
 	var rank EvalRank
 	// c0
@@ -259,8 +260,8 @@ func RankAceFiveLow(mask EvalRank, c0, c1, c2, c3, c4 Card) EvalRank {
 	return rank
 }
 
-// RankEightOrBetter is a 8-or-better low rank eval func. [Ace]'s are low,
-// [Straight]'s and [Flush]'s do not count.
+// RankEightOrBetter is an 8-or-better low rank eval func. [Ace] cards are low,
+// [Straight] and [Flush] hands do not count.
 func RankEightOrBetter(c0, c1, c2, c3, c4 Card) EvalRank {
 	return RankAceFiveLow(0xff00, c0, c1, c2, c3, c4)
 }
@@ -307,8 +308,8 @@ func RankSpanish(c0, c1, c2, c3, c4 Card) EvalRank {
 	return r.ToFlushOver()
 }
 
-// RankRazz is a [Razz] (A-to-5) low rank eval func. [Ace]'s are low,
-// [Straight]'s and [Flush]'s do not count.
+// RankRazz is a [Razz] (A-to-5) low rank eval func. [Ace] cards are low,
+// [Straight] and [Flush] hands do not count.
 //
 // When there is a [Pair] (or higher) of matching ranks, will be the inverted
 // Cactus value.
@@ -319,21 +320,21 @@ func RankRazz(c0, c1, c2, c3, c4 Card) EvalRank {
 	return Invalid - RankCactus(c0, c1, c2, c3, c4)
 }
 
-// RankLowball is a [Lowball] (2-to-7) low rank eval func. [Ace]'s are high,
-// [Straight]'s and [Flush]'s count.
+// RankLowball is a [Lowball] (2-to-7) low rank eval func. [Ace] cards are high,
+// [Straight] and [Flush] hands count.
 //
-// Works by adding 2 additional ranks for [Ace]-high [StraightFlush]'s and
-// [Straight]'s.
+// Works by adding 2 additional ranks for [Ace]-high [StraightFlush] and
+// [Straight] hands.
 //
 // See [EvalRank.ToLowball].
 func RankLowball(c0, c1, c2, c3, c4 Card) EvalRank {
 	return RankCactus(c0, c1, c2, c3, c4).ToLowball()
 }
 
-// EvalFunc is a eval func.
+// EvalFunc is an eval func.
 type EvalFunc func(*Eval, []Card, []Card)
 
-// NewEval returns a eval func that ranks 5, 6, or 7 cards using f. The
+// NewEval returns an eval func that ranks 5, 6, or 7 cards using f. The
 // returned eval func will store the results on an eval's Hi.
 func NewEval(f RankFunc) EvalFunc {
 	return func(ev *Eval, p, b []Card) {
@@ -356,7 +357,7 @@ func NewEval(f RankFunc) EvalFunc {
 	}
 }
 
-// NewMaxEval returns a eval func that ranks 5, 6, or 7 cards using f and max.
+// NewMaxEval returns an eval func that ranks 5, 6, or 7 cards using f and max.
 //
 // The returned eval func will store results on an eval's Hi only when lower
 // than max.
@@ -381,7 +382,7 @@ func NewMaxEval(f RankFunc, maximum EvalRank, low bool) EvalFunc {
 	}
 }
 
-// NewSplitEval returns a eval func that ranks 5, 6, or 7 cards using hi, lo
+// NewSplitEval returns an eval func that ranks 5, 6, or 7 cards using hi, lo
 // and max.
 //
 // The returned eval func will store results on an eval's Hi and Lo depending
@@ -408,12 +409,20 @@ func NewSplitEval(hi, lo RankFunc, maximum EvalRank) EvalFunc {
 	}
 }
 
-// NewHybridEval creates a hybrid Cactus and TwoPlusTwo eval func, using
-// [RankCactus] for 5 and 6 cards, and a TwoPlusTwo eval func for 7 cards.
+// NewHybridEval creates a hybrid Cactus and Two-Plus-Two eval func, using
+// [RankCactus] for 5 and 6 cards, and the registered Two-Plus-Two eval func
+// (see [RegisterTwoPlusTwo]) for 7 cards. Uses [RankCactus] for 7 cards when
+// no Two-Plus-Two eval func is registered.
 //
 // Gives optimal performance when evaluating the best-5 of any 5, 6, or 7 cards
 // of a combined pocket and board.
 func NewHybridEval(normalize, low bool) EvalFunc {
+	return newHybridEval(normalize, low, twoPlusTwo)
+}
+
+// newHybridEval creates a hybrid Cactus and Two-Plus-Two eval func, using
+// twoPlusTwo (when not nil) for 7 cards.
+func newHybridEval(normalize, low bool, twoPlusTwo func([]Card) EvalRank) EvalFunc {
 	var f EvalFunc
 	if low {
 		f = NewSplitEval(RankCactus, RankEightOrBetter, EightOrBetter)
@@ -421,17 +430,8 @@ func NewHybridEval(normalize, low bool) EvalFunc {
 		f = NewEval(RankCactus)
 	}
 	return func(ev *Eval, p, b []Card) {
-		switch np, nb := len(p), len(b); np + nb {
-		case 5, 6:
-			f(ev, p, b)
-			if normalize {
-				bestCactus(ev.HiRank, ev.HiBest, ev.HiUnused, 0, nil)
-				if low && ev.LoRank < EightOrBetter {
-					bestAceLow(ev.LoBest)
-					bestAceHigh(ev.LoUnused)
-				}
-			}
-		case 7:
+		switch np, nb := len(p), len(b); {
+		case np+nb == 7 && twoPlusTwo != nil:
 			v := make([]Card, np+nb)
 			copy(v, p)
 			copy(v[np:], b)
@@ -449,6 +449,15 @@ func NewHybridEval(normalize, low bool) EvalFunc {
 					bestAceHigh(ev.LoUnused)
 				}
 			}
+		case 5 <= np+nb && np+nb <= 7:
+			f(ev, p, b)
+			if normalize {
+				bestCactus(ev.HiRank, ev.HiBest, ev.HiUnused, 0, nil)
+				if low && ev.LoRank < EightOrBetter {
+					bestAceLow(ev.LoBest)
+					bestAceHigh(ev.LoUnused)
+				}
+			}
 		}
 	}
 }
@@ -456,8 +465,9 @@ func NewHybridEval(normalize, low bool) EvalFunc {
 // NewCactusEval creates a Cactus eval func.
 func NewCactusEval(board int, normalize, low bool) EvalFunc {
 	var f EvalFunc
+	hybrid := twoPlusTwo != nil
 	switch {
-	case twoPlusTwo != nil:
+	case hybrid:
 		f = NewHybridEval(normalize, low)
 	case low:
 		f = NewSplitEval(RankCactus, RankEightOrBetter, EightOrBetter)
@@ -465,19 +475,18 @@ func NewCactusEval(board int, normalize, low bool) EvalFunc {
 		f = NewEval(RankCactus)
 	}
 	return func(ev *Eval, p, b []Card) {
-		if nb := len(b); len(p) < 3 && nb < 4 {
+		// fewer than 5 cards (ie, pre-flop), use the pocket's starting rank
+		if np, nb := len(p), len(b); np < 3 && np+nb < 5 {
 			if r := StartingEvalRank(p); r != 0 && r != Invalid {
 				ev.HiRank, ev.HiBest = r, make([]Card, 5)
 				copy(ev.HiBest, p)
-				if nb == 3 {
-					copy(ev.HiBest[2:], b[:3])
-				}
+				copy(ev.HiBest[np:], b)
 				bestAceHigh(ev.HiBest)
 				return
 			}
 		}
 		f(ev, p, b)
-		if normalize && twoPlusTwo == nil {
+		if normalize && !hybrid {
 			bestCactus(ev.HiRank, ev.HiBest, ev.HiUnused, 0, nil)
 			if low {
 				bestAceLow(ev.LoBest)
@@ -518,7 +527,7 @@ func NewJacksOrBetterEval(normalize bool) EvalFunc {
 	}
 }
 
-// NewOmahaEval creates a [Omaha] eval func.
+// NewOmahaEval creates an [Omaha] eval func.
 //
 // Uses any 2 from 2, 3, 4, 5, or 6 pocket cards, and any 3 from 3, 4 or 5
 // board cards to make a best-5.
@@ -526,7 +535,7 @@ func NewOmahaEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize
 	return func(ev *Eval, p, b []Card) {
 		np, nb := len(p), len(b)
 		switch {
-		case 6 < np:
+		case np < 2, 6 < np:
 			return
 		case nb < 3:
 			ev.HiRank, ev.HiBest = StartingEvalRank(p), p
@@ -534,56 +543,46 @@ func NewOmahaEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize
 		case 5 < nb:
 			return
 		}
-		var fp, fb func([]Card) ([][]Card, int)
-		switch np {
-		case 2:
-			fp = take2c2
-		case 3:
-			fp = take3c2
-		case 4:
-			fp = take4c2
-		case 5:
-			fp = take5c2
-		case 6:
-			fp = take6c2
+		pockets, boards := omahaPockets[np], omahaBoards[nb]
+		// copy the board combinations, as each is used with every pocket
+		var buf [10][3]Card
+		v := buf[:len(boards)]
+		for j, board := range boards {
+			v[j] = [3]Card{b[board[0]], b[board[1]], b[board[2]]}
 		}
-		switch nb {
-		case 3:
-			fb = take3c3
-		case 4:
-			fb = take4c3
-		case 5:
-			fb = take5c3
-		}
-		vp, ip := fp(p)
-		vb, ib := fb(b)
-		ev.HiUnused = make([]Card, np+nb-5)
-		var loBest, loUnused []Card
-		if low {
-			loUnused = make([]Card, np+nb-5)
-		}
-		var c0, c1, c2, c3, c4 Card
-		for i, r := 0, EvalRank(0); i < ip; i++ {
-			for j := range ib {
-				c0, c1, c2, c3, c4 = vp[i][0], vp[i][1], vb[j][0], vb[j][1], vb[j][2]
-				if r = hi(c0, c1, c2, c3, c4); r < ev.HiRank {
-					ev.HiRank = r
-					ev.HiBest = []Card{c0, c1, c2, c3, c4}
-					ev.HiUnused = append(ev.HiUnused[:0], vp[i][2:]...)
-					ev.HiUnused = append(ev.HiUnused, vb[j][3:]...)
-				}
-				if low {
-					if r = RankEightOrBetter(c0, c1, c2, c3, c4); r < EightOrBetter && r < ev.LoRank {
-						ev.LoRank = r
-						loBest = []Card{c0, c1, c2, c3, c4}
-						loUnused = append(loUnused[:0], vp[i][2:]...)
-						loUnused = append(loUnused, vb[j][3:]...)
+		hi, hiRank, loRank := hi, ev.HiRank, ev.LoRank
+		hiPocket, hiBoard, loPocket, loBoard := -1, -1, -1, -1
+		for i, pocket := range pockets {
+			c0, c1 := p[pocket[0]], p[pocket[1]]
+			if !low {
+				for j := range v {
+					if r := hi(c0, c1, v[j][0], v[j][1], v[j][2]); r < hiRank {
+						hiRank, hiPocket, hiBoard = r, i, j
 					}
+				}
+				continue
+			}
+			for j := range v {
+				c2, c3, c4 := v[j][0], v[j][1], v[j][2]
+				if r := hi(c0, c1, c2, c3, c4); r < hiRank {
+					hiRank, hiPocket, hiBoard = r, i, j
+				}
+				if r := RankEightOrBetter(c0, c1, c2, c3, c4); r < EightOrBetter && r < loRank {
+					loRank, loPocket, loBoard = r, i, j
 				}
 			}
 		}
-		if low && ev.LoRank != Invalid {
-			ev.LoBest, ev.LoUnused = loBest, loUnused
+		ev.HiRank, ev.LoRank = hiRank, loRank
+		if hiPocket != -1 {
+			ev.HiBest, ev.HiUnused = omahaBest(p, b, pockets[hiPocket], boards[hiBoard])
+		} else {
+			ev.HiUnused = make([]Card, np+nb-5)
+		}
+		switch {
+		case low && ev.LoRank != Invalid && loPocket != -1:
+			ev.LoBest, ev.LoUnused = omahaBest(p, b, pockets[loPocket], boards[loBoard])
+		case low && ev.LoRank != Invalid:
+			ev.LoBest, ev.LoUnused = nil, make([]Card, np+nb-5)
 		}
 		if normalize {
 			bestCactus(ev.HiRank, ev.HiBest, nil, base, inv)
@@ -596,6 +595,44 @@ func NewOmahaEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize
 				ev.LoBest, ev.LoUnused = nil, nil
 			}
 		}
+	}
+}
+
+// omahaBest returns the best and unused cards for the pocket and board
+// combination.
+func omahaBest(p, b []Card, pocket, board []uint8) ([]Card, []Card) {
+	v := make([]Card, 0, len(p)+len(b))
+	v = append(v, p[pocket[0]], p[pocket[1]], b[board[0]], b[board[1]], b[board[2]])
+	for _, i := range pocket[2:] {
+		v = append(v, p[i])
+	}
+	for _, i := range board[3:] {
+		v = append(v, b[i])
+	}
+	return v[:5:5], v[5:]
+}
+
+// omahaPockets and omahaBoards are the pocket and board combinations (as
+// indexes) for Omaha evals, where the first 2 pocket and the first 3 board
+// indexes of each combination are used, and the remaining are unused.
+var omahaPockets, omahaBoards [7][][]uint8
+
+func init() {
+	omahaPockets[2] = [][]uint8{{0, 1}}
+	omahaPockets[3] = [][]uint8{{0, 1, 2}, {1, 2, 0}, {2, 0, 1}}
+	for i := range t4c2 {
+		omahaPockets[4] = append(omahaPockets[4], t4c2[i][:])
+	}
+	for i := range t5c2 {
+		omahaPockets[5] = append(omahaPockets[5], t5c2[i][:])
+	}
+	for i := range t6c2 {
+		omahaPockets[6] = append(omahaPockets[6], t6c2[i][:])
+	}
+	omahaBoards[3] = [][]uint8{{0, 1, 2}}
+	omahaBoards[4] = [][]uint8{{0, 1, 2, 3}, {1, 2, 3, 0}, {2, 3, 0, 1}, {3, 0, 1, 2}}
+	for i := range t5c3 {
+		omahaBoards[5] = append(omahaBoards[5], t5c3[i][:])
 	}
 }
 
@@ -662,23 +699,17 @@ func NewBadugiEval(normalize bool) EvalFunc {
 			idx := p[i].SuitIndex()
 			s[idx] = append(s[idx], p[i])
 		}
-		sort.SliceStable(s, func(i, j int) bool {
-			a, b := len(s[i]), len(s[j])
-			switch {
-			case a != b:
-				return a < b
-			case a == 0:
-				return true
-			case b == 0:
-				return false
+		slices.SortStableFunc(s, func(a, b []Card) int {
+			if c := cmp.Compare(len(a), len(b)); c != 0 || len(a) == 0 {
+				return c
 			}
-			return s[i][0].AceRank() < s[j][0].AceRank()
+			return cmp.Compare(a[0].AceRank(), b[0].AceRank())
 		})
 		var best, unused []Card
 		count, rank := 4, 0
 		for i := range 4 {
-			sort.Slice(s[i], func(j, k int) bool {
-				return s[i][j].AceRank() < s[i][k].AceRank()
+			slices.SortFunc(s[i], func(a, b Card) int {
+				return cmp.Compare(a.AceRank(), b.AceRank())
 			})
 			captured, r := false, 0
 			for j := range len(s[i]) {
@@ -751,7 +782,7 @@ type Eval struct {
 	LoUnused []Card
 }
 
-// EvalOf creates a eval for the type.
+// EvalOf creates an eval for the type.
 func EvalOf(typ Type) *Eval {
 	return &Eval{
 		Type:   typ,
@@ -848,7 +879,8 @@ func (ev *Eval) Hi5(f RankFunc, v []Card) {
 func (ev *Eval) HiLo5(hi, lo RankFunc, v []Card, maximum EvalRank) {
 	ev.HiRank, ev.HiBest = hi(v[0], v[1], v[2], v[3], v[4]), v
 	if r := lo(v[0], v[1], v[2], v[3], v[4]); r < maximum {
-		ev.LoRank, ev.LoBest = r, v
+		// copy, as Hi and Lo best are ordered separately
+		ev.LoRank, ev.LoBest = r, slices.Clone(v)
 	}
 }
 
@@ -1120,8 +1152,8 @@ func Order(evs []*Eval, low bool) ([]int, int) {
 		m[i], v[i] = evs[i], i
 	}
 	// sort v based on mapped evals
-	sort.SliceStable(v, func(j, k int) bool {
-		return m[v[j]].Comp(m[v[k]], low) < 0
+	slices.SortStableFunc(v, func(a, b int) int {
+		return m[a].Comp(m[b], low)
 	})
 	if !low {
 		// determine hi pivot
@@ -1179,24 +1211,32 @@ func bestCactusSplit(rank EvalRank, v []Card, base Rank) ([]Card, []Card) {
 	return v[:5], v[5:]
 }
 
-// bestAceHigh orders v by rank, high to low, Aces are high.
+// bestAceHigh orders v by rank, high to low, Aces are high, and then by suit.
 func bestAceHigh(v []Card) {
-	sort.Slice(v, func(i, j int) bool {
-		m, n := v[i].Rank(), v[j].Rank()
-		if m == n {
-			return v[j].Suit() < v[i].Suit()
+	sortDesc(v)
+}
+
+// sortDesc sorts v in descending order. As a card's rank bits are higher than
+// its suit bits, cards are ordered by rank and then by suit.
+func sortDesc(v []Card) {
+	if 12 < len(v) {
+		slices.SortFunc(v, func(a, b Card) int {
+			return cmp.Compare(b, a)
+		})
+		return
+	}
+	// insertion sort is faster for the few cards in a hand
+	for i := 1; i < len(v); i++ {
+		for j := i; 0 < j && v[j-1] < v[j]; j-- {
+			v[j-1], v[j] = v[j], v[j-1]
 		}
-		return n < m
-	})
+	}
 }
 
 // bestAceLow orders v by rank, high to low, Aces are low.
 func bestAceLow(v []Card) {
-	sort.Slice(v, func(i, j int) bool {
-		if a, b := v[i].AceRank(), v[j].AceRank(); a != b {
-			return b < a
-		}
-		return v[i].Suit() < v[j].Suit()
+	slices.SortFunc(v, func(a, b Card) int {
+		return cmp.Or(cmp.Compare(b.AceRank(), a.AceRank()), cmp.Compare(a.Suit(), b.Suit()))
 	})
 }
 
@@ -1217,8 +1257,8 @@ func bestSoko(rank EvalRank, v, u []Card) {
 			copy(v, v[1:])
 			v[4] = c
 		}
-		sort.Slice(v[:4], func(i, j int) bool {
-			return v[i].Rank() > v[j].Rank()
+		slices.SortFunc(v[:4], func(a, b Card) int {
+			return cmp.Compare(b.Rank(), a.Rank())
 		})
 		bestAceHigh(u)
 	case rank <= SokoStraight:
@@ -1232,67 +1272,54 @@ func bestSoko(rank EvalRank, v, u []Card) {
 
 // bestStraightFlush sorts v by best straight flush.
 func bestStraightFlush(v []Card, base Rank) {
-	s := orderSuits(v)
-	var b, d []Card
-	for _, c := range v {
-		switch c.Suit() {
-		case s[0]:
-			b = append(b, c)
-		default:
-			d = append(d, c)
-		}
-	}
-	bestStraight(b, base)
-	copy(v, b)
-	copy(v[len(b):], d)
+	n := partitionSuit(v, flushSuit(v))
+	bestStraight(v[:n], base)
 }
 
 // bestFlush sorts v by best flush.
 func bestFlush(v []Card) {
-	suits := orderSuits(v)
-	var b, d []Card
-	for _, c := range v {
-		switch c.Suit() {
-		case suits[0]:
-			b = append(b, c)
-		default:
-			d = append(d, c)
-		}
-	}
-	copy(v, b)
-	copy(v[len(b):], d)
+	partitionSuit(v, flushSuit(v))
 }
 
-// bestStraight sorts v by best-5 straight.
+// bestStraight sorts v by best-5 straight, followed by the remaining cards
+// ordered by rank.
 func bestStraight(v []Card, base Rank) {
-	m := make(map[Rank][]Card)
-	for _, c := range v {
-		r := c.Rank()
-		m[r] = append(m[r], c)
+	// first is the index + 1 of the first card of each rank in v
+	var first [16]int
+	var ranks uint16
+	for i := len(v) - 1; 0 <= i; i-- {
+		r := v[i].Rank()
+		first[r], ranks = i+1, ranks|1<<r
 	}
-	b := make([]Card, 5)
+	has := func(r Rank) bool {
+		return ranks&(1<<r) != 0
+	}
+	var buf [16]Card
+	var used uint64
+	b := buf[:0]
 	for h, i, j, k, l := Ace, King, Queen, Jack, Ten; base+Five <= h; h, i, j, k, l = h-1, i-1, j-1, k-1, l-1 {
 		if l == base-1 {
 			l = Ace
 		}
-		if m[h] != nil && m[i] != nil && m[j] != nil && m[k] != nil && m[l] != nil {
-			b[0], b[1], b[2], b[3], b[4] = m[h][0], m[i][0], m[j][0], m[k][0], m[l][0]
-			m[h], m[i], m[j], m[k], m[l] = m[h][1:], m[i][1:], m[j][1:], m[k][1:], m[l][1:]
+		if has(h) && has(i) && has(j) && has(k) && has(l) {
+			for _, r := range [...]Rank{h, i, j, k, l} {
+				b, used = append(b, v[first[r]-1]), used|1<<(first[r]-1)
+			}
 			break
 		}
 		if l == base-1 {
 			break
 		}
 	}
-	copy(v, b)
 	// collect remaining
-	var d []Card
-	for i := Ace; i != InvalidRank; i-- {
-		if _, ok := m[i]; ok && m[i] != nil {
-			d = append(d, m[i]...)
+	for r := Ace; r != InvalidRank; r-- {
+		for i, c := range v {
+			if c.Rank() == r && used&(1<<i) == 0 {
+				b = append(b, c)
+			}
 		}
 	}
-	copy(v[5:], d)
+	copy(v, b)
 }
 
 // bestSokoStraight sorts v by best-4 straight.
@@ -1329,32 +1356,25 @@ func bestSokoStraight(v []Card, base Rank) {
 
 // bestSet sorts v by best matching sets in v.
 func bestSet(v []Card) {
-	m := make(map[Rank][]Card)
+	var count [16]int
 	for _, c := range v {
-		r := c.Rank()
-		m[r] = append(m[r], c)
+		count[c.Rank()]++
 	}
-	var ranks []Rank
-	for rank := range m {
-		ranks = append(ranks, rank)
+	// order by set size, and then by rank and suit
+	key := func(c Card) uint64 {
+		return uint64(count[c.Rank()])<<32 | uint64(c)
 	}
-	sort.Slice(ranks, func(i, j int) bool {
-		n, m := len(m[ranks[i]]), len(m[ranks[j]])
-		if n == m {
-			return ranks[j] < ranks[i]
+	for i := 1; i < len(v); i++ {
+		for j := i; 0 < j && key(v[j-1]) < key(v[j]); j-- {
+			v[j-1], v[j] = v[j], v[j-1]
 		}
-		return m < n
-	})
-	var i int
-	for _, rank := range ranks {
-		sort.Slice(m[rank], func(i, j int) bool {
-			return m[rank][j].Suit() < m[rank][i].Suit()
-		})
-		copy(v[i:], m[rank])
-		i += len(m[rank])
 	}
-	i = 5
-	j, k := len(m[ranks[0]]), len(m[ranks[1]])
+	// j and k are the sizes of the 2 largest sets
+	j, k := count[v[0].Rank()], 0
+	if j < len(v) {
+		k = count[v[j].Rank()]
+	}
+	i := 5
 	switch {
 	case j == 4:
 		i = 4
@@ -1367,50 +1387,78 @@ func bestSet(v []Card) {
 	bestAceHigh(v[i:])
 }
 
-// orderSuits orders v's card suits by count.
-func orderSuits(v []Card) []Suit {
-	m := make(map[Suit]int)
-	var suits []Suit
+// flushSuit returns the most common suit in v, preferring higher suits.
+func flushSuit(v []Card) Suit {
+	var count [16]int
 	for _, c := range v {
-		s := c.Suit()
-		if _, ok := m[s]; !ok {
-			suits = append(suits, s)
-		}
-		m[s]++
+		count[c.Suit()]++
 	}
-	sort.Slice(suits, func(i, j int) bool {
-		if m[suits[i]] == m[suits[j]] {
-			return suits[j] < suits[i]
+	var suit Suit
+	for s := len(count) - 1; 0 <= s; s-- {
+		if count[s] > count[suit] {
+			suit = Suit(s)
 		}
-		return m[suits[j]] < m[suits[i]]
-	})
-	return suits
+	}
+	return suit
+}
+
+// partitionSuit moves the cards in v having suit to the front of v,
+// preserving their order, returning the number of cards having suit.
+func partitionSuit(v []Card, suit Suit) int {
+	var buf [16]Card
+	b := buf[:0]
+	for _, c := range v {
+		if c.Suit() == suit {
+			b = append(b, c)
+		}
+	}
+	n := len(b)
+	for _, c := range v {
+		if c.Suit() != suit {
+			b = append(b, c)
+		}
+	}
+	copy(v, b)
+	return n
 }
 
 // normalizeSuits normalizes the suits in v, swapping cards from v of the same
-// rank in u.
+// rank in u, such that the cards of each rank are ordered by suit across v
+// and u.
 func normalizeSuits(v, u []Card) {
-	m := make(map[Rank][]Card)
-	for _, c := range v {
-		r := c.Rank()
-		m[r] = append(m[r], c)
+	n := len(v) + len(u)
+	at := func(i int) *Card {
+		if i < len(v) {
+			return &v[i]
+		}
+		return &u[i-len(v)]
 	}
-	for _, c := range u {
-		r := c.Rank()
-		m[r] = append(m[r], c)
-	}
-	for k := range m {
-		sort.Slice(m[k], func(i, j int) bool {
-			return m[k][j].Suit() < m[k][i].Suit()
-		})
-	}
-	for i, c := range v {
-		r := c.Rank()
-		v[i], m[r] = m[r][0], m[r][1:]
-	}
-	for i, c := range u {
-		r := c.Rank()
-		u[i], m[r] = m[r][0], m[r][1:]
+	var idxBuf [16]int
+	var cardBuf [16]Card
+	for i := range n {
+		r := at(i).Rank()
+		// skip ranks already normalized
+		seen := false
+		for j := 0; j < i && !seen; j++ {
+			seen = at(j).Rank() == r
+		}
+		if seen {
+			continue
+		}
+		idx, cards := idxBuf[:0], cardBuf[:0]
+		for j := i; j < n; j++ {
+			if c := *at(j); c.Rank() == r {
+				idx, cards = append(idx, j), append(cards, c)
+			}
+		}
+		if len(idx) == 1 {
+			continue
+		}
+		// same rank cards, so ordered by suit
+		sortDesc(cards)
+		for k, j := range idx {
+			*at(j) = cards[k]
+		}
 	}
 }
 
@@ -1471,125 +1519,4 @@ func take6c2(v []Card) ([][]Card, int) {
 		}
 	}
 	return u, 15
-}
-
-// take3c3 generates the combinations of v.
-func take3c3(v []Card) ([][]Card, int) {
-	return [][]Card{v}, 1
-}
-
-// take4c3 generates the combinations of v.
-func take4c3(v []Card) ([][]Card, int) {
-	u := make([][]Card, 4)
-	for i := range 4 {
-		u[i] = []Card{v[i], v[(i+1)%4], v[(i+2)%4], v[(i+3)%4]}
-	}
-	return u, 4
-}
-
-// take5c3 generates the combinations of v.
-func take5c3(v []Card) ([][]Card, int) {
-	u := make([][]Card, 10)
-	for i := range 10 {
-		u[i] = []Card{
-			v[t5c3[i][0]],
-			v[t5c3[i][1]],
-			v[t5c3[i][2]],
-			v[t5c3[i][3]],
-			v[t5c3[i][4]],
-		}
-	}
-	return u, 10
-}
-
-// t4c2 is used for taking 4, choosing 2.
-var t4c2 = [6][4]uint8{
-	{0, 1, 2, 3},
-	{0, 2, 1, 3},
-	{0, 3, 1, 2},
-	{1, 2, 0, 3},
-	{1, 3, 0, 2},
-	{2, 3, 0, 1},
-}
-
-// t5c2 is used for taking 5, choosing 2.
-var t5c2 = [10][5]uint8{
-	{0, 1, 2, 3, 4},
-	{0, 2, 1, 3, 4},
-	{0, 3, 1, 2, 4},
-	{0, 4, 1, 2, 3},
-	{1, 2, 0, 3, 4},
-	{1, 3, 0, 2, 4},
-	{1, 4, 0, 2, 3},
-	{2, 3, 0, 1, 4},
-	{2, 4, 0, 1, 3},
-	{3, 4, 0, 1, 2},
-}
-
-// t5c3 is used for taking 5, choosing 3.
-var t5c3 = [10][5]uint8{
-	{0, 1, 2, 3, 4},
-	{0, 1, 3, 2, 4},
-	{0, 1, 4, 2, 3},
-	{0, 2, 3, 1, 4},
-	{0, 2, 4, 1, 3},
-	{0, 3, 4, 1, 2},
-	{1, 2, 3, 0, 4},
-	{1, 2, 4, 0, 3},
-	{1, 3, 4, 0, 2},
-	{2, 3, 4, 0, 1},
-}
-
-// t6c2 is used for taking 6, choosing 2.
-var t6c2 = [15][6]uint8{
-	{0, 1, 2, 3, 4, 5},
-	{0, 2, 1, 3, 4, 5},
-	{0, 3, 1, 2, 4, 5},
-	{0, 4, 1, 2, 3, 5},
-	{0, 5, 1, 2, 3, 4},
-	{1, 2, 0, 3, 4, 5},
-	{1, 3, 0, 2, 4, 5},
-	{1, 4, 0, 2, 3, 5},
-	{1, 5, 0, 2, 3, 4},
-	{2, 3, 0, 1, 4, 5},
-	{2, 4, 0, 1, 3, 5},
-	{2, 5, 0, 1, 3, 4},
-	{3, 4, 0, 1, 2, 5},
-	{3, 5, 0, 1, 2, 4},
-	{4, 5, 0, 1, 2, 3},
-}
-
-// t6c5 is used for taking 6, choosing 5.
-var t6c5 = [6][6]uint8{
-	{0, 1, 2, 3, 4, 5},
-	{0, 1, 2, 3, 5, 4},
-	{0, 1, 2, 4, 5, 3},
-	{0, 1, 3, 4, 5, 2},
-	{0, 2, 3, 4, 5, 1},
-	{1, 2, 3, 4, 5, 0},
-}
-
-// t7c5 is used for taking 7, choosing 5.
-var t7c5 = [21][7]uint8{
-	{0, 1, 2, 3, 4, 5, 6},
-	{0, 1, 2, 3, 5, 4, 6},
-	{0, 1, 2, 3, 6, 4, 5},
-	{0, 1, 2, 4, 5, 3, 6},
-	{0, 1, 2, 4, 6, 3, 5},
-	{0, 1, 2, 5, 6, 3, 4},
-	{0, 1, 3, 4, 5, 2, 6},
-	{0, 1, 3, 4, 6, 2, 5},
-	{0, 1, 3, 5, 6, 2, 4},
-	{0, 1, 4, 5, 6, 2, 3},
-	{0, 2, 3, 4, 5, 1, 6},
-	{0, 2, 3, 4, 6, 1, 5},
-	{0, 2, 3, 5, 6, 1, 4},
-	{0, 2, 4, 5, 6, 1, 3},
-	{0, 3, 4, 5, 6, 1, 2},
-	{1, 2, 3, 4, 5, 0, 6},
-	{1, 2, 3, 4, 6, 0, 5},
-	{1, 2, 3, 5, 6, 0, 4},
-	{1, 2, 4, 5, 6, 0, 3},
-	{1, 3, 4, 5, 6, 0, 2},
-	{2, 3, 4, 5, 6, 0, 1},
 }

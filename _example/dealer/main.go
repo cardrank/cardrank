@@ -45,7 +45,7 @@ func main() {
 			fmt.Printf("  %s\n", d)
 			// display pockets
 			if d.HasPocket() {
-				for i := 0; i < players; i++ {
+				for i := range players {
 					fmt.Printf("    %d: %v\n", i, run.Pockets[i])
 				}
 			}
@@ -73,7 +73,7 @@ func main() {
 		for d.NextResult() {
 			run, res := d.Result()
 			fmt.Printf("  Run %d:\n", run)
-			for i := 0; i < players; i++ {
+			for i := range players {
 				if d.Active[i] {
 					hi := res.Evals[i].Desc(false)
 					fmt.Printf("    %d: %v %v %s\n", i, hi.Best, hi.Unused, hi)

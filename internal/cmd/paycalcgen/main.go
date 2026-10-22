@@ -1,5 +1,5 @@
-//go:build ignore
-
+// Command paycalcgen generates the paycalc top*.csv payout tables from the
+// WSOP website, caching the fetched page in table.html.
 package main
 
 import (

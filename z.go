@@ -1,10 +1,8 @@
-//go:build !noinit
-
 package cardrank
 
+// init is in z.go so that it runs after the init funcs of the other files.
 func init() {
-	Init()
-	if err := RegisterDefaultTypes(); err != nil {
+	if err := registerDefaultTypes(); err != nil {
 		panic(err)
 	}
 }

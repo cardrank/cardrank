@@ -4,8 +4,6 @@
 *.log
 *.out
 *.html
-*.csv
-*.md
 *.ods
 *.xls
 *.xlsx

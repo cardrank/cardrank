@@ -7,9 +7,10 @@ import (
 	"encoding/csv"
 	"fmt"
 	"regexp"
+	"runtime"
+	"slices"
 	"strconv"
-	"sync/atomic"
-	"time"
+	"sync"
 )
 
 // OddsCalc calculates run odds.
@@ -172,15 +173,11 @@ func (odds *Odds) Percent(pos int) float32 {
 // Outs returns the out cards and suits for pos.
 func (odds *Odds) Outs(pos int, distinct bool) ([]Card, []Suit) {
 	v, s := odds.outs(pos, distinct)
-	sort.Slice(v, func(i, j int) bool {
-		m, n := v[i].Suit(), v[j].Suit()
-		if m == n {
-			return v[j].Rank() < v[i].Rank()
-		}
-		return m < n
+	slices.SortFunc(v, func(a, b Card) int {
+		return cmp.Or(cmp.Compare(a.Suit(), b.Suit()), cmp.Compare(b.Rank(), a.Rank()))
 	})
-	sort.Slice(s, func(i, j int) bool {
-		return s[j] < s[i]
+	slices.SortFunc(s, func(a, b Suit) int {
+		return cmp.Compare(b, a)
 	})
 	return v, s
 }
@@ -257,7 +254,7 @@ func (odds *Odds) formatOuts(f fmt.State, verb rune, distinct bool) {
 }
 */
 
-// ExpValueCalc is a expected value calculator.
+// ExpValueCalc is an expected value calculator.
 type ExpValueCalc struct {
 	typ       Type
 	deep      bool
@@ -284,7 +281,9 @@ func (c *ExpValueCalc) u() []Card {
 	return c.typ.DeckType().Exclude(c.pocket, c.board)
 }
 
-// Calc calculates the expected value.
+// Calc calculates the expected value. Boards are evaluated concurrently by
+// [runtime.GOMAXPROCS] workers. When ctx is done, returns the partial expected
+// value and false.
 func (c *ExpValueCalc) Calc(ctx context.Context) (*ExpValue, bool) {
 	u, b, nb := c.u(), c.typ.Board(), len(c.board)
 	switch np := len(c.pocket); {
@@ -293,67 +292,65 @@ func (c *ExpValueCalc) Calc(ctx context.Context) (*ExpValue, bool) {
 	case nb == 0:
 		return NewExpValue(1), false
 	}
+	// start workers
+	boards := make(chan []Card)
+	results := make([]*ExpValue, runtime.GOMAXPROCS(0))
+	var wg sync.WaitGroup
+	for i := range results {
+		results[i] = c.NewExpValue()
+		wg.Go(func() {
+			for board := range boards {
+				c.do(ctx, results[i], board, Exclude(u, board[nb:]))
+			}
+		})
+	}
+	// send boards
 	v := make([]Card, b)
 	copy(v, c.board)
-	count, expv, g := int64(0), c.NewExpValue(), newBinGenInit(u, b-nb, false, v[b-(b-nb):])
-	for g.Next() {
+send:
+	for g := newBinGenInit(u, b-nb, false, v[nb:]); g.Next(); {
 		select {
 		case <-ctx.Done():
-			return expv, false
-		default:
-		}
-		avail, board := Exclude(u, v[b-(b-nb):]), make([]Card, b)
-		copy(board, v)
-		atomic.AddInt64(&count, 1)
-		go c.do(ctx, expv, board, avail, &count)
-	}
-	for {
-		if atomic.LoadInt64(&count) == 0 {
-			break
-		}
-		select {
-		case <-ctx.Done():
-			return expv, false
-		case <-time.After(50 * time.Millisecond):
+			break send
+		case boards <- slices.Clone(v):
 		}
 	}
-	return expv, true
+	close(boards)
+	wg.Wait()
+	expv := c.NewExpValue()
+	for _, res := range results {
+		expv.Add(res)
+	}
+	return expv, ctx.Err() == nil
 }
 
-func (c *ExpValueCalc) do(_ context.Context, expv *ExpValue, board, avail []Card, wait *int64) {
-	// setup evals
-	evs := make([]*Eval, 2)
-	for i := range 2 {
-		evs[i] = EvalOf(c.typ)
+// do tallies the wins, splits, and losses for the pocket against all possible
+// opponent pockets from avail, adding them to expv.
+func (c *ExpValueCalc) do(ctx context.Context, expv *ExpValue, board, avail []Card) {
+	if ctx.Err() != nil {
+		return
 	}
-	// eval pocket
+	evs := []*Eval{EvalOf(c.typ), EvalOf(c.typ)}
 	f := calcs[c.typ]
 	f(evs[0], c.pocket, board)
-	// set up variables for loop
-	var i, pivot int
-	var indices []int
-	var win bool
-	for g, v := NewCombinGen(avail, c.typ.Pocket()); g.Next(); {
-		// eval and order
+	n := 0
+	for g, v := NewCombinGen(avail, c.typ.Pocket()); g.Next(); n++ {
+		if n&0x3ff == 0x3ff && ctx.Err() != nil {
+			return
+		}
 		evs[1].HiRank = Invalid
 		f(evs[1], v, board)
-		indices, pivot = Order(evs, false)
-		// determine if win
-		for i, win = 0, false; i < pivot; i++ {
-			win = win || indices[i] == 0
-		}
-		// tally splits/wins/losses
-		switch {
+		indices, pivot := Order(evs, false)
+		switch win := slices.Contains(indices[:pivot], 0); {
 		case win && pivot != 1:
-			atomic.AddUint64(&expv.Splits, 1)
+			expv.Splits++
 		case win:
-			atomic.AddUint64(&expv.Wins, 1)
+			expv.Wins++
 		default:
-			atomic.AddUint64(&expv.Losses, 1)
+			expv.Losses++
 		}
-		atomic.AddUint64(&expv.Total, 1)
+		expv.Total++
 	}
-	atomic.AddInt64(wait, -1)
 }
 
 // NewExpValue creates a new expected value.
@@ -361,7 +358,7 @@ func (c *ExpValueCalc) NewExpValue() *ExpValue {
 	return NewExpValue(c.opponents)
 }
 
-// ExpValue is the result of a expected value calculation.
+// ExpValue is the result of an expected value calculation.
 type ExpValue struct {
 	Opponents int
 	Wins      uint64
@@ -385,7 +382,7 @@ func (expv *ExpValue) Add(v *ExpValue) {
 	expv.Total += v.Total
 }
 
-// Float32 returns the expected value as a float32.
+// Float64 returns the expected value as a float64.
 func (expv *ExpValue) Float64() float64 {
 	if expv.Total != 0 {
 		return (float64(expv.Wins) + float64(expv.Splits)/float64(expv.Opponents+1)) / float64(expv.Total)
@@ -416,12 +413,12 @@ func (expv *ExpValue) Format(f fmt.State, verb rune) {
 }
 
 // CalcOption is a calc option.
-type CalcOption func(interface{})
+type CalcOption func(any)
 
 // WithDeep is a calc option to set whether the run should run deep
 // calculations.
 func WithDeep(deep bool) CalcOption {
-	return func(v interface{}) {
+	return func(v any) {
 		switch c := v.(type) {
 		case *OddsCalc:
 			c.deep = deep
@@ -433,7 +430,7 @@ func WithDeep(deep bool) CalcOption {
 
 // WithRuns is a calc option to set the runs.
 func WithRuns(runs []*Run) CalcOption {
-	return func(v interface{}) {
+	return func(v any) {
 		if c, ok := v.(*OddsCalc); ok {
 			c.runs = runs
 		}
@@ -442,7 +439,7 @@ func WithRuns(runs []*Run) CalcOption {
 
 // WithPocketsBoard is a calc option to run with the pockets, board.
 func WithPocketsBoard(pockets [][]Card, board []Card) CalcOption {
-	return func(v interface{}) {
+	return func(v any) {
 		if c, ok := v.(*OddsCalc); ok {
 			run := NewRun(len(pockets))
 			run.Pockets, run.Hi = pockets, board
@@ -454,7 +451,7 @@ func WithPocketsBoard(pockets [][]Card, board []Card) CalcOption {
 // WithActive is a calc option to run with the active map and whether or not
 // folded positions should be included.
 func WithActive(active map[int]bool, folded bool) CalcOption {
-	return func(v interface{}) {
+	return func(v any) {
 		if c, ok := v.(*OddsCalc); ok {
 			c.active, c.folded = active, folded
 		}
@@ -464,7 +461,7 @@ func WithActive(active map[int]bool, folded bool) CalcOption {
 // WithDiscard is a calc option to set whether the run's discarded cards should
 // be excluded.
 func WithDiscard(discard bool) CalcOption {
-	return func(v interface{}) {
+	return func(v any) {
 		if c, ok := v.(*OddsCalc); ok {
 			c.discard = discard
 		}
@@ -473,7 +470,7 @@ func WithDiscard(discard bool) CalcOption {
 
 // WithBoard is a calc option to set the board.
 func WithBoard(board []Card) CalcOption {
-	return func(v interface{}) {
+	return func(v any) {
 		if c, ok := v.(*ExpValueCalc); ok {
 			c.board = board
 		}
@@ -482,7 +479,7 @@ func WithBoard(board []Card) CalcOption {
 
 // WithOpponents is a calc option to set the opponents.
 func WithOpponents(opponents int) CalcOption {
-	return func(v interface{}) {
+	return func(v any) {
 		if c, ok := v.(*ExpValueCalc); ok {
 			c.opponents = opponents
 		}
@@ -500,7 +497,7 @@ type BinGen[T any] struct {
 	d []T
 }
 
-// newBinGen creates a uninitialized binomial combination generator. The
+// newBinGen creates an uninitialized binomial combination generator. The
 // generator must be manually initialized by setting f.
 func newBinGen[T any](s []T, k int) *BinGen[T] {
 	// calculate iterations

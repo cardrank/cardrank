@@ -1,6 +1,7 @@
 package cardrank
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"slices"
@@ -495,5 +496,17 @@ func TestDescType(t *testing.T) {
 				t.Errorf("%s %q expected %q, got: %q", test.typ, test.v, exp, s)
 			}
 		})
+	}
+}
+
+func TestRegisterTypeDuplicateStreetId(t *testing.T) {
+	desc := Holdem.Desc()
+	desc.Type = Type(0x7a7a)
+	desc.Streets = append(desc.Streets, desc.Streets[0])
+	if err := RegisterType(desc); !errors.Is(err, ErrInvalidId) {
+		t.Fatalf("expected ErrInvalidId, got: %v", err)
+	}
+	if _, ok := descs[desc.Type]; ok {
+		t.Errorf("expected type not to be registered")
 	}
 }

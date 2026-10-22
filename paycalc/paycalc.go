@@ -1,5 +1,12 @@
-// Package paycalc contains a tournament payout tables.
+// Package paycalc contains tournament payout tables, and calculates
+// tournament payouts based on the number of entries, buy-in, guarantee, and
+// rake.
+//
+// The [Top10], [Top15], and [Top20] tables (paying the top 10%, 15%, or 20% of
+// entries) are registered automatically.
 package paycalc
+
+//go:generate go run ../internal/cmd/paycalcgen
 
 import (
 	"bytes"
@@ -38,8 +45,8 @@ func RegisterBytes(typ Type, name string, top float64, buf []byte) error {
 	return RegisterReader(typ, name, top, bytes.NewReader(buf))
 }
 
-// Init initializes the tournament payout tables.
-func Init() error {
+// registerTables registers the built-in tournament payout tables.
+func registerTables() error {
 	if err := RegisterBytes(Top10, "top10", 0.10, top10); err != nil {
 		return err
 	}
@@ -122,7 +129,7 @@ func (typ Type) WriteMarkdown(w io.Writer, header int) error {
 
 // WriteTo writes the tournament payout table to w, formatting cells with f,
 // breaking line output when early is true.
-func (typ Type) WriteTo(w io.Writer, f func(interface{}, int, bool) string, divider func(int, int) string, early bool) error {
+func (typ Type) WriteTo(w io.Writer, f func(any, int, bool) string, divider func(int, int) string, early bool) error {
 	if t, ok := tables[typ]; ok {
 		return t.WriteTo(w, f, divider, early)
 	}

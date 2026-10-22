@@ -12,7 +12,6 @@ var (
 func init() {
 	flush5, unique5 = cactusMaps()
 	sokoFlush4, sokoStraight4 = sokoMaps()
-	cactus = Cactus
 }
 
 // Cactus is a Cactus Kev rank eval func, using lookup maps generated on the
@@ -119,7 +118,7 @@ func cactusMaps() (map[uint32]EvalRank, map[uint32]EvalRank) {
 // RankSoko is a [Soko] rank eval func.
 //
 // Has ranks to [Cactus], adding a Four Flush and Four Straight that beat
-// [Pair]'s and [Nothing]:
+// [Pair] hands and [Nothing]:
 //
 //	Straight Flush
 //	Four of a Kind

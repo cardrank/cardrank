@@ -13,12 +13,9 @@ func TestCactus(t *testing.T) {
 	if s := os.Getenv("TESTS"); !strings.Contains(s, "cactus") && !strings.Contains(s, "all") {
 		t.Skip("skipping: $ENV{TESTS} does not contain 'cactus' or 'all'")
 	}
-	if cactus == nil {
-		t.Skip("skipping: cactus is not available")
-	}
 	const total = 133784560
 	t.Parallel()
-	u, f, tests, exp, ev := shuffled(DeckFrench), NewEval(cactus), cactusTests(false, true), EvalOf(Holdem), EvalOf(Holdem)
+	u, f, tests, exp, ev := shuffled(DeckFrench), NewEval(Cactus), cactusTests(false, true), EvalOf(Holdem), EvalOf(Holdem)
 	v := make([]Card, 7)
 	var i int
 	for c0 := range 52 {

@@ -19,7 +19,7 @@ func main() {
 	evs := cardrank.OmahaHiLo.EvalPockets(pockets, board)
 	fmt.Printf("------ OmahaHiLo %d ------\n", seed)
 	fmt.Printf("Board: %b\n", board)
-	for i := 0; i < players; i++ {
+	for i := range players {
 		hi, lo := evs[i].Desc(false), evs[i].Desc(true)
 		fmt.Printf("  %d: %b %b %b %s\n", i+1, pockets[i], hi.Best, hi.Unused, hi)
 		fmt.Printf("                   %b %b %s\n", lo.Best, lo.Unused, lo)
@@ -31,7 +31,7 @@ func main() {
 		fmt.Printf("Result: %d wins with %s, %b\n", hiOrder[0]+1, hi, hi.Best)
 	} else {
 		var s []string
-		for i := 0; i < hiPivot; i++ {
+		for i := range hiPivot {
 			s = append(s, strconv.Itoa(hiOrder[i]+1))
 		}
 		fmt.Printf("Result: %s push with %s\n", strings.Join(s, ", "), hi)
@@ -43,7 +43,7 @@ func main() {
 		fmt.Printf("        %d wins with %s %b\n", loOrder[0]+1, lo, lo.Best)
 	} else {
 		var s []string
-		for j := 0; j < loPivot; j++ {
+		for j := range loPivot {
 			s = append(s, strconv.Itoa(loOrder[j]+1))
 		}
 		lo := evs[loOrder[0]].Desc(true)

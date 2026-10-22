@@ -1,10 +1,4 @@
-//go:build !embedded
-
 package cardrank
-
-func init() {
-	cactusFast = CactusFast
-}
 
 // CactusFast is a fast Cactus Kev rank eval func, implementing Paul Senzee's
 // perfect hash lookup.

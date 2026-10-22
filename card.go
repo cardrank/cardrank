@@ -3,7 +3,7 @@ package cardrank
 import (
 	"bytes"
 	"fmt"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -307,7 +307,7 @@ func (suit Suit) Emoji() string {
 	return ""
 }
 
-// ALterEmoji returns the card suit alternate pip emoji.
+// AlternateEmoji returns the card suit alternate pip emoji.
 func (suit Suit) AlternateEmoji() string {
 	switch suit {
 	case Spade:
@@ -338,23 +338,27 @@ func New(rank Rank, suit Suit) Card {
 
 // FromRune creates a card from a unicode playing card rune.
 func FromRune(r rune) Card {
-	switch {
-	case unicode.Is(rangeS, r):
-		return New(runeCardRank(r, UnicodeSpadeAce), Spade)
-	case unicode.Is(rangeH, r):
-		return New(runeCardRank(r, UnicodeHeartAce), Heart)
-	case unicode.Is(rangeD, r):
-		return New(runeCardRank(r, UnicodeDiamondAce), Diamond)
-	case unicode.Is(rangeC, r):
-		return New(runeCardRank(r, UnicodeClubAce), Club)
+	for _, v := range [...]struct {
+		ace  rune
+		suit Suit
+	}{
+		{UnicodeSpadeAce, Spade},
+		{UnicodeHeartAce, Heart},
+		{UnicodeDiamondAce, Diamond},
+		{UnicodeClubAce, Club},
+	} {
+		// ace through king, including the knight
+		if v.ace <= r && r < v.ace+14 {
+			return New(runeCardRank(r, v.ace), v.suit)
+		}
 	}
 	return InvalidCard
 }
 
 // FromString creates a card from a string.
 func FromString(s string) Card {
-	if strings.HasPrefix(s, "10") {
-		s = "T" + s[2:]
+	if rest, ok := strings.CutPrefix(s, "10"); ok {
+		s = "T" + rest
 	}
 	switch v := []rune(s); len(v) {
 	case 1:
@@ -367,13 +371,13 @@ func FromString(s string) Card {
 
 // FromIndex creates a card from a numerical index (0-51).
 func FromIndex(i int) Card {
-	if i < 52 {
+	if 0 <= i && i < 52 {
 		return New(Rank(i%13), Suit(1<<(i/13)))
 	}
 	return InvalidCard
 }
 
-// Parse parses common string representations of [Card]'s contained in v,
+// Parse parses common string representations of [Card] values contained in v,
 // ignoring case and whitespace.
 //
 // Accepts the following:
@@ -389,7 +393,7 @@ func Parse(v ...string) ([]Card, error) {
 			switch {
 			case unicode.IsSpace(r[i]):
 				continue
-			case unicode.Is(rangeA, r[i]):
+			case isCardRune(r[i]):
 				c := FromRune(r[i])
 				if c == InvalidCard {
 					return nil, &ParseError{
@@ -430,7 +434,7 @@ func Parse(v ...string) ([]Card, error) {
 	return cards, nil
 }
 
-// Must parses common string representations of [Card]'s contained in v,
+// Must parses common string representations of [Card] values contained in v,
 // ignoring case and whitespace and panicing on any error.
 //
 // Returns a single slice of all cards from all strings in v.
@@ -513,7 +517,7 @@ func (c Card) Rune() rune {
 }
 
 // KnightRune returns the card's unicode playing card rune, substituting
-// knights for [Jack]'s.
+// knights for [Jack] cards.
 func (c Card) KnightRune() rune {
 	if c == InvalidCard {
 		return '0'
@@ -765,12 +769,10 @@ const (
 	UnicodeClubWhite    rune = '♧'
 )
 
-// Exclude is returns v excluding any specified cards.
+// Exclude returns a copy of v excluding any specified cards.
 func Exclude(v []Card, ex ...[]Card) []Card {
 	if len(ex) == 0 {
-		o := make([]Card, len(v))
-		copy(o, v)
-		return o
+		return slices.Clone(v)
 	}
 	m := make(map[Card]bool)
 	for _, u := range ex {
@@ -799,58 +801,7 @@ func runeCardRank(rank, ace rune) Rank {
 	return r - 1
 }
 
-func init() {
-	s, h, d, c := make([]rune, 14), make([]rune, 14), make([]rune, 14), make([]rune, 14)
-	for i := range 14 {
-		s[i] = UnicodeSpadeAce + rune(i)
-		h[i] = UnicodeHeartAce + rune(i)
-		d[i] = UnicodeDiamondAce + rune(i)
-		c[i] = UnicodeClubAce + rune(i)
-	}
-	rangeS = newRangeTable(s...)
-	rangeH = newRangeTable(h...)
-	rangeD = newRangeTable(d...)
-	rangeC = newRangeTable(c...)
-	a := make([]rune, 14*4)
-	copy(a[0:14], s)
-	copy(a[14:28], h)
-	copy(a[28:42], d)
-	copy(a[42:56], c)
-	rangeA = newRangeTable(a...)
-}
-
-// range tables for unicode playing card runes.
-var (
-	rangeS *unicode.RangeTable // spadees
-	rangeH *unicode.RangeTable // hearts
-	rangeD *unicode.RangeTable // diamonds
-	rangeC *unicode.RangeTable // clubs
-	rangeA *unicode.RangeTable // all
-)
-
-// newRangeTable creates a range table for the passed runes.
-func newRangeTable(r ...rune) *unicode.RangeTable {
-	if len(r) == 0 {
-		return &unicode.RangeTable{}
-	}
-	sort.Slice(r, func(i, j int) bool {
-		return r[i] < r[j]
-	})
-	// Remove duplicates.
-	k := 1
-	for i := 1; i < len(r); i++ {
-		if r[k-1] != r[i] {
-			r[k] = r[i]
-			k++
-		}
-	}
-	rt := new(unicode.RangeTable)
-	for _, r := range r[:k] {
-		if r <= 0xFFFF {
-			rt.R16 = append(rt.R16, unicode.Range16{Lo: uint16(r), Hi: uint16(r), Stride: 1})
-		} else {
-			rt.R32 = append(rt.R32, unicode.Range32{Lo: uint32(r), Hi: uint32(r), Stride: 1})
-		}
-	}
-	return rt
+// isCardRune returns true when r is within the unicode playing card block.
+func isCardRune(r rune) bool {
+	return UnicodeSpadeAce <= r && r < UnicodeClubAce+14
 }

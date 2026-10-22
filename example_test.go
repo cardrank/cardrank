@@ -109,10 +109,7 @@ func Example() {
 		deck := d.Deck.All()
 		fmt.Println("Deck:")
 		for i := 0; i < len(deck); i += 8 {
-			n := i + 8
-			if n > len(deck) {
-				n = len(deck)
-			}
+			n := min(i+8, len(deck))
 			fmt.Printf("  %v\n", deck[i:n])
 		}
 		last := -1
