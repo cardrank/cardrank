@@ -61,8 +61,8 @@ func testDeckNew(t *testing.T, exp int, typ DeckType, r string) {
 	}
 	// check shuffle
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
-	d1.Shuffle(rnd, 1)
-	d2.Shuffle(rnd, 1)
+	d1.Shuffle(rnd)
+	d2.Shuffle(rnd)
 	if slices.Equal(d1.v, v) {
 		t.Fatalf("expected d1.v != v")
 	}
@@ -128,7 +128,7 @@ func testDeckShoe(t *testing.T, exp int, typ DeckType) {
 	t.Helper()
 	const count = 7
 	d := typ.Shoe(count)
-	d.Shuffle(rand.New(rand.NewSource(time.Now().UnixNano())), 1)
+	d.Shuffle(rand.New(rand.NewSource(time.Now().UnixNano())))
 	if n, exp := len(d.v), count*exp; n != exp {
 		t.Fatalf("expected len(d.v) == %d, got: %d", exp, n)
 	}
@@ -200,14 +200,20 @@ func TestDealerRuns(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.typ.Name(), func(t *testing.T) {
-			testDealer(t, test.typ, test.count, test.seed, func(r *rand.Rand, d *Dealer) {
-				switch run, _ := d.Run(); {
-				case d.Id() == 'f' && run == 0:
-					if b, exp := d.ChangeRuns(3), true; b != exp {
-						t.Fatalf("expected %t, got: %t", exp, b)
+			testDealer(t, test.typ, test.count, test.seed, func(_ *rand.Rand, d *Dealer, run int) {
+				if d.Street().ID == 'f' && run == 0 {
+					if err := d.ChangeRuns(3); err != nil {
+						t.Fatalf("expected no error, got: %v", err)
 					}
-					if b, exp := d.Deactivate(3, 4), true; b != exp {
-						t.Fatalf("expected %t, got: %t", exp, b)
+					// fold positions 3 and 4, when present
+					var fold []int
+					for _, i := range []int{3, 4} {
+						if i < d.Players() {
+							fold = append(fold, i)
+						}
+					}
+					if err := d.Fold(fold...); err != nil {
+						t.Fatalf("expected no error, got: %v", err)
 					}
 				}
 			})
@@ -215,31 +221,31 @@ func TestDealerRuns(t *testing.T) {
 	}
 }
 
-type dealFunc func(r *rand.Rand, d *Dealer)
+type dealFunc func(r *rand.Rand, d *Dealer, run int)
 
 func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	r := rand.New(rand.NewSource(seed))
-	d := typ.Dealer(r, 1, count)
+	d := typ.Dealer(r, count)
 	desc := typ.Desc()
 	t.Logf("Eval: %l", typ)
 	t.Logf("Desc: %s/%s", desc.HiDesc, desc.LoDesc)
-	deck := d.Deck.All()
+	deck := slices.Collect(d.Deck().All())
 	t.Logf("Deck: %s [%d]", desc.Deck, len(deck))
 	for i := 0; i < len(deck); i += 8 {
 		t.Logf("  %v", deck[i:min(i+8, len(deck))])
 	}
 	last := -1
-	for d.Next() {
-		i, run := d.Run()
+	for i, run := range d.Deal() {
 		if last != i {
 			t.Logf("Run %d:", i)
 		}
 		last = i
 		t.Logf("  %s", d)
-		if d.HasPocket() {
+		street := d.Street()
+		if street.Pocket != 0 {
 			for i := range count {
 				t.Logf("    %d: %v", i, run.Pockets[i])
 			}
@@ -247,108 +253,96 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 		if v := d.Discarded(); len(v) != 0 {
 			t.Logf("    Discard: %v", v)
 		}
-		if d.HasBoard() {
+		if street.Board != 0 {
 			t.Logf("    Board: %v", run.Hi)
-			if d.Double {
+			if typ.Double() {
 				t.Logf("           %v", run.Lo)
 			}
 		}
 		if d.HasCalc() {
-			if hi, lo, ok := d.Calc(ctx, false); ok && hi != nil {
+			if odds, err := d.Odds(ctx); err == nil && odds.Hi != nil {
 				t.Log("    Calc:")
-				for i := range len(hi.Counts) {
-					t.Logf("      %d: %*s", i, i, hi)
-					if lo != nil {
-						t.Logf("         %*s", i, lo)
+				for i := range len(odds.Hi.Counts) {
+					t.Logf("      %d: %*s", i, i, odds.Hi)
+					if odds.Lo != nil {
+						t.Logf("         %*s", i, odds.Lo)
 					}
 				}
 			}
 		}
 		if f != nil {
-			f(r, d)
+			f(r, d, i)
 		}
 	}
 	t.Logf("Showdown:")
-	for d.NextResult() {
-		run, res := d.Result()
-		t.Logf("  Run %d:", run)
-		if d.Type.Board() != 0 {
-			t.Logf("    Board: %v", d.Runs[run].Hi)
-			if d.Double {
-				t.Logf("           %v", d.Runs[run].Lo)
+	for i, res := range d.Results() {
+		run := d.runs[i]
+		t.Logf("  Run %d:", i)
+		if typ.Board() != 0 {
+			t.Logf("    Board: %v", run.Hi)
+			if typ.Double() {
+				t.Logf("           %v", run.Lo)
 			}
 		}
-		if d.Type.Pocket() != 0 {
+		if typ.Pocket() != 0 {
 			t.Log("    Pockets:")
 			for i := range count {
-				t.Logf("      %d: %v", i, d.Runs[run].Pockets[i])
+				t.Logf("      %d: %v", i, run.Pockets[i])
 			}
 		}
 		t.Log("    Evals:")
 		for i := range count {
-			if d.Active[i] {
-				hi := res.Evals[i].Desc(false)
+			if d.Active(i) {
+				hi := res.Evals[i].Hi
 				t.Logf("      %d: %v %v %s", i, hi.Best, hi.Unused, hi)
-				if d.Low || d.Double {
-					lo := res.Evals[i].Desc(true)
+				if typ.Low() || typ.Double() {
+					lo := res.Evals[i].Lo
 					t.Logf("         %v %v %s", lo.Best, lo.Unused, lo)
 				}
 			} else {
 				t.Logf("      %d: inactive", i)
 			}
 		}
-		hi, lo := res.Win()
 		t.Log("    Result:")
-		t.Logf("      %S", hi)
-		if lo != nil {
-			t.Logf("      %S", lo)
+		t.Logf("      %S", res.Hi)
+		if res.Lo.Valid() {
+			t.Logf("      %S", res.Lo)
 		}
 	}
 }
 
-func TestHasNext(t *testing.T) {
+func TestDealStreets(t *testing.T) {
 	for _, typ := range Types() {
 		if maximum := typ.Max(); maximum != 1 {
 			for i := 2; i <= maximum; i++ {
 				t.Run(fmt.Sprintf("%s/%d", typ, i), func(t *testing.T) {
-					testHasNext(t, typ, len(typ.Streets()), i)
+					testDealStreets(t, typ, len(typ.Streets()), i)
 				})
 			}
 		} else {
 			for i := 1; i <= 8; i++ {
 				t.Run(fmt.Sprintf("%s/%d", typ, i), func(t *testing.T) {
-					testHasNext(t, typ, len(typ.Streets()), 1)
+					testDealStreets(t, typ, len(typ.Streets()), 1)
 				})
 			}
 		}
 	}
 }
 
-func testHasNext(t *testing.T, typ Type, exp, count int) {
+func testDealStreets(t *testing.T, typ Type, exp, count int) {
 	t.Helper()
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	d := typ.Dealer(r, 1, count)
-	if !d.HasNext() {
-		t.Fatal("expected to have next")
-	}
-	var next int
-	if d.HasNext() {
-		next++
-	}
+	d := typ.Dealer(r, count)
 	var streets int
-	for d.Next() {
-		if d.HasNext() {
-			next++
-		}
+	for range d.Deal() {
 		streets++
 	}
-	switch {
-	case streets != exp:
+	if streets != exp {
 		t.Errorf("expected %d, got: %d", exp, streets)
-	case next != exp:
-		t.Errorf("expected %d, got: %d", exp, next)
-	case d.HasNext():
-		t.Error("expected to not have next")
+	}
+	// dealing is complete
+	for range d.Deal() {
+		t.Fatal("expected no further streets")
 	}
 }
 
@@ -371,11 +365,11 @@ func TestRunOut(t *testing.T) {
 func testRunOut(t *testing.T, seed int64, typ Type, count int) {
 	t.Helper()
 	const runOuts = 4
-	var deck []Card
+	var deck Cards
 	runs, results := make([][]*Run, runOuts), make([][]*Result, runOuts)
 	r := rand.New(rand.NewSource(seed))
-	d := typ.Dealer(r, 3, count)
-	deck = d.Deck.All()
+	d := typ.Dealer(r, count)
+	deck = slices.Collect(d.Deck().All())
 	for i := 0; i < len(deck); i += 8 {
 		t.Logf("%v", deck[i:min(i+8, len(deck))])
 	}
@@ -384,23 +378,22 @@ func testRunOut(t *testing.T, seed int64, typ Type, count int) {
 		buf := new(bytes.Buffer)
 		fmt.Fprintf(buf, "-- %d --\n", i)
 		d.Reset()
-		for d.Next() {
+		for run := range d.Deal() {
 			// change run on the flop
-			run, _ := d.Run()
 			fmt.Fprintf(buf, "%s\n", d)
-			if i != 0 && run == 0 && d.Id() == 'f' {
-				if !d.ChangeRuns(i + 1) {
-					t.Fatalf("unable to change runs to %d", i+1)
+			if i != 0 && run == 0 && d.Street().ID == 'f' {
+				if err := d.ChangeRuns(i + 1); err != nil {
+					t.Fatalf("unable to change runs to %d: %v", i+1, err)
 				} else {
 					fmt.Fprintf(buf, "runs changed to %d\n", i+1)
 				}
-			} else if i == 0 && run == 0 && d.Id() == 'f' {
+			} else if i == 0 && run == 0 && d.Street().ID == 'f' {
 				fmt.Fprintln(buf)
 			}
 		}
-		for d.NextResult() {
+		for range d.Results() {
 		}
-		v[i], runs[i], results[i] = buf.String(), d.Runs, d.Results
+		v[i], runs[i], results[i] = buf.String(), d.runs, d.results
 	}
 	t.Log("")
 	sidebyside(t, "", "  ", v...)
@@ -511,7 +504,7 @@ func TestDeckLimit(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(strconv.Itoa(test.limit), func(t *testing.T) {
-			d := NewDeck()
+			d := DeckFrench.New()
 			d.Limit(test.limit)
 			if n := d.Remaining(); n != test.exp {
 				t.Errorf("expected Remaining() == %d, got: %d", test.exp, n)
@@ -519,41 +512,39 @@ func TestDeckLimit(t *testing.T) {
 			if n := len(d.Draw(100)); n != test.exp {
 				t.Errorf("expected to draw %d cards, got: %d", test.exp, n)
 			}
-			if n := len(d.All()); n != test.exp {
+			if n := len(slices.Collect(d.All())); n != test.exp {
 				t.Errorf("expected All() to return %d cards, got: %d", test.exp, n)
 			}
 		})
 	}
 }
 
-func TestDealerFormatBeforeNext(t *testing.T) {
-	d := NewDealer(Holdem.Desc(), NewDeck(), 2)
+func TestDealerFormatBeforeDeal(t *testing.T) {
+	d := NewDealer(Holdem, DeckFrench.New(), 2)
 	for _, verb := range []string{"%n", "%s"} {
 		if s := fmt.Sprintf(verb, d); s != "" {
-			t.Errorf("expected %s to be empty before Next, got: %q", verb, s)
+			t.Errorf("expected %s to be empty before dealing, got: %q", verb, s)
 		}
 	}
-	if !d.Next() {
-		t.Fatalf("expected Next() to return true")
+	for range d.Deal() {
+		break
 	}
 	if s, exp := fmt.Sprintf("%n", d), "Pre-Flop"; s != exp {
 		t.Errorf("expected %%n == %q, got: %q", exp, s)
 	}
 }
 
-func TestWinInvalid(t *testing.T) {
-	var nilWin *Win
-	if !nilWin.Invalid() {
-		t.Errorf("expected nil win to be invalid")
-	}
+func TestWinValid(t *testing.T) {
 	evs := []*Eval{EvalOf(Holdem)}
-	for _, win := range []*Win{
+	for _, win := range []Win{
 		{},
-		{Evals: evs, Order: []int{0}, Pivot: 0},
-		{Evals: evs, Pivot: 1},
-		{Order: []int{0}, Pivot: 1},
+		{evals: evs, Ranking: Ranking{Order: []int{0}}},
+		{evals: evs, Ranking: Ranking{Pivot: 1}},
+		{Ranking: Ranking{Order: []int{0}, Pivot: 1}},
+		// unevaluated
+		{evals: evs, Ranking: Ranking{Order: []int{0}, Pivot: 1}},
 	} {
-		if !win.Invalid() {
+		if win.Valid() {
 			t.Errorf("expected %+v to be invalid", win)
 		}
 		if s, exp := fmt.Sprintf("%S", win), "None"; s != exp {
@@ -561,8 +552,47 @@ func TestWinInvalid(t *testing.T) {
 		}
 	}
 	ev := Holdem.Eval(Must("Ah Kh"), Must("Qh Jh Th 2s 3s"))
-	win := NewWin([]*Eval{ev}, []int{0}, 1, false, false, nil)
-	if win.Invalid() {
+	win := Win{evals: []*Eval{ev}, Ranking: Ranking{Order: []int{0}, Pivot: 1}}
+	if !win.Valid() {
 		t.Errorf("expected win to be valid")
+	}
+	if s, exp := win.Describe("alice"), "alice wins with Straight Flush, Ace-high, Royal"; s != exp {
+		t.Errorf("expected %q, got: %q", exp, s)
+	}
+}
+
+func TestDealerStreetIndex(t *testing.T) {
+	d := Holdem.Dealer(rand.New(rand.NewSource(1)), 2)
+	if i := d.StreetIndex(); i != -1 {
+		t.Fatalf("expected -1 before dealing, got: %d", i)
+	}
+	streets := Holdem.Streets()
+	type dealt struct {
+		run, street int
+	}
+	var v []dealt
+	for run := range d.Deal() {
+		i := d.StreetIndex()
+		if i < 0 || len(streets) <= i {
+			t.Fatalf("expected a valid street index, got: %d", i)
+		}
+		if exp := streets[i]; d.Street() != exp {
+			t.Errorf("expected street %v, got: %v", exp, d.Street())
+		}
+		v = append(v, dealt{run, i})
+		// run it twice, after the flop
+		if d.Street().ID == 'f' && run == 0 {
+			if err := d.ChangeRuns(2); err != nil {
+				t.Fatalf("expected no error, got: %v", err)
+			}
+		}
+	}
+	// the second run deals the turn and river
+	exp := []dealt{{0, 0}, {0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}}
+	if !slices.Equal(v, exp) {
+		t.Errorf("expected %v, got: %v", exp, v)
+	}
+	if i := d.StreetIndex(); i != -1 {
+		t.Errorf("expected -1 after dealing, got: %d", i)
 	}
 }

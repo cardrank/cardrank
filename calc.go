@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"encoding/csv"
 	"fmt"
+	"iter"
 	"regexp"
 	"runtime"
 	"slices"
@@ -13,50 +14,63 @@ import (
 	"sync"
 )
 
-// OddsCalc calculates run odds.
-type OddsCalc struct {
+// RunOdds are a run's Hi and Lo odds.
+type RunOdds struct {
+	Hi *Odds
+	// Lo is nil when the type has no Lo.
+	Lo *Odds
+}
+
+// CalcOdds calculates the odds for the last of the runs, where the cards dealt
+// in all the runs are unavailable. When ctx is done, returns the partial odds
+// and the context's error.
+func CalcOdds(ctx context.Context, typ Type, runs []*Run, opts ...OddsOption) (RunOdds, error) {
+	c := &oddsCalc{
+		typ:  typ,
+		runs: runs,
+	}
+	for _, o := range opts {
+		o.applyOdds(c)
+	}
+	hi, lo, ok := c.calc(ctx)
+	switch {
+	case ctx.Err() != nil:
+		return RunOdds{Hi: hi, Lo: lo}, ctx.Err()
+	case !ok:
+		return RunOdds{}, ErrInvalidCalc
+	}
+	return RunOdds{Hi: hi, Lo: lo}, nil
+}
+
+// oddsCalc calculates run odds.
+type oddsCalc struct {
 	typ     Type
 	deep    bool
 	runs    []*Run
-	active  map[int]bool
+	active  []bool
 	folded  bool
 	discard bool
 }
 
-// NewOddsCalc creates a new run odds calc.
-func NewOddsCalc(typ Type, opts ...CalcOption) *OddsCalc {
-	c := &OddsCalc{
-		typ: typ,
-	}
-	for _, o := range opts {
-		o(c)
-	}
-	return c
-}
-
 // u builds the set of unused cards.
-func (c *OddsCalc) u() []Card {
-	var ex [][]Card
+func (c *oddsCalc) u() []Card {
+	var ex []Cards
 	for _, run := range c.runs {
 		if c.discard {
 			ex = append(ex, run.Discard)
 		}
 		ex = append(ex, run.Hi, run.Lo)
-		if c.active == nil || c.folded {
-			ex = append(ex, run.Pockets...)
-		} else {
-			for i, p := range run.Pockets {
-				if c.active[i] {
-					ex = append(ex, p)
-				}
+		for i, p := range run.Pockets {
+			if c.active == nil || c.folded || c.active[i] {
+				ex = append(ex, p)
 			}
 		}
 	}
 	return c.typ.DeckType().Exclude(ex...)
 }
 
-// Calc calculates odds.
-func (c *OddsCalc) Calc(ctx context.Context) (*Odds, *Odds, bool) {
+// calc calculates odds.
+func (c *oddsCalc) calc(ctx context.Context) (*Odds, *Odds, bool) {
 	// check runs and pocket count
 	n := len(c.runs)
 	if n == 0 {
@@ -72,7 +86,7 @@ func (c *OddsCalc) Calc(ctx context.Context) (*Odds, *Odds, bool) {
 	k, u := b-len(run.Hi), c.u()
 	// if pocket == 2, board == 0, use lookup
 	if !c.deep && b == k {
-		hi, lo := run.CalcStart(low || double)
+		hi, lo := run.calcStart(low || double)
 		return hi, lo, true
 	}
 	// expand hi + lo boards
@@ -81,15 +95,14 @@ func (c *OddsCalc) Calc(ctx context.Context) (*Odds, *Odds, bool) {
 		run.Lo = append(run.Lo, make([]Card, k)...)
 	}
 	// setup odds
-	hi := NewOdds(count, u)
+	hi := newOdds(count, u)
 	var lo *Odds
 	if low || double {
-		lo = NewOdds(count, u)
+		lo = newOdds(count, u)
 	}
-	hiSuits, loSuits := countRunSuits(run, double)
 	// iterate combinations
 	offset := b - k
-	for g, v := NewCombinGen(u, k); g.Next(); {
+	for g, v := newCombinGen(u, k); g.Next(); {
 		// check context
 		select {
 		case <-ctx.Done():
@@ -102,14 +115,14 @@ func (c *OddsCalc) Calc(ctx context.Context) (*Odds, *Odds, bool) {
 			copy(run.Lo[offset:], v)
 		}
 		// eval
-		evs := run.Eval(c.typ, c.active, true)
+		evs := run.eval(c.typ, c.active, true)
 		// add to odds
-		hi.Add(evs, hiSuits, run.Hi[offset:], false)
+		hi.add(evs, run.Hi[offset:], false)
 		switch {
 		case low:
-			lo.Add(evs, loSuits, run.Hi[offset:], true)
+			lo.add(evs, run.Hi[offset:], true)
 		case double:
-			lo.Add(evs, loSuits, run.Lo[offset:], true)
+			lo.add(evs, run.Lo[offset:], true)
 		}
 	}
 	return hi, lo, true
@@ -127,8 +140,8 @@ type Odds struct {
 	// Dead  bool
 }
 
-// NewOdds creates a new odds.
-func NewOdds(count int, u []Card) *Odds {
+// newOdds creates a new odds.
+func newOdds(count int, u []Card) *Odds {
 	odds := &Odds{
 		Counts: make([]int, count),
 		Outs:   make([]map[Card]bool, count),
@@ -140,18 +153,16 @@ func NewOdds(count int, u []Card) *Odds {
 	return odds
 }
 
-// Add adds the eval results to the odds.
-func (odds *Odds) Add(evs []*Eval, suits [][4]int, v []Card, low bool) {
-	indices, pivot := Order(evs, low)
-	s := make([][4]int, len(suits))
-	copy(s, suits)
-	for i := range pivot {
-		odds.Counts[indices[i]]++
+// add adds the eval results to the odds.
+func (odds *Odds) add(evs []*Eval, v []Card, low bool) {
+	r := Order(hands(evs, low))
+	for _, i := range r.Winners() {
+		odds.Counts[i]++
 		for _, c := range v {
-			odds.Outs[indices[i]][c] = true
+			odds.Outs[i][c] = true
 		}
 	}
-	odds.Total += pivot
+	odds.Total += r.Pivot
 }
 
 // Float32 returns the odds as a slice of float32.
@@ -254,8 +265,8 @@ func (odds *Odds) formatOuts(f fmt.State, verb rune, distinct bool) {
 }
 */
 
-// ExpValueCalc is an expected value calculator.
-type ExpValueCalc struct {
+// expValueCalc is an expected value calculator.
+type expValueCalc struct {
 	typ       Type
 	deep      bool
 	pocket    []Card
@@ -263,32 +274,42 @@ type ExpValueCalc struct {
 	opponents int
 }
 
-// NewExpValueCalc creates a new expected value calculator.
-func NewExpValueCalc(typ Type, pocket []Card, opts ...CalcOption) *ExpValueCalc {
-	c := &ExpValueCalc{
+// CalcExpValue calculates the expected value of the pocket against all
+// possible opponent pockets, for all possible remaining boards. When ctx is
+// done, returns the partial expected value and the context's error.
+func CalcExpValue(ctx context.Context, typ Type, pocket, board Cards, opts ...ExpValueOption) (ExpValue, error) {
+	c := &expValueCalc{
 		typ:       typ,
 		pocket:    pocket,
+		board:     board,
 		opponents: 1,
 	}
 	for _, o := range opts {
-		o(c)
+		o.applyExpValue(c)
 	}
-	return c
+	expv, ok := c.calc(ctx)
+	switch {
+	case ctx.Err() != nil:
+		return *expv, ctx.Err()
+	case !ok:
+		return ExpValue{}, ErrInvalidCalc
+	}
+	return *expv, nil
 }
 
 // u builds the set of unused cards.
-func (c *ExpValueCalc) u() []Card {
+func (c *expValueCalc) u() []Card {
 	return c.typ.DeckType().Exclude(c.pocket, c.board)
 }
 
 // Calc calculates the expected value. Boards are evaluated concurrently by
 // [runtime.GOMAXPROCS] workers. When ctx is done, returns the partial expected
 // value and false.
-func (c *ExpValueCalc) Calc(ctx context.Context) (*ExpValue, bool) {
+func (c *expValueCalc) calc(ctx context.Context) (*ExpValue, bool) {
 	u, b, nb := c.u(), c.typ.Board(), len(c.board)
 	switch np := len(c.pocket); {
 	case !c.deep && 1 < np && np < 7 && nb == 0:
-		return StartingExpValue(c.pocket), true
+		return startingHandExpValue(c.pocket), true
 	case nb == 0:
 		return NewExpValue(1), false
 	}
@@ -297,10 +318,10 @@ func (c *ExpValueCalc) Calc(ctx context.Context) (*ExpValue, bool) {
 	results := make([]*ExpValue, runtime.GOMAXPROCS(0))
 	var wg sync.WaitGroup
 	for i := range results {
-		results[i] = c.NewExpValue()
+		results[i] = c.newExpValue()
 		wg.Go(func() {
 			for board := range boards {
-				c.do(ctx, results[i], board, Exclude(u, board[nb:]))
+				c.do(ctx, results[i], board, Cards(u).Exclude(board[nb:]))
 			}
 		})
 	}
@@ -317,7 +338,7 @@ send:
 	}
 	close(boards)
 	wg.Wait()
-	expv := c.NewExpValue()
+	expv := c.newExpValue()
 	for _, res := range results {
 		expv.Add(res)
 	}
@@ -326,25 +347,23 @@ send:
 
 // do tallies the wins, splits, and losses for the pocket against all possible
 // opponent pockets from avail, adding them to expv.
-func (c *ExpValueCalc) do(ctx context.Context, expv *ExpValue, board, avail []Card) {
+func (c *expValueCalc) do(ctx context.Context, expv *ExpValue, board, avail []Card) {
 	if ctx.Err() != nil {
 		return
 	}
-	evs := []*Eval{EvalOf(c.typ), EvalOf(c.typ)}
-	f := calcs[c.typ]
-	f(evs[0], c.pocket, board)
+	e, ev, opp := evaluators[c.typ], EvalOf(c.typ), EvalOf(c.typ)
+	e.Rank(ev, c.pocket, board)
 	n := 0
-	for g, v := NewCombinGen(avail, c.typ.Pocket()); g.Next(); n++ {
+	for g, v := newCombinGen(avail, c.typ.Pocket()); g.Next(); n++ {
 		if n&0x3ff == 0x3ff && ctx.Err() != nil {
 			return
 		}
-		evs[1].HiRank = Invalid
-		f(evs[1], v, board)
-		indices, pivot := Order(evs, false)
-		switch win := slices.Contains(indices[:pivot], 0); {
-		case win && pivot != 1:
+		opp.Hi.Rank = Invalid
+		e.Rank(opp, v, board)
+		switch ev.Hi.Compare(opp.Hi) {
+		case 0:
 			expv.Splits++
-		case win:
+		case -1:
 			expv.Wins++
 		default:
 			expv.Losses++
@@ -353,8 +372,8 @@ func (c *ExpValueCalc) do(ctx context.Context, expv *ExpValue, board, avail []Ca
 	}
 }
 
-// NewExpValue creates a new expected value.
-func (c *ExpValueCalc) NewExpValue() *ExpValue {
+// newExpValue creates a new expected value.
+func (c *expValueCalc) newExpValue() *ExpValue {
 	return NewExpValue(c.opponents)
 }
 
@@ -383,7 +402,7 @@ func (expv *ExpValue) Add(v *ExpValue) {
 }
 
 // Float64 returns the expected value as a float64.
-func (expv *ExpValue) Float64() float64 {
+func (expv ExpValue) Float64() float64 {
 	if expv.Total != 0 {
 		return (float64(expv.Wins) + float64(expv.Splits)/float64(expv.Opponents+1)) / float64(expv.Total)
 	}
@@ -391,12 +410,12 @@ func (expv *ExpValue) Float64() float64 {
 }
 
 // Percent returns the expected value calculated as a percent.
-func (expv *ExpValue) Percent() float64 {
+func (expv ExpValue) Percent() float64 {
 	return expv.Float64() * 100.0
 }
 
 // Format satisfies the [fmt.Formatter] interface.
-func (expv *ExpValue) Format(f fmt.State, verb rune) {
+func (expv ExpValue) Format(f fmt.State, verb rune) {
 	switch verb {
 	case 'f':
 		fmt.Fprintf(f, "%f", expv.Float64())
@@ -412,82 +431,78 @@ func (expv *ExpValue) Format(f fmt.State, verb rune) {
 	}
 }
 
-// CalcOption is a calc option.
-type CalcOption func(any)
+// OddsOption is an option for [CalcOdds].
+type OddsOption interface {
+	applyOdds(*oddsCalc)
+}
 
-// WithDeep is a calc option to set whether the run should run deep
-// calculations.
+// ExpValueOption is an option for [CalcExpValue].
+type ExpValueOption interface {
+	applyExpValue(*expValueCalc)
+}
+
+// CalcOption is an option for both [CalcOdds] and [CalcExpValue].
+type CalcOption interface {
+	OddsOption
+	ExpValueOption
+}
+
+// oddsOption is an [OddsOption] func.
+type oddsOption func(*oddsCalc)
+
+func (o oddsOption) applyOdds(c *oddsCalc) { o(c) }
+
+// expValueOption is an [ExpValueOption] func.
+type expValueOption func(*expValueCalc)
+
+func (o expValueOption) applyExpValue(c *expValueCalc) { o(c) }
+
+// deepOption is the [WithDeep] option.
+type deepOption bool
+
+func (o deepOption) applyOdds(c *oddsCalc)         { c.deep = bool(o) }
+func (o deepOption) applyExpValue(c *expValueCalc) { c.deep = bool(o) }
+
+// WithDeep is a calc option to set whether to run deep calculations, instead
+// of using the precalculated starting pocket odds when no board has been
+// dealt.
 func WithDeep(deep bool) CalcOption {
-	return func(v any) {
-		switch c := v.(type) {
-		case *OddsCalc:
-			c.deep = deep
-		case *ExpValueCalc:
-			c.deep = deep
-		}
-	}
+	return deepOption(deep)
 }
 
-// WithRuns is a calc option to set the runs.
-func WithRuns(runs []*Run) CalcOption {
-	return func(v any) {
-		if c, ok := v.(*OddsCalc); ok {
-			c.runs = runs
-		}
-	}
+// WithActive is an odds option to set the active positions. Inactive
+// positions are not included in the odds.
+func WithActive(active []bool) OddsOption {
+	return oddsOption(func(c *oddsCalc) {
+		c.active = active
+	})
 }
 
-// WithPocketsBoard is a calc option to run with the pockets, board.
-func WithPocketsBoard(pockets [][]Card, board []Card) CalcOption {
-	return func(v any) {
-		if c, ok := v.(*OddsCalc); ok {
-			run := NewRun(len(pockets))
-			run.Pockets, run.Hi = pockets, board
-			c.runs = append(c.runs, run)
-		}
-	}
+// WithFolded is an odds option to set whether the cards of inactive positions
+// are unavailable (ie, they are known).
+func WithFolded(folded bool) OddsOption {
+	return oddsOption(func(c *oddsCalc) {
+		c.folded = folded
+	})
 }
 
-// WithActive is a calc option to run with the active map and whether or not
-// folded positions should be included.
-func WithActive(active map[int]bool, folded bool) CalcOption {
-	return func(v any) {
-		if c, ok := v.(*OddsCalc); ok {
-			c.active, c.folded = active, folded
-		}
-	}
+// WithDiscard is an odds option to set whether the runs' discarded cards are
+// unavailable (ie, they are known).
+func WithDiscard(discard bool) OddsOption {
+	return oddsOption(func(c *oddsCalc) {
+		c.discard = discard
+	})
 }
 
-// WithDiscard is a calc option to set whether the run's discarded cards should
-// be excluded.
-func WithDiscard(discard bool) CalcOption {
-	return func(v any) {
-		if c, ok := v.(*OddsCalc); ok {
-			c.discard = discard
-		}
-	}
+// WithOpponents is an expected value option to set the number of opponents.
+func WithOpponents(opponents int) ExpValueOption {
+	return expValueOption(func(c *expValueCalc) {
+		c.opponents = opponents
+	})
 }
 
-// WithBoard is a calc option to set the board.
-func WithBoard(board []Card) CalcOption {
-	return func(v any) {
-		if c, ok := v.(*ExpValueCalc); ok {
-			c.board = board
-		}
-	}
-}
-
-// WithOpponents is a calc option to set the opponents.
-func WithOpponents(opponents int) CalcOption {
-	return func(v any) {
-		if c, ok := v.(*ExpValueCalc); ok {
-			c.opponents = opponents
-		}
-	}
-}
-
-// BinGen is a binomial combination generator.
-type BinGen[T any] struct {
+// binGen is a binomial combination generator.
+type binGen[T any] struct {
 	s []T
 	i int
 	n int
@@ -499,7 +514,7 @@ type BinGen[T any] struct {
 
 // newBinGen creates an uninitialized binomial combination generator. The
 // generator must be manually initialized by setting f.
-func newBinGen[T any](s []T, k int) *BinGen[T] {
+func newBinGen[T any](s []T, k int) *binGen[T] {
 	// calculate iterations
 	i, n, l := -1, len(s), k
 	if 0 <= n && 0 <= k && k < n {
@@ -511,7 +526,7 @@ func newBinGen[T any](s []T, k int) *BinGen[T] {
 			i = (n - l + j) * i / j
 		}
 	}
-	return &BinGen[T]{
+	return &binGen[T]{
 		s: s,
 		i: i,
 		n: n,
@@ -522,7 +537,7 @@ func newBinGen[T any](s []T, k int) *BinGen[T] {
 
 // newBinGenInit creates and initializes a binomial combination generator for k
 // elements in s, copying the values to d.
-func newBinGenInit[T any](s []T, k int, unused bool, d []T) *BinGen[T] {
+func newBinGenInit[T any](s []T, k int, unused bool, d []T) *binGen[T] {
 	g := newBinGen(s, k)
 	if !unused {
 		g.f = g.cpy
@@ -533,26 +548,53 @@ func newBinGenInit[T any](s []T, k int, unused bool, d []T) *BinGen[T] {
 	return g
 }
 
-// NewCombinGen creates a binomial combination generator for k elements in s.
+// newCombinGen creates a binomial combination generator for k elements in s.
 // Returns the generator and a slice where the values will be copied after each
-// to [BinGen.Next].
-func NewCombinGen[T any](s []T, k int) (*BinGen[T], []T) {
+// to [binGen.Next].
+func newCombinGen[T any](s []T, k int) (*binGen[T], []T) {
 	d := make([]T, k)
 	g := newBinGenInit(s, k, false, d)
 	return g, d
 }
 
-// NewCombinUnusedGen creates a binomial combination generator for k elements
+// newCombinUnusedGen creates a binomial combination generator for k elements
 // in s, and len(s)-k unused elements. Returns the generator and a slice where
-// the values will be copied after each to [BinGen.Next].
-func NewCombinUnusedGen[T any](s []T, k int) (*BinGen[T], []T) {
+// the values will be copied after each to [binGen.Next].
+func newCombinUnusedGen[T any](s []T, k int) (*binGen[T], []T) {
 	d := make([]T, len(s))
 	g := newBinGenInit(s, k, true, d)
 	return g, d
 }
 
+// Combinations returns an iterator over each combination of k elements of s.
+// The yielded slice is reused between iterations, so clone it (such as with
+// [slices.Clone]) to retain it.
+func Combinations[T any](s []T, k int) iter.Seq[[]T] {
+	return func(yield func([]T) bool) {
+		for g, v := newCombinGen(s, k); g.Next(); {
+			if !yield(v) {
+				return
+			}
+		}
+	}
+}
+
+// CombinationsUnused returns an iterator over each combination of k elements
+// of s, and the remaining unused elements of s. The yielded slices are reused
+// between iterations, so clone them (such as with [slices.Clone]) to retain
+// them.
+func CombinationsUnused[T any](s []T, k int) iter.Seq2[[]T, []T] {
+	return func(yield func([]T, []T) bool) {
+		for g, v := newCombinUnusedGen(s, k); g.Next(); {
+			if !yield(v[:k:k], v[k:]) {
+				return
+			}
+		}
+	}
+}
+
 // Next generates the next binomial combination.
-func (g *BinGen[T]) Next() bool {
+func (g *binGen[T]) Next() bool {
 	switch {
 	case g.i <= 0:
 		g.i = -1
@@ -580,14 +622,14 @@ func (g *BinGen[T]) Next() bool {
 }
 
 // cpy copies the next combination to d.
-func (g *BinGen[T]) cpy() {
+func (g *binGen[T]) cpy() {
 	for i := range g.k {
 		g.d[i] = g.s[g.v[i]]
 	}
 }
 
 // unused copies the next combination to d along with the unused values.
-func (g *BinGen[T]) unused() {
+func (g *binGen[T]) unused() {
 	m := make(map[int]bool)
 	for i := range g.k {
 		m[g.v[i]], g.d[i] = true, g.s[g.v[i]]
@@ -601,22 +643,22 @@ func (g *BinGen[T]) unused() {
 	}
 }
 
-// startingExpValue is the preloaded map of starting expected value
+// startingExpValues is the preloaded map of starting expected value
 // calculations.
-var startingExpValue map[string]ExpValue
+var startingExpValues map[string]ExpValue
 
 // startingCactus is the preloaded map of starting cactus values.
 var startingCactus map[string]EvalRank
 
 func init() {
 	var err error
-	if startingExpValue, startingCactus, err = holdemStarting(); err != nil {
+	if startingExpValues, startingCactus, err = holdemStarting(); err != nil {
 		panic(err)
 	}
 }
 
-// StartingExpValue returns the starting pocket expected value.
-func StartingExpValue(pocket []Card) *ExpValue {
+// startingHandExpValue returns the starting pocket expected value.
+func startingHandExpValue(pocket []Card) *ExpValue {
 	var f func([]Card) ([][]Card, int)
 	switch len(pocket) {
 	case 2:
@@ -635,18 +677,18 @@ func StartingExpValue(pocket []Card) *ExpValue {
 	pockets, n := f(pocket)
 	expv := NewExpValue(1)
 	for i := range n {
-		v := startingExpValue[HashKey(pockets[i][0], pockets[i][1])]
+		v := startingExpValues[StartingKey(pockets[i][0], pockets[i][1])]
 		expv.Add(&v)
 	}
 	return expv
 }
 
-// StartingEvalRank returns the worst (highest) possible resulting 5-card rank
+// startingHandRank returns the worst (highest) possible resulting 5-card rank
 // for the pocket.
 //
 // For example, a single [King] would be the highest non-[Straight] and
 // non-[Flush] value between [Pair] and [HighCard].
-func StartingEvalRank(pocket []Card) EvalRank {
+func startingHandRank(pocket []Card) EvalRank {
 	var f func([]Card) ([][]Card, int)
 	switch n := len(pocket); n {
 	case 0:
@@ -681,7 +723,7 @@ func StartingEvalRank(pocket []Card) EvalRank {
 			return TwoHigh
 		}
 	case 2:
-		return startingCactus[HashKey(pocket[0], pocket[1])]
+		return startingCactus[StartingKey(pocket[0], pocket[1])]
 	case 3:
 		f = take3c2
 	case 4:
@@ -696,13 +738,13 @@ func StartingEvalRank(pocket []Card) EvalRank {
 	pockets, n := f(pocket)
 	r := Invalid
 	for i := range n {
-		r = min(r, startingCactus[HashKey(pockets[i][0], pockets[i][1])])
+		r = min(r, startingCactus[StartingKey(pockets[i][0], pockets[i][1])])
 	}
 	return r
 }
 
-// HashKey returns the hash key of the pocket cards.
-func HashKey(c0, c1 Card) string {
+// StartingKey returns the hash key of the pocket cards.
+func StartingKey(c0, c1 Card) string {
 	r0, r1 := c0.Rank(), c1.Rank()
 	if r0 < r1 {
 		r0, r1 = r1, r0
@@ -716,13 +758,16 @@ func HashKey(c0, c1 Card) string {
 	return string([]byte{r0.Byte(), r1.Byte(), 's'})
 }
 
-// HoldemStarting returns the starting Holdem pockets.
-func HoldemStarting() (map[string]ExpValue, map[string]EvalRank) {
-	m, v, err := holdemStarting()
-	if err != nil {
-		panic(fmt.Sprintf("unable to load starting pockets: %v", err))
+// StartingHand returns the precalculated expected value (against 1 opponent)
+// of a Holdem or Omaha starting pocket of 2 to 6 cards, and the worst possible
+// resulting 5 card rank for the pocket. Returns a zero expected value and
+// [Invalid] for other pocket sizes.
+func StartingHand(pocket Cards) (ExpValue, EvalRank) {
+	expv := startingHandExpValue(pocket)
+	if expv == nil {
+		return ExpValue{}, Invalid
 	}
-	return m, v
+	return *expv, startingHandRank(pocket)
 }
 
 // holdemStarting returns the starting Holdem pockets.
@@ -775,35 +820,3 @@ var starting []byte
 
 // startingTotal is the total for each starting pocket pair.
 const startingTotal = 2097572400
-
-// countRunSuits returns the suit counts for each of the run's pockets.
-func countRunSuits(run *Run, double bool) ([][4]int, [][4]int) {
-	hi := countCardSuits(run.Pockets, run.Hi)
-	var lo [][4]int
-	if double {
-		lo = countCardSuits(run.Pockets, run.Lo)
-	}
-	return hi, lo
-}
-
-// countCardSuits returns suit counts.
-func countCardSuits(pockets [][]Card, board []Card) [][4]int {
-	count := len(pockets)
-	if count == 0 {
-		return nil
-	}
-	base := make([]int, 4)
-	countSuits(base, board)
-	v := make([][4]int, count)
-	for i := range count {
-		copy(v[i][:], base)
-	}
-	return v
-}
-
-// countSuits counts the suits in v, adding to d.
-func countSuits(d []int, v []Card) {
-	for _, c := range v {
-		d[c.SuitIndex()]++
-	}
-}

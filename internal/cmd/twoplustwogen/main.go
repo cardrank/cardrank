@@ -118,7 +118,7 @@ func run(verbose bool, out, sum string) error {
 const TenMiB = 10 * (1 << 20)
 
 type TwoPlusTwoGenerator struct {
-	f     cardrank.EvalFunc
+	e     cardrank.Evaluator
 	ev    *cardrank.Eval
 	ids   []int64
 	tbl   []uint32
@@ -128,7 +128,7 @@ type TwoPlusTwoGenerator struct {
 
 func NewTwoPlusTwoGenerator(logf func(string, ...any)) []uint32 {
 	g := &TwoPlusTwoGenerator{
-		f:     cardrank.NewEval(cardrank.RankCactus),
+		e:     cardrank.RankEvaluator(cardrank.RankCactus),
 		ev:    cardrank.EvalOf(cardrank.Holdem),
 		ids:   make([]int64, 612978),
 		tbl:   make([]uint32, 32487834),
@@ -372,8 +372,8 @@ func (g *TwoPlusTwoGenerator) eval(id int64) cardrank.EvalRank {
 	// hhhhrrrrrrrrrrrr   hhhh = 1 high card -> 9 straight flush
 	// r..r = rank within the above  1 to max of 2861
 	// now the worst hand = 1
-	g.f(g.ev, p[:n], nil)
-	result := cardrank.Nothing - g.ev.HiRank + 1
+	g.e.Rank(g.ev, p[:n], nil)
+	result := cardrank.Nothing - g.ev.Hi.Rank + 1
 	switch {
 	case result < 1278:
 		// 1277 high card

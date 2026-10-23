@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -26,15 +27,15 @@ func TestStartingExpValue(t *testing.T) {
 			}
 			c0, c1, c2 := New(a, Heart), New(b, Heart), New(b, Spade)
 			if a != b {
-				if key := HashKey(c0, c1); !m[key] {
+				if key := StartingKey(c0, c1); !m[key] {
 					m[key], count = true, count+1
-					expv := StartingExpValue([]Card{c0, c2})
+					expv := startingHandExpValue([]Card{c0, c2})
 					t.Logf("%3d: %- 3v %v", count, key, expv)
 				}
 			}
-			if key := HashKey(c0, c2); !m[key] {
+			if key := StartingKey(c0, c2); !m[key] {
 				m[key], count = true, count+1
-				expv := StartingExpValue([]Card{c0, c2})
+				expv := startingHandExpValue([]Card{c0, c2})
 				t.Logf("%3d: %- 3v %v", count, key, expv)
 			}
 		}
@@ -64,16 +65,16 @@ func TestStartingEvalRank(t *testing.T) {
 		{"2h 2d 3h", 6185},
 	}
 	for i, test := range tests {
-		if r := StartingEvalRank(Must(test.s)); r != test.exp {
+		if r := startingHandRank(Must(test.s)); r != test.exp {
 			t.Errorf("test %d (%s) expected %d, got: %d", i, test.s, test.exp, r)
 		}
 	}
 }
 
 func TestStartingExpValueOmaha(t *testing.T) {
-	expv, ok := Omaha.ExpValue(context.Background(), Must("Ah Kh 9s Jd"))
-	if !ok {
-		t.Fatalf("expected ok")
+	expv, err := Omaha.ExpValue(context.Background(), Must("Ah Kh 9s Jd"), nil)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
 	}
 	t.Logf("%v", expv)
 }
@@ -374,18 +375,18 @@ func TestOddsCalc(t *testing.T) {
 	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			t.Parallel()
-			pockets := make([][]Card, len(test.pockets))
+			pockets := make([]Cards, len(test.pockets))
 			for i := range len(test.pockets) {
 				pockets[i] = Must(test.pockets[i])
 			}
-			var active map[int]bool
+			var active []bool
 			if len(test.inactive) != 0 {
-				active = make(map[int]bool)
-				for i := range len(test.pockets) {
+				active = make([]bool, len(test.pockets))
+				for i := range active {
 					active[i] = true
 				}
-				for i := range len(test.inactive) {
-					active[test.inactive[i]] = false
+				for _, i := range test.inactive {
+					active[i] = false
 				}
 			}
 			testOddsCalc(t, ctx, test.typ, pockets, Must(test.board), test.v, test.n, active)
@@ -393,17 +394,13 @@ func TestOddsCalc(t *testing.T) {
 	}
 }
 
-func testOddsCalc(t *testing.T, ctx context.Context, typ Type, pockets [][]Card, board []Card, v []int, n int, active map[int]bool) {
+func testOddsCalc(t *testing.T, ctx context.Context, typ Type, pockets []Cards, board Cards, v []int, n int, active []bool) {
 	t.Helper()
-	odds, _, ok := NewOddsCalc(
-		typ,
-		WithPocketsBoard(pockets, board),
-		WithDeep(true),
-		WithActive(active, true),
-	).Calc(ctx)
+	res, err := typ.Odds(ctx, pockets, board, WithDeep(true), WithActive(active), WithFolded(true))
+	odds := res.Hi
 	switch {
-	case !ok:
-		t.Fatalf("expected ok == true")
+	case err != nil:
+		t.Fatalf("expected no error, got: %v", err)
 	case odds == nil:
 		t.Fatalf("expected non-nil odds")
 	case !reflect.DeepEqual(odds.Counts, v):
@@ -551,16 +548,11 @@ func TestExpValueCalc(t *testing.T) {
 func testExpValueCalc(t *testing.T, ctx context.Context, typ Type, pocket, board []Card, opponents int, wins, splits, losses, total uint64) {
 	t.Helper()
 	t.Logf("type: %v pocket: %v board: %v opponents: %d", typ, pocket, board, opponents)
-	expv, ok := NewExpValueCalc(
-		typ,
-		pocket,
-		WithBoard(board),
-		WithOpponents(opponents),
-	).Calc(ctx)
+	expv, err := CalcExpValue(ctx, typ, pocket, board, WithOpponents(opponents))
 	t.Logf("wins/splits/losses/total: %d/%d/%d/%d", expv.Wins, expv.Splits, expv.Losses, expv.Total)
 	switch {
-	case !ok:
-		t.Fatalf("expected ok == true")
+	case err != nil:
+		t.Fatalf("expected no error, got: %v", err)
 	case expv.Wins != wins:
 		t.Errorf("expected wins to be equal: %d != %d", wins, expv.Wins)
 	case expv.Splits != splits:
@@ -583,7 +575,7 @@ func TestStartingCSV(t *testing.T) {
 	m, ch := make(map[string]bool), make(chan *expValueRes, 1)
 	var wg sync.WaitGroup
 	calc := func(c0, c1 Card) {
-		if key := HashKey(c0, c1); !m[key] {
+		if key := StartingKey(c0, c1); !m[key] {
 			m[key] = true
 			wg.Go(func() {
 				ch <- testStartingCSV(t, ctx, c0, c1)
@@ -619,7 +611,7 @@ func TestStartingCSV(t *testing.T) {
 	buf := new(bytes.Buffer)
 	fmt.Fprintf(buf, "%s,%s,%s,%s,%s,%s\n", "name", "wins", "splits", "losses", "calc", "cactus")
 	for _, res := range v {
-		fmt.Fprintf(buf, "%s,%d,%d,%d,%f,%d\n", HashKey(res.c0, res.c1), res.ev.Wins, res.ev.Splits, res.ev.Losses, res.ev.Float64(), int(res.cactus))
+		fmt.Fprintf(buf, "%s,%d,%d,%d,%f,%d\n", StartingKey(res.c0, res.c1), res.ev.Wins, res.ev.Splits, res.ev.Losses, res.ev.Float64(), int(res.cactus))
 	}
 	if err := os.WriteFile("starting.csv", buf.Bytes(), 0o644); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
@@ -628,12 +620,12 @@ func TestStartingCSV(t *testing.T) {
 
 func testStartingCSV(t *testing.T, ctx context.Context, c0, c1 Card) *expValueRes {
 	t.Helper()
-	expv, ok := NewExpValueCalc(Holdem, []Card{c0, c1}).Calc(ctx)
+	expv, err := CalcExpValue(ctx, Holdem, Cards{c0, c1}, nil)
 	return &expValueRes{
 		c0:     c0,
 		c1:     c1,
-		ev:     *expv,
-		ok:     ok,
+		ev:     expv,
+		ok:     err == nil,
 		cactus: calcStartingCactus(c0, c1),
 	}
 }
@@ -642,12 +634,12 @@ func calcStartingCactus(c0, c1 Card) EvalRank {
 	if r0 := c0.Rank(); r0 == c1.Rank() {
 		return calcStartingCactusPair(r0)
 	}
-	f, ev := calcs[Holdem], EvalOf(Holdem)
+	f, ev := evaluators[Holdem].Rank, EvalOf(Holdem)
 	r, z := EvalRank(0), []Card{c0, c1, InvalidCard, InvalidCard, InvalidCard}
-	for g, v := NewCombinGen(Formatter([]Card{c0, c1}).Ranks(), 3); g.Next(); {
+	for g, v := newCombinGen(Cards([]Card{c0, c1}).Ranks(), 3); g.Next(); {
 		z[2], z[3], z[4] = New(v[0], Spade), New(v[1], Heart), New(v[2], Club)
 		f(ev, z, nil)
-		r = max(r, ev.HiRank)
+		r = max(r, ev.Hi.Rank)
 	}
 	return r
 }
@@ -661,8 +653,8 @@ func calcStartingCactusPair(rank Rank) EvalRank {
 		v = append(v, New(r, Club))
 	}
 	ev := EvalOf(Holdem)
-	calcs[Holdem](ev, []Card{New(rank, Heart), New(rank, Spade)}, v)
-	return ev.HiRank
+	evaluators[Holdem].Rank(ev, []Card{New(rank, Heart), New(rank, Spade)}, v)
+	return ev.Hi.Rank
 }
 
 type expValueRes struct {
@@ -685,10 +677,10 @@ func TestHashKey(t *testing.T) {
 	}
 	for i, test := range tests {
 		v := Must(test.s)
-		if s := HashKey(v[0], v[1]); s != test.exp {
+		if s := StartingKey(v[0], v[1]); s != test.exp {
 			t.Errorf("test %d expected %q, got: %q", i, test.exp, s)
 		}
-		if s := HashKey(v[1], v[0]); s != test.exp {
+		if s := StartingKey(v[1], v[0]); s != test.exp {
 			t.Errorf("test %d expected %q, got: %q", i, test.exp, s)
 		}
 	}
@@ -699,12 +691,9 @@ func TestExpValueCalcCancel(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	defer cancel()
 	// pre-flop deep calc is far too large to finish before the timeout
-	expv, ok := NewExpValueCalc(Holdem, Must("Ah Kh"), WithDeep(true), WithBoard(Must("2c"))).Calc(ctx)
-	if ok {
-		t.Fatalf("expected calc to be canceled")
-	}
-	if expv == nil {
-		t.Fatalf("expected partial expected value")
+	expv, err := CalcExpValue(ctx, Holdem, Must("Ah Kh"), Must("2c"), WithDeep(true))
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("expected calc to be canceled, got: %v", err)
 	}
 	if n := expv.Wins + expv.Splits + expv.Losses; n != expv.Total {
 		t.Errorf("expected wins + splits + losses == total, got: %d != %d", n, expv.Total)

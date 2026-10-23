@@ -17,44 +17,66 @@ import (
 	paulhankin "github.com/paulhankin/poker/v2/poker"
 )
 
-// count is the number of hands generated (must be a power of 2).
-const count = 1 << 12
+// count is the number of hands dealt (must be a power of 2). Many hands are
+// dealt so that the benchmarks evaluate random hands, rather than a small set
+// of hands whose lookup table entries stay in the CPU cache.
+const count = 1 << 20
 
-// hands are randomly dealt hands of 11 cards, converted to each evaluator's
-// card representation.
+// checked is the number of hands checked for agreement, which is fewer than
+// count as some evaluators are slow.
+const checked = 1 << 13
+
+// hands are randomly dealt hands of 11 cards.
 //
 // 5, 6, and 7 card evals use the first 5, 6, or 7 cards of a hand. Omaha evals
 // use the first 4, 5, or 6 cards as the pocket, and the last 5 cards as the
 // board.
 var hands = deal(count, 0x5eed)
 
-// hand is a dealt hand in each evaluator's representation.
-type hand struct {
-	cardrank   [11]cardrank.Card
-	chehsunliu [11]chehsunliu.Card
-	paulhankin [11]paulhankin.Card
-	riverboat  [11]riverboat.Card
-	joker      [11]joker.Card
+// dealt are dealt hands in each evaluator's card representation, each in its
+// own slice so that benchmarking an evaluator only reads its own cards.
+type dealt struct {
+	cardrank   [][11]cardrank.Card
+	chehsunliu [][11]chehsunliu.Card
+	paulhankin [][11]paulhankin.Card
+	riverboat  [][11]riverboat.Card
+	joker      [][11]joker.Card
 }
 
 // deal deals n random hands of 11 cards.
-func deal(n int, seed uint64) []hand {
-	r, deck := rand.New(rand.NewPCG(seed, seed)), cardrank.DeckFrench.Unshuffled()
+func deal(n int, seed uint64) dealt {
+	// convert each card to each evaluator's representation once
+	deck := cardrank.DeckFrench.Unshuffled()
 	suits := strings.NewReplacer("s", "♠", "h", "♥", "d", "♦", "c", "♣")
-	v := make([]hand, n)
-	for i := range v {
+	var ch [52]chehsunliu.Card
+	var ph [52]paulhankin.Card
+	var rb [52]riverboat.Card
+	var jk [52]joker.Card
+	for _, c := range deck {
+		i, s := c.Index(), c.String()
+		ch[i] = chehsunliu.NewCard(s)
+		ph[i] = paulhankin.NameToCard[strings.ToUpper(s[1:]+s[:1])]
+		rb[i] = riverboat.MustParseCardString(s)
+		if err := jk[i].UnmarshalText([]byte(s[:1] + suits.Replace(s[1:]))); err != nil {
+			panic(err)
+		}
+	}
+	v := dealt{
+		cardrank:   make([][11]cardrank.Card, n),
+		chehsunliu: make([][11]chehsunliu.Card, n),
+		paulhankin: make([][11]paulhankin.Card, n),
+		riverboat:  make([][11]riverboat.Card, n),
+		joker:      make([][11]joker.Card, n),
+	}
+	r := rand.New(rand.NewPCG(seed, seed))
+	for i := range n {
 		r.Shuffle(len(deck), func(j, k int) {
 			deck[j], deck[k] = deck[k], deck[j]
 		})
 		for j, c := range deck[:11] {
-			s := c.String()
-			v[i].cardrank[j] = c
-			v[i].chehsunliu[j] = chehsunliu.NewCard(s)
-			v[i].paulhankin[j] = paulhankin.NameToCard[strings.ToUpper(s[1:]+s[:1])]
-			v[i].riverboat[j] = riverboat.MustParseCardString(s)
-			if err := v[i].joker[j].UnmarshalText([]byte(s[:1] + suits.Replace(s[1:]))); err != nil {
-				panic(err)
-			}
+			k := c.Index()
+			v.cardrank[i][j], v.chehsunliu[i][j], v.paulhankin[i][j] = c, ch[k], ph[k]
+			v.riverboat[i][j], v.joker[i][j] = rb[k], jk[k]
 		}
 	}
 	return v
@@ -74,7 +96,7 @@ var evaluators = []evaluator{
 	{"cardrank/TwoPlusTwo", benchTwoPlusTwo(5), benchTwoPlusTwo(6), benchTwoPlusTwo(7)},
 	{"cardrank/CactusFast", benchRankFunc(cardrank.CactusFast), benchEvalFunc(cardrank.CactusFast, 6), benchEvalFunc(cardrank.CactusFast, 7)},
 	{"cardrank/Cactus", benchRankFunc(cardrank.Cactus), benchEvalFunc(cardrank.Cactus, 6), benchEvalFunc(cardrank.Cactus, 7)},
-	{"cardrank/NewHybridEval", benchHybrid(5), benchHybrid(6), benchHybrid(7)},
+	{"cardrank/Holdem.Rank", benchHoldemRank(5), benchHoldemRank(6), benchHoldemRank(7)},
 	{"cardrank/Holdem.Eval", benchHoldem(5), benchHoldem(6), benchHoldem(7)},
 	{"chehsunliu/poker", benchChehsunliu(5), benchChehsunliu(6), benchChehsunliu(7)},
 	{"paulhankin/poker", benchPaulhankin5, nil, benchPaulhankin7},
@@ -112,10 +134,10 @@ var omahaEvaluators = []struct {
 	bench func(int) func(*testing.B)
 }{
 	{"cardrank/Omaha.Eval", benchOmahaType},
-	{"cardrank/CactusFast", benchOmaha(func(v *hand) *[11]cardrank.Card { return &v.cardrank }, rankCardrank)},
-	{"chehsunliu/poker", benchOmaha(func(v *hand) *[11]chehsunliu.Card { return &v.chehsunliu }, rankChehsunliu)},
-	{"paulhankin/poker", benchOmaha(func(v *hand) *[11]paulhankin.Card { return &v.paulhankin }, rankPaulhankin)},
-	{"alexclewontin/riverboat", benchOmaha(func(v *hand) *[11]riverboat.Card { return &v.riverboat }, riverboat.HandValue)},
+	{"cardrank/CactusFast", benchOmaha(func(i int) *[11]cardrank.Card { return &hands.cardrank[i] }, rankCardrank)},
+	{"chehsunliu/poker", benchOmaha(func(i int) *[11]chehsunliu.Card { return &hands.chehsunliu[i] }, rankChehsunliu)},
+	{"paulhankin/poker", benchOmaha(func(i int) *[11]paulhankin.Card { return &hands.paulhankin[i] }, rankPaulhankin)},
+	{"alexclewontin/riverboat", benchOmaha(func(i int) *[11]riverboat.Card { return &hands.riverboat[i] }, riverboat.HandValue)},
 	{"notnil/joker", benchOmahaJoker},
 }
 
@@ -142,9 +164,9 @@ var twoPlusTwo = twoplustwo.New()
 
 func benchTwoPlusTwo(n int) func(*testing.B) {
 	return func(b *testing.B) {
-		twoPlusTwo(hands[0].cardrank[:n]) // load lookup table
+		twoPlusTwo(hands.cardrank[0][:n]) // load lookup table
 		for i := 0; b.Loop(); i++ {
-			sinkCardrank = twoPlusTwo(hands[i&(count-1)].cardrank[:n])
+			sinkCardrank = twoPlusTwo(hands.cardrank[i&(count-1)][:n])
 		}
 	}
 }
@@ -152,38 +174,40 @@ func benchTwoPlusTwo(n int) func(*testing.B) {
 func benchRankFunc(f cardrank.RankFunc) func(*testing.B) {
 	return func(b *testing.B) {
 		for i := 0; b.Loop(); i++ {
-			v := &hands[i&(count-1)].cardrank
+			v := &hands.cardrank[i&(count-1)]
 			sinkCardrank = f(v[0], v[1], v[2], v[3], v[4])
 		}
 	}
 }
 
 func benchEvalFunc(f cardrank.RankFunc, n int) func(*testing.B) {
-	return benchCardrankEvalFunc(cardrank.NewEval(f), n)
+	return benchEvaluatorRank(cardrank.RankEvaluator(f), n)
 }
 
-func benchHybrid(n int) func(*testing.B) {
-	return benchCardrankEvalFunc(cardrank.NewHybridEval(false, false), n)
+// benchHoldemRank benchmarks Holdem's evaluator ranking only, which uses
+// CactusFast for 5 and 6 cards and TwoPlusTwo for 7 cards.
+func benchHoldemRank(n int) func(*testing.B) {
+	return benchEvaluatorRank(cardrank.Holdem.Evaluator(), n)
 }
 
-func benchCardrankEvalFunc(eval cardrank.EvalFunc, n int) func(*testing.B) {
+func benchEvaluatorRank(e cardrank.Evaluator, n int) func(*testing.B) {
 	return func(b *testing.B) {
 		ev := cardrank.EvalOf(cardrank.Holdem)
-		eval(ev, hands[0].cardrank[:2], hands[0].cardrank[2:n]) // load lookup table
+		e.Rank(ev, hands.cardrank[0][:2], hands.cardrank[0][2:n]) // load lookup table
 		for i := 0; b.Loop(); i++ {
-			v := hands[i&(count-1)].cardrank[:n]
-			eval(ev, v[:2], v[2:])
-			sinkCardrank = ev.HiRank
+			v := hands.cardrank[i&(count-1)][:n]
+			e.Rank(ev, v[:2], v[2:])
+			sinkCardrank = ev.Hi.Rank
 		}
 	}
 }
 
 func benchHoldem(n int) func(*testing.B) {
 	return func(b *testing.B) {
-		cardrank.Holdem.Eval(hands[0].cardrank[:2], hands[0].cardrank[2:n]) // load lookup table
+		cardrank.Holdem.Eval(hands.cardrank[0][:2], hands.cardrank[0][2:n]) // load lookup table
 		for i := 0; b.Loop(); i++ {
-			v := hands[i&(count-1)].cardrank[:n]
-			sinkCardrank = cardrank.Holdem.Eval(v[:2], v[2:]).HiRank
+			v := hands.cardrank[i&(count-1)][:n]
+			sinkCardrank = cardrank.Holdem.Eval(v[:2], v[2:]).Hi.Rank
 		}
 	}
 }
@@ -191,40 +215,40 @@ func benchHoldem(n int) func(*testing.B) {
 func benchChehsunliu(n int) func(*testing.B) {
 	return func(b *testing.B) {
 		for i := 0; b.Loop(); i++ {
-			sinkInt = int(chehsunliu.Evaluate(hands[i&(count-1)].chehsunliu[:n]))
+			sinkInt = int(chehsunliu.Evaluate(hands.chehsunliu[i&(count-1)][:n]))
 		}
 	}
 }
 
 func benchPaulhankin5(b *testing.B) {
 	for i := 0; b.Loop(); i++ {
-		sinkInt = int(paulhankin.Eval5((*[5]paulhankin.Card)(hands[i&(count-1)].paulhankin[:5])))
+		sinkInt = int(paulhankin.Eval5((*[5]paulhankin.Card)(hands.paulhankin[i&(count-1)][:5])))
 	}
 }
 
 func benchPaulhankin7(b *testing.B) {
 	for i := 0; b.Loop(); i++ {
-		sinkInt = int(paulhankin.Eval7((*[7]paulhankin.Card)(hands[i&(count-1)].paulhankin[:7])))
+		sinkInt = int(paulhankin.Eval7((*[7]paulhankin.Card)(hands.paulhankin[i&(count-1)][:7])))
 	}
 }
 
 func benchRiverboat5(b *testing.B) {
 	for i := 0; b.Loop(); i++ {
-		v := &hands[i&(count-1)].riverboat
+		v := &hands.riverboat[i&(count-1)]
 		sinkInt = riverboat.HandValue(v[0], v[1], v[2], v[3], v[4])
 	}
 }
 
 func benchRiverboat6(b *testing.B) {
 	for i := 0; b.Loop(); i++ {
-		v := &hands[i&(count-1)].riverboat
+		v := &hands.riverboat[i&(count-1)]
 		_, sinkInt = riverboat.BestFiveOfSix(v[0], v[1], v[2], v[3], v[4], v[5])
 	}
 }
 
 func benchRiverboat7(b *testing.B) {
 	for i := 0; b.Loop(); i++ {
-		v := &hands[i&(count-1)].riverboat
+		v := &hands.riverboat[i&(count-1)]
 		_, sinkInt = riverboat.BestFiveOfSeven(v[0], v[1], v[2], v[3], v[4], v[5], v[6])
 	}
 }
@@ -232,7 +256,7 @@ func benchRiverboat7(b *testing.B) {
 func benchJoker(n int) func(*testing.B) {
 	return func(b *testing.B) {
 		for i := 0; b.Loop(); i++ {
-			sinkInt = int(joker.New(hands[i&(count-1)].joker[:n]).Ranking())
+			sinkInt = int(joker.New(hands.joker[i&(count-1)][:n]).Ranking())
 		}
 	}
 }
@@ -241,17 +265,17 @@ func benchOmahaType(k int) func(*testing.B) {
 	typ := omahaTypes[k]
 	return func(b *testing.B) {
 		for i := 0; b.Loop(); i++ {
-			v := &hands[i&(count-1)].cardrank
-			sinkCardrank = typ.Eval(v[:k], v[6:]).HiRank
+			v := &hands.cardrank[i&(count-1)]
+			sinkCardrank = typ.Eval(v[:k], v[6:]).Hi.Rank
 		}
 	}
 }
 
-func benchOmaha[C any](cards func(*hand) *[11]C, f func(c0, c1, c2, c3, c4 C) int) func(int) func(*testing.B) {
+func benchOmaha[C any](cards func(int) *[11]C, f func(c0, c1, c2, c3, c4 C) int) func(int) func(*testing.B) {
 	return func(k int) func(*testing.B) {
 		return func(b *testing.B) {
 			for i := 0; b.Loop(); i++ {
-				sinkInt = omaha(cards(&hands[i&(count-1)]), k, f)
+				sinkInt = omaha(cards(i&(count-1)), k, f)
 			}
 		}
 	}
@@ -260,7 +284,7 @@ func benchOmaha[C any](cards func(*hand) *[11]C, f func(c0, c1, c2, c3, c4 C) in
 func benchOmahaJoker(k int) func(*testing.B) {
 	return func(b *testing.B) {
 		for i := 0; b.Loop(); i++ {
-			sinkInt = int(omahaJoker(&hands[i&(count-1)].joker, k).Ranking())
+			sinkInt = int(omahaJoker(&hands.joker[i&(count-1)], k).Ranking())
 		}
 	}
 }
@@ -344,21 +368,21 @@ func rankPaulhankin(c0, c1, c2, c3, c4 paulhankin.Card) int {
 // cardrank.
 func TestAgreement(t *testing.T) {
 	for n := 5; n <= 7; n++ {
-		evals := make([]cardrank.EvalRank, count)
-		for i := range hands {
-			v := hands[i].cardrank[:n]
+		evals := make([]cardrank.EvalRank, checked)
+		for i := range checked {
+			v := hands.cardrank[i][:n]
 			evals[i] = twoPlusTwo(v)
-			if r := cardrank.Holdem.Eval(v[:2], v[2:]).HiRank; r != evals[i] {
+			if r := cardrank.Holdem.Eval(v[:2], v[2:]).Hi.Rank; r != evals[i] {
 				t.Fatalf("%v: Holdem.Eval %d != TwoPlusTwo %d", v, r, evals[i])
 			}
 			ev := cardrank.EvalOf(cardrank.Holdem)
-			if cardrank.NewHybridEval(false, false)(ev, v[:2], v[2:]); ev.HiRank != evals[i] {
-				t.Fatalf("%v: NewHybridEval %d != TwoPlusTwo %d", v, ev.HiRank, evals[i])
+			if cardrank.Holdem.Evaluator().Rank(ev, v[:2], v[2:]); ev.Hi.Rank != evals[i] {
+				t.Fatalf("%v: Holdem.Evaluator().Rank %d != TwoPlusTwo %d", v, ev.Hi.Rank, evals[i])
 			}
-			if r := chehsunliu.Evaluate(hands[i].chehsunliu[:n]); int(r) != int(evals[i]) {
+			if r := chehsunliu.Evaluate(hands.chehsunliu[i][:n]); int(r) != int(evals[i]) {
 				t.Errorf("%v: chehsunliu %d != cardrank %d", v, r, evals[i])
 			}
-			if r := riverboatEval(&hands[i].riverboat, n); r != int(evals[i]) {
+			if r := riverboatEval(&hands.riverboat[i], n); r != int(evals[i]) {
 				t.Errorf("%v: riverboat %d != cardrank %d", v, r, evals[i])
 			}
 		}
@@ -367,12 +391,12 @@ func TestAgreement(t *testing.T) {
 		for i, j := range adjacent(evals) {
 			exp := cmp.Compare(evals[j], evals[i]) // > 0 when hand i is better
 			if n != 6 {
-				if c := cmp.Compare(paulhankinEval(&hands[i].paulhankin, n), paulhankinEval(&hands[j].paulhankin, n)); c != exp {
-					t.Errorf("%v vs %v: paulhankin compare %d, expected %d", hands[i].cardrank[:n], hands[j].cardrank[:n], c, exp)
+				if c := cmp.Compare(paulhankinEval(&hands.paulhankin[i], n), paulhankinEval(&hands.paulhankin[j], n)); c != exp {
+					t.Errorf("%v vs %v: paulhankin compare %d, expected %d", hands.cardrank[i][:n], hands.cardrank[j][:n], c, exp)
 				}
 			}
-			if c := cmp.Compare(joker.New(hands[i].joker[:n]).CompareTo(joker.New(hands[j].joker[:n])), 0); c != exp {
-				t.Errorf("%v vs %v: joker compare %d, expected %d", hands[i].cardrank[:n], hands[j].cardrank[:n], c, exp)
+			if c := cmp.Compare(joker.New(hands.joker[i][:n]).CompareTo(joker.New(hands.joker[j][:n])), 0); c != exp {
+				t.Errorf("%v vs %v: joker compare %d, expected %d", hands.cardrank[i][:n], hands.cardrank[j][:n], c, exp)
 			}
 		}
 	}
@@ -382,28 +406,28 @@ func TestAgreement(t *testing.T) {
 // identically to cardrank.
 func TestOmahaAgreement(t *testing.T) {
 	for k, typ := range omahaTypes {
-		evals := make([]cardrank.EvalRank, count)
-		for i := range hands {
-			v := &hands[i].cardrank
-			evals[i] = typ.Eval(v[:k], v[6:]).HiRank
+		evals := make([]cardrank.EvalRank, checked)
+		for i := range checked {
+			v := &hands.cardrank[i]
+			evals[i] = typ.Eval(v[:k], v[6:]).Hi.Rank
 			if r := omaha(v, k, rankCardrank); r != int(evals[i]) {
 				t.Fatalf("%s %v %v: CactusFast %d != %d", typ, v[:k], v[6:], r, evals[i])
 			}
-			if r := omaha(&hands[i].chehsunliu, k, rankChehsunliu); r != int(evals[i]) {
+			if r := omaha(&hands.chehsunliu[i], k, rankChehsunliu); r != int(evals[i]) {
 				t.Errorf("%s %v %v: chehsunliu %d != %d", typ, v[:k], v[6:], r, evals[i])
 			}
-			if r := omaha(&hands[i].riverboat, k, riverboat.HandValue); r != int(evals[i]) {
+			if r := omaha(&hands.riverboat[i], k, riverboat.HandValue); r != int(evals[i]) {
 				t.Errorf("%s %v %v: riverboat %d != %d", typ, v[:k], v[6:], r, evals[i])
 			}
 		}
 		for i, j := range adjacent(evals) {
 			exp := cmp.Compare(evals[j], evals[i]) // > 0 when hand i is better
-			ph := cmp.Compare(omaha(&hands[j].paulhankin, k, rankPaulhankin), omaha(&hands[i].paulhankin, k, rankPaulhankin))
+			ph := cmp.Compare(omaha(&hands.paulhankin[j], k, rankPaulhankin), omaha(&hands.paulhankin[i], k, rankPaulhankin))
 			if ph != exp {
-				t.Errorf("%s %v vs %v: paulhankin compare %d, expected %d", typ, hands[i].cardrank, hands[j].cardrank, ph, exp)
+				t.Errorf("%s %v vs %v: paulhankin compare %d, expected %d", typ, hands.cardrank[i], hands.cardrank[j], ph, exp)
 			}
-			if c := cmp.Compare(omahaJoker(&hands[i].joker, k).CompareTo(omahaJoker(&hands[j].joker, k)), 0); c != exp {
-				t.Errorf("%s %v vs %v: joker compare %d, expected %d", typ, hands[i].cardrank, hands[j].cardrank, c, exp)
+			if c := cmp.Compare(omahaJoker(&hands.joker[i], k).CompareTo(omahaJoker(&hands.joker[j], k)), 0); c != exp {
+				t.Errorf("%s %v vs %v: joker compare %d, expected %d", typ, hands.cardrank[i], hands.cardrank[j], c, exp)
 			}
 		}
 	}

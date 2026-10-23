@@ -5,27 +5,31 @@
 // # Cards and Decks
 //
 // A [Card] is a [Rank] and [Suit], and can be created with [New], parsed from
-// strings with [Parse] or [Must], or created from a unicode playing card rune
-// with [FromRune]. A [Deck] is created from a [DeckType], such as the standard
-// 52 card [DeckFrench], and is shuffled with any [Shuffler] (such as
+// strings with [Parse] or [Must] as [Cards], or created from a unicode playing
+// card rune with [FromRune]. A [Deck] is created from a [DeckType], such as the
+// standard 52 card [DeckFrench], and is shuffled with any [Shuffler] (such as
 // [math/rand.Rand]).
 //
 // # Evaluation
 //
 // Each registered [Type] (such as [Holdem] or [OmahaHiLo]) evaluates pocket
 // and board cards with [Type.Eval], returning an [Eval] containing the Hi and
-// Lo [EvalRank] values and the best and unused cards. Lower ranks are better. Evals
-// are compared with [Eval.Comp], and winners are determined with [Order].
+// Lo [Hand], each having a rank and the best and unused cards. Lower ranks are
+// better. Hands are compared with [Hand.Compare], and winners are determined
+// with [HiOrder] and [LoOrder].
 //
 // Ranks are calculated with pure Go implementations of well-known poker hand
 // evaluators: [Cactus], [CactusFast], and the Two-Plus-Two lookup table (see
-// [NewTwoPlusTwoEval]).
+// [NewTwoPlusTwoEval]). A type's [Evaluator] can be replaced with
+// [TypeDesc.Evaluator].
 //
 // # Dealing
 //
-// A [Dealer] deals the streets of a [Type], handles multiple run outs, and
-// determines the winners of each run. [OddsCalc] and [ExpValueCalc] calculate
-// a run's odds and a pocket's expected value.
+// A [Dealer] deals the streets of a [Type] (see [Dealer.Deal]), handles
+// multiple run outs, and determines the results of each run (see
+// [Dealer.Results]). [CalcOdds] and [CalcExpValue] calculate a run's odds and
+// a pocket's expected value. [Combinations] and [CombinationsUnused] iterate
+// over combinations of cards.
 //
 // # Two-Plus-Two
 //
@@ -59,11 +63,8 @@ var (
 	// descs are the registered type descriptions.
 	descs = make(map[Type]TypeDesc)
 
-	// calcs are calc funcs.
-	calcs = make(map[Type]EvalFunc)
-
-	// evals are eval funcs.
-	evals = make(map[Type]EvalFunc)
+	// evaluators are the registered type evaluators.
+	evaluators = make(map[Type]Evaluator)
 )
 
 // SetRankCactus sets the [RankCactus] rank func, and rebuilds the eval funcs of
@@ -81,7 +82,7 @@ func SetRankCactus(f RankFunc) {
 // initialization (such as from an init func), as it is not safe for
 // concurrent use.
 //
-// See [NewTwoPlusTwoEval] and [NewHybridEval].
+// See [NewTwoPlusTwoEval] and [newHybridEval].
 //
 // [twoplustwo]: https://pkg.go.dev/github.com/cardrank/cardrank/twoplustwo
 func RegisterTwoPlusTwo(f func([]Card) EvalRank) {
@@ -102,15 +103,15 @@ func registerDefaultTypes() error {
 // RegisterType registers a type.
 func RegisterType(desc TypeDesc) error {
 	if _, ok := descs[desc.Type]; ok {
-		return ErrInvalidId
+		return ErrInvalidID
 	}
 	// check street ids
 	m := make(map[byte]bool)
 	for _, street := range desc.Streets {
-		if (!unicode.IsLetter(rune(street.Id)) && !unicode.IsNumber(rune(street.Id))) || m[street.Id] {
-			return ErrInvalidId
+		if (!unicode.IsLetter(rune(street.ID)) && !unicode.IsNumber(rune(street.ID))) || m[street.ID] {
+			return ErrInvalidID
 		}
-		m[street.Id] = true
+		m[street.ID] = true
 	}
 	desc.Num = len(descs)
 	descs[desc.Type] = desc
@@ -118,17 +119,24 @@ func RegisterType(desc TypeDesc) error {
 	return nil
 }
 
-// rebuild rebuilds the calc and eval funcs of all registered types.
+// rebuild rebuilds the evaluators of all registered types.
 func rebuild() {
 	for _, desc := range descs {
 		desc.build()
 	}
 }
 
-// build builds the type's calc and eval funcs.
+// build builds the type's evaluator, using the [TypeDesc.Evaluator] when set,
+// or the built-in evaluator for the [TypeDesc.Eval] type.
 func (desc TypeDesc) build() {
-	calcs[desc.Type] = desc.Eval.New(desc.board, false, desc.Low)
-	evals[desc.Type] = desc.Eval.New(desc.board, true, desc.Low)
+	if desc.Evaluator != nil {
+		evaluators[desc.Type] = desc.Evaluator
+		return
+	}
+	evaluators[desc.Type] = funcEvaluator{
+		rank: desc.Eval.newEvalFunc(desc.board, false, desc.Low),
+		eval: desc.Eval.newEvalFunc(desc.board, true, desc.Low),
+	}
 }
 
 // Types returns registered types.
@@ -148,14 +156,20 @@ func (err Error) Error() string {
 
 // Error values.
 const (
-	// ErrInvalidId is the invalid id error.
-	ErrInvalidId Error = "invalid id"
-	// ErrMismatchedIdAndType is the mismatched id and type error.
-	ErrMismatchedIdAndType Error = "mismatched id and type"
+	// ErrInvalidID is the invalid id error.
+	ErrInvalidID Error = "invalid id"
+	// ErrMismatchedIDAndType is the mismatched id and type error.
+	ErrMismatchedIDAndType Error = "mismatched id and type"
 	// ErrInvalidCard is the invalid card error.
 	ErrInvalidCard Error = "invalid card"
 	// ErrInvalidType is the invalid type error.
 	ErrInvalidType Error = "invalid type"
+	// ErrInvalidState is the invalid state error.
+	ErrInvalidState Error = "invalid state"
+	// ErrInvalidPosition is the invalid position error.
+	ErrInvalidPosition Error = "invalid position"
+	// ErrInvalidCalc is the invalid calc error.
+	ErrInvalidCalc Error = "invalid calc"
 )
 
 // primes are the first 13 prime numbers (one per card rank).

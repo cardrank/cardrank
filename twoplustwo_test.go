@@ -28,7 +28,7 @@ func TestRegisterTwoPlusTwo(t *testing.T) {
 		}
 		for _, nb := range boards {
 			for range 200 {
-				d := typ.DeckType().Shuffle(r, 1)
+				d := typ.DeckType().Shuffle(r)
 				hands = append(hands, hand{typ, d.Draw(typ.Pocket()), d.Draw(nb)})
 			}
 		}
@@ -46,16 +46,16 @@ func TestRegisterTwoPlusTwo(t *testing.T) {
 	for i, h := range hands {
 		ev, e := h.typ.Eval(h.pocket, h.board), exp[i]
 		switch {
-		case ev.HiRank != e.HiRank,
-			!slices.Equal(ev.HiBest, e.HiBest),
-			!slices.Equal(ev.HiUnused, e.HiUnused),
-			ev.LoRank != e.LoRank,
-			!slices.Equal(ev.LoBest, e.LoBest),
-			!slices.Equal(ev.LoUnused, e.LoUnused):
+		case ev.Hi.Rank != e.Hi.Rank,
+			!slices.Equal(ev.Hi.Best, e.Hi.Best),
+			!slices.Equal(ev.Hi.Unused, e.Hi.Unused),
+			ev.Lo.Rank != e.Lo.Rank,
+			!slices.Equal(ev.Lo.Best, e.Lo.Best),
+			!slices.Equal(ev.Lo.Unused, e.Lo.Unused):
 			t.Errorf("%s %v %v: expected %v %v %v / %v %v %v, got: %v %v %v / %v %v %v",
 				h.typ, h.pocket, h.board,
-				e.HiRank, e.HiBest, e.HiUnused, e.LoRank, e.LoBest, e.LoUnused,
-				ev.HiRank, ev.HiBest, ev.HiUnused, ev.LoRank, ev.LoBest, ev.LoUnused,
+				e.Hi.Rank, e.Hi.Best, e.Hi.Unused, e.Lo.Rank, e.Lo.Best, e.Lo.Unused,
+				ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused, ev.Lo.Rank, ev.Lo.Best, ev.Lo.Unused,
 			)
 		}
 	}

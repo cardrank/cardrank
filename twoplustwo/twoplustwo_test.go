@@ -10,15 +10,15 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	f, cactus := twoplustwo.New(), cardrank.NewEval(cardrank.CactusFast)
+	f, cactus := twoplustwo.New(), cardrank.RankEvaluator(cardrank.CactusFast)
 	r := rand.New(rand.NewSource(0x2b2))
 	for range 10000 {
 		for n := 5; n <= 7; n++ {
-			v := cardrank.DeckFrench.Shuffle(r, 1).Draw(n)
+			v := cardrank.DeckFrench.Shuffle(r).Draw(n)
 			ev := cardrank.EvalOf(cardrank.Holdem)
-			cactus(ev, v[:2], v[2:])
-			if rank := f(v); rank != ev.HiRank {
-				t.Fatalf("%v: expected %d, got: %d", v, ev.HiRank, rank)
+			cactus.Rank(ev, v[:2], v[2:])
+			if rank := f(v); rank != ev.Hi.Rank {
+				t.Fatalf("%v: expected %d, got: %d", v, ev.Hi.Rank, rank)
 			}
 		}
 	}

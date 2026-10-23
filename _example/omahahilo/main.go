@@ -15,38 +15,37 @@ func main() {
 	seed := time.Now().UnixNano()
 	// note: use a better pseudo-random number generator
 	r := rand.New(rand.NewSource(seed))
-	pockets, board := cardrank.OmahaHiLo.Deal(r, 3, players)
+	pockets, board := cardrank.OmahaHiLo.Deal(r, players)
 	evs := cardrank.OmahaHiLo.EvalPockets(pockets, board)
 	fmt.Printf("------ OmahaHiLo %d ------\n", seed)
 	fmt.Printf("Board: %b\n", board)
 	for i := range players {
-		hi, lo := evs[i].Desc(false), evs[i].Desc(true)
+		hi, lo := evs[i].Hi, evs[i].Lo
 		fmt.Printf("  %d: %b %b %b %s\n", i+1, pockets[i], hi.Best, hi.Unused, hi)
 		fmt.Printf("                   %b %b %s\n", lo.Best, lo.Unused, lo)
 	}
-	hiOrder, hiPivot := cardrank.Order(evs, false)
-	loOrder, loPivot := cardrank.Order(evs, true)
-	hi := evs[hiOrder[0]].Desc(false)
-	if hiPivot == 1 {
-		fmt.Printf("Result: %d wins with %s, %b\n", hiOrder[0]+1, hi, hi.Best)
+	hiWin, loWin := cardrank.HiOrder(evs), cardrank.LoOrder(evs)
+	hi := evs[hiWin.Order[0]].Hi
+	if hiWin.Pivot == 1 {
+		fmt.Printf("Result: %d wins with %s, %b\n", hiWin.Order[0]+1, hi, hi.Best)
 	} else {
-		var s []string
-		for i := range hiPivot {
-			s = append(s, strconv.Itoa(hiOrder[i]+1))
-		}
-		fmt.Printf("Result: %s push with %s\n", strings.Join(s, ", "), hi)
+		fmt.Printf("Result: %s push with %s\n", positions(hiWin.Winners()), hi)
 	}
-	if loPivot == 0 {
+	switch lo := evs[loWin.Order[0]].Lo; loWin.Pivot {
+	case 0:
 		fmt.Printf("        None\n")
-	} else if loPivot == 1 {
-		lo := evs[loOrder[0]].Desc(true)
-		fmt.Printf("        %d wins with %s %b\n", loOrder[0]+1, lo, lo.Best)
-	} else {
-		var s []string
-		for j := range loPivot {
-			s = append(s, strconv.Itoa(loOrder[j]+1))
-		}
-		lo := evs[loOrder[0]].Desc(true)
-		fmt.Printf("        %s push with %s\n", strings.Join(s, ", "), lo)
+	case 1:
+		fmt.Printf("        %d wins with %s %b\n", loWin.Order[0]+1, lo, lo.Best)
+	default:
+		fmt.Printf("        %s push with %s\n", positions(loWin.Winners()), lo)
 	}
+}
+
+// positions returns the 1-based positions as a string.
+func positions(v []int) string {
+	var s []string
+	for _, i := range v {
+		s = append(s, strconv.Itoa(i+1))
+	}
+	return strings.Join(s, ", ")
 }

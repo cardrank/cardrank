@@ -241,7 +241,7 @@ func TestFormatterSuits(t *testing.T) {
 		{"As Kh Qd Jc", ""},
 	}
 	for i, test := range tests {
-		v := Formatter(Must(test.s)).Suits()
+		v := Cards(Must(test.s)).Suits()
 		if s := strings.Trim(fmt.Sprintf("%v", v), "[]"); s != test.exp {
 			t.Errorf("test %d %s expected %q, got: %q", i, test.s, test.exp, s)
 		}
@@ -272,7 +272,7 @@ func TestFormatterRanks(t *testing.T) {
 		{"2s 3h 4s", "A K Q J T 9 8 7 6 5"},
 	}
 	for i, test := range tests {
-		v := Formatter(Must(test.s)).Ranks()
+		v := Cards(Must(test.s)).Ranks()
 		if s := strings.Trim(fmt.Sprintf("%v", v), "[]"); s != test.exp {
 			t.Errorf("test %d %s expected %q, got: %q", i, test.s, test.exp, s)
 		}

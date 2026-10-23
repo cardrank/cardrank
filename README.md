@@ -75,7 +75,7 @@ Additional examples for a [`Dealer`][dealer] and the [`Holdem`][type] and
 
 ### Eval Ranking
 
-An [`EvalRank`][eval-rank] is determined using the [`EvalFunc`][eval-func]
+An [`EvalRank`][eval-rank] is determined using the [`Evaluator`][evaluator]
 registered for a [`Type`][type]. `EvalRank` values are ordered low to high, and
 a lower rank is a better hand:
 
@@ -87,13 +87,13 @@ fmt.Printf("%t\n", cardrank.StraightFlush < cardrank.FullHouse)
 ```
 
 Pocket and board [cards][card] can be passed to a type's `Eval` method, which
-uses the type's registered [`EvalFunc`][eval-func] and returns an
-[`Eval`][eval]:
+uses the type's registered [`Evaluator`][evaluator] and returns an
+[`Eval`][eval], containing the Hi and Lo [`Hand`][hand]:
 
 ```go
 pocket, board := cardrank.Must("Ah Kh"), cardrank.Must("Qh Jh Th 2s 3s")
 ev := cardrank.Holdem.Eval(pocket, board)
-fmt.Printf("%s - %d\n", ev, ev.HiRank)
+fmt.Printf("%s - %d\n", ev, ev.Hi.Rank)
 
 // Output:
 // Straight Flush, Ace-high, Royal [Ah Kh Qh Jh Th] - 1
@@ -111,19 +111,21 @@ fmt.Printf("%s\n", ev)
 // Four, Three, Two-low [4c 3s 2h]
 ```
 
-If an invalid number of cards is passed to a type's `EvalFunc`, the `Eval`'s
-[`HiRank`][eval.hi-rank] and [`LoRank`][eval.lo-rank] are set to
-[`Invalid`][invalid].
-
-Hands are compared by their [`Eval.HiRank`][eval.hi-rank] or
-[`Eval.LoRank`][eval.lo-rank] values to determine a winner.
+If an invalid number of cards is passed to a type's `Eval`, the
+[`Hand`][hand]'s `Rank` is set to [`Invalid`][invalid].
 
 #### Hi/Lo
 
-Some types have both a Hi and Lo [`EvalRank`][eval-rank], such as
-[`Double`][type] board [`Holdem`][type] and the `*HiLo` variants like
-[`OmahaHiLo`][type]. An [`Eval`][eval] contains both values as its
-[`HiRank`][eval.hi-rank] and [`LoRank`][eval.lo-rank].
+Some types have both a Hi and Lo [`Hand`][hand], such as [`Double`][type]
+board [`Holdem`][type] and the `*HiLo` variants like [`OmahaHiLo`][type]. An
+[`Eval`][eval] contains both as its `Hi` and `Lo`. A `Hand` formats its own
+description:
+
+```go
+ev := cardrank.OmahaHiLo.Eval(cardrank.Must("Ah 2h Kc Qd"), cardrank.Must("3c 4d 8s Kh Ts"))
+fmt.Printf("%s %s\n", ev.Hi, ev.Hi.Best)
+fmt.Printf("%s %s\n", ev.Lo, ev.Lo.Best)
+```
 
 #### Cactus Kev
 
@@ -179,74 +181,74 @@ direct use.
 
 ### Winner Determination
 
-Winners are determined by the [lowest `EvalRank`][eval-rank] of either the Hi
-or Lo value for the [`Type`][type]. Hands with equal `EvalRank` values are
-equivalent, and split the win.
+Winners are determined by the lowest [`EvalRank`][eval-rank] of either the Hi
+or Lo [`Hand`][hand]. Hands with equal ranks are equivalent, and split the win.
 
-#### Comparing Eval Ranks
+#### Comparing Hands
 
-An [`Eval`][eval] can be compared to another `Eval` using
-[`Comp`][eval.comp]. `Comp` returns `-1`, `0`, or `+1`, making it easy to
+A [`Hand`][hand] can be compared to another `Hand` using
+[`Compare`][hand.compare], which returns `-1`, `0`, or `+1`, making it easy to
 compare or sort hands:
 
 ```go
 // Compare a and b's Hi:
-if a.Comp(b, false) < 0 {
-	fmt.Printf("%s is a winner!", a)
+if a.Hi.Compare(b.Hi) < 0 {
+	fmt.Printf("%s is a winner!", a.Hi)
 }
 
 // Compare a and b's Lo:
-if a.Comp(b, true) == 0 {
-	fmt.Printf("%s and %s are equal!", a, b)
+if a.Lo.Compare(b.Lo) == 0 {
+	fmt.Printf("%s and %s are equal!", a.Lo, b.Lo)
 }
 
 // Sort []*Eval by Hi:
 slices.SortFunc(evs, func(a, b *cardrank.Eval) int {
-	return a.Comp(b, false)
-})
-
-// Sort []*Eval by Lo:
-slices.SortFunc(evs, func(a, b *cardrank.Eval) int {
-	return a.Comp(b, true)
+	return a.Hi.Compare(b.Hi)
 })
 ```
 
-The package-level [`Order`][order] func orders evals and determines winners.
-See [ordering evals](#ordering-evals) below.
+#### Ordering Hands
 
-#### Ordering Evals
-
-[`Order`][order] determines the winners of a hand by ordering the indexes of a
-[`[]*Eval`][eval]. It returns the ordered indexes as a `[]int`, and an `int`
-pivot marking the cutoff for a win:
+[`HiOrder`][hi-order] and [`LoOrder`][lo-order] determine the winners of a
+hand by ordering the positions of a [`[]*Eval`][eval], returning a
+[`Ranking`][ranking] (see [`Order`][order] to order a `[]Hand`):
 
 ```go
-// Order by HiRank:
-hiOrder, hiPivot := cardrank.Order(evs, false)
-```
-
-For a [`Type`][type] with a Lo value:
-
-```go
-// Order by LoRank:
-loOrder, loPivot := cardrank.Order(evs, true)
-```
-
-The evals whose indexes are before the pivot are the winners. When ordering by
-`HiRank` there is always at least 1 winner (except for [`Video`][type] types),
-but when ordering by `LoRank` there may be no winners:
-
-```go
-for _, i := range hiOrder[:hiPivot] {
-	fmt.Printf("%s is a Hi winner!", evs[i])
+hi := cardrank.HiOrder(evs)
+for _, i := range hi.Winners() {
+	fmt.Printf("%s is a Hi winner!", evs[i].Hi)
 }
 ```
 
-Similarly, for Lo winners:
+When ordering by Hi there is always at least 1 winner (except for
+[`Video`][type] types), but when ordering by Lo there may be no winners:
 
 ```go
-for _, i := range loOrder[:loPivot] {
-	fmt.Printf("%s is a Lo winner!", evs[i])
+lo := cardrank.LoOrder(evs)
+if len(lo.Winners()) == 0 {
+	fmt.Println("no qualifying Lo")
+}
+```
+
+#### Dealing
+
+A [`Dealer`][dealer] deals the streets of a [`Type`][type], with
+[`Deal`][dealer.deal] iterating over each street of each run, and
+[`Results`][dealer.results] iterating over each run's result. Positions can be
+folded, and the runs changed, from within the loop:
+
+```go
+d := cardrank.Holdem.Dealer(r, 4)
+for run := range d.Deal() {
+	if d.Street().ID == 'f' && run == 0 {
+		// run it twice, after the flop
+		if err := d.ChangeRuns(2); err != nil {
+			panic(err)
+		}
+	}
+}
+for run, res := range d.Results() {
+	fmt.Printf("run %d: %s\n", run, res.Hi.Describe("Alice", "Bob", "Carl", "Dave"))
 }
 ```
 
@@ -261,42 +263,48 @@ identically:
 cd test && go test -bench .
 ```
 
-Results with Go 1.27.3 on `linux/amd64`, with the [`twoplustwo`](#two-plus-two)
-package imported (time per hand, with allocations per hand in parentheses when
-non-zero).
+Results with Go 1.27.3 on `linux/amd64`, single-threaded, over 1,048,576
+randomly dealt hands, with the [`twoplustwo`](#two-plus-two) package imported
+(time per hand, with allocations per hand in parentheses when non-zero).
 
 Best 5 of 5, 6, or 7 cards:
 
 | Evaluator                                  | 5 cards      | 6 cards      | 7 cards       |
 | ------------------------------------------ | -----------: | -----------: | ------------: |
-| `cardrank` [`CactusFast`][cactus-fast]     | 2.7 ns       | 61 ns (3)    | 120 ns (3)    |
-| `cardrank` [`Cactus`][cactus]              | 7.9 ns       | 92 ns (3)    | 234 ns (3)    |
-| `cardrank` [`TwoPlusTwo`][two-plus-two]    | 16.9 ns      | 22.0 ns      | 24.7 ns       |
-| `cardrank` [`NewHybridEval`][hybrid-eval]  | 18.5 ns (1)  | 62 ns (3)    | 54.9 ns (1)   |
-| `cardrank` [`Holdem.Eval`][type]           | 104 ns (2)   | 159 ns (4)   | 115 ns (2)    |
-| [paulhankin/poker][paulhankin]             | 5.4 ns       |              | 14.3 ns       |
-| [alexclewontin/riverboat][riverboat]       | 5.0 ns       | 56 ns (1)    | 380 ns (7)    |
-| [chehsunliu/poker][chehsunliu]             | 10.3 ns      | 73 ns        | 522 ns        |
-| [notnil/joker][joker]                      | 1.27 µs (48) | 7.1 µs (269) | 25.4 µs (984) |
+| `cardrank` [`CactusFast`][cactus-fast]     | 6.4 ns       | 67 ns (3)    | 129 ns (3)    |
+| `cardrank` [`Cactus`][cactus]              | 8.2 ns       | 98 ns (3)    | 244 ns (3)    |
+| `cardrank` [`TwoPlusTwo`][two-plus-two]    | 29.4 ns      | 61.6 ns      | 65.6 ns       |
+| `cardrank` [`Holdem.Rank`][evaluator]      | 20.8 ns (1)  | 69 ns (3)    | 123 ns (1)    |
+| `cardrank` [`Holdem.Eval`][type]           | 114 ns (2)   | 179 ns (4)   | 222 ns (2)    |
+| [paulhankin/poker][paulhankin]             | 5.4 ns       |              | 20.3 ns       |
+| [alexclewontin/riverboat][riverboat]       | 7.3 ns       | 63 ns (1)    | 388 ns (7)    |
+| [chehsunliu/poker][chehsunliu]             | 10.3 ns      | 74 ns        | 531 ns        |
+| [notnil/joker][joker]                      | 1.30 µs (48) | 7.0 µs (269) | 25.2 µs (982) |
 
 Omaha, best of any 2 pocket and 3 board cards, with 5 board cards:
 
-| Evaluator                              | 4 pocket      | 5 pocket      | 6 pocket      |
-| -------------------------------------- | ------------: | ------------: | ------------: |
-| `cardrank` [`CactusFast`][cactus-fast] | 225 ns        | 372 ns        | 549 ns        |
-| `cardrank` [`Omaha.Eval`][type]        | 364 ns (2)    | 498 ns (2)    | 658 ns (2)    |
-| [alexclewontin/riverboat][riverboat]   | 306 ns        | 505 ns        | 749 ns        |
-| [chehsunliu/poker][chehsunliu]         | 1.26 µs       | 2.10 µs       | 3.15 µs       |
-| [paulhankin/poker][paulhankin]         | 1.27 µs       | 2.10 µs       | 3.13 µs       |
-| [notnil/joker][joker]                  | 73.6 µs (2973) | 120 µs (4941) | 181 µs (7397) |
+| Evaluator                              | 4 pocket       | 5 pocket      | 6 pocket      |
+| -------------------------------------- | -------------: | ------------: | ------------: |
+| `cardrank` [`CactusFast`][cactus-fast] | 230 ns         | 376 ns        | 554 ns        |
+| `cardrank` [`Omaha.Eval`][type]        | 381 ns (2)     | 518 ns (2)    | 676 ns (2)    |
+| [alexclewontin/riverboat][riverboat]   | 311 ns         | 511 ns        | 757 ns        |
+| [chehsunliu/poker][chehsunliu]         | 1.29 µs        | 2.14 µs       | 3.20 µs       |
+| [paulhankin/poker][paulhankin]         | 1.29 µs        | 2.12 µs       | 3.16 µs       |
+| [notnil/joker][joker]                  | 73.9 µs (2971) | 123 µs (4939) | 182 µs (7395) |
 
 Notes:
 
 - `CactusFast` and `Cactus` evaluate 6 and 7 cards by ranking every 5 card
-  combination with [`NewEval`][new-eval].
-- `NewHybridEval` uses [`RankCactus`][rank-cactus] (`CactusFast`) for 5 and 6
-  cards, and `TwoPlusTwo` for 7 cards when the `twoplustwo` package is
-  imported. It is the eval used by `Holdem.Eval`.
+  combination (see [`RankEvaluator`][rank-evaluator]).
+- Evaluating random hands means most lookups into large tables miss the CPU
+  cache, so the `TwoPlusTwo` table (124 MiB) is much slower here than over a
+  small, repeated set of hands (65.6 ns vs 24.7 ns for 7 cards), and even
+  the much smaller `CactusFast` tables are slower (6.4 ns vs 2.7 ns for 5
+  cards).
+- `Holdem.Rank` is the `Rank` method of Holdem's [`Evaluator`][evaluator]
+  (ranking only, as used for odds calculations), which uses
+  [`RankCactus`][rank-cactus] (`CactusFast`) for 5 and 6 cards, and
+  `TwoPlusTwo` for 7 cards when the `twoplustwo` package is imported.
 - `Holdem.Eval` and `Omaha.Eval` are the high-level APIs ([`Omaha`][type],
   [`OmahaFive`][type], and [`OmahaSix`][type]): they also determine and order
   the best five and unused cards, and allocate the returned [`Eval`][eval].
@@ -359,18 +367,21 @@ TESTS=all go test ./...
 [street-desc]: https://pkg.go.dev/github.com/cardrank/cardrank#StreetDesc
 [order]: https://pkg.go.dev/github.com/cardrank/cardrank#Order
 [eval-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#EvalRank
-[eval-func]: https://pkg.go.dev/github.com/cardrank/cardrank#EvalFunc
-[eval.comp]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.Comp
-[eval.hi-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.HiRank
-[eval.lo-rank]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.LoRank
+[evaluator]: https://pkg.go.dev/github.com/cardrank/cardrank#Evaluator
+[hand]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand
+[hand.compare]: https://pkg.go.dev/github.com/cardrank/cardrank#Hand.Compare
+[ranking]: https://pkg.go.dev/github.com/cardrank/cardrank#Ranking
+[hi-order]: https://pkg.go.dev/github.com/cardrank/cardrank#HiOrder
+[lo-order]: https://pkg.go.dev/github.com/cardrank/cardrank#LoOrder
+[dealer.deal]: https://pkg.go.dev/github.com/cardrank/cardrank#Dealer.Deal
+[dealer.results]: https://pkg.go.dev/github.com/cardrank/cardrank#Dealer.Results
 [rank-cactus]: https://pkg.go.dev/github.com/cardrank/cardrank#RankCactus
 [cactus]: https://pkg.go.dev/github.com/cardrank/cardrank#Cactus
 [cactus-fast]: https://pkg.go.dev/github.com/cardrank/cardrank#CactusFast
 [two-plus-two]: https://pkg.go.dev/github.com/cardrank/cardrank/twoplustwo
 [pkg-example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package
 [paycalc]: https://pkg.go.dev/github.com/cardrank/cardrank/paycalc
-[new-eval]: https://pkg.go.dev/github.com/cardrank/cardrank#NewEval
-[hybrid-eval]: https://pkg.go.dev/github.com/cardrank/cardrank#NewHybridEval
+[rank-evaluator]: https://pkg.go.dev/github.com/cardrank/cardrank#RankEvaluator
 [paulhankin]: https://github.com/paulhankin/poker
 [riverboat]: https://github.com/alexclewontin/riverboat
 [chehsunliu]: https://github.com/chehsunliu/poker

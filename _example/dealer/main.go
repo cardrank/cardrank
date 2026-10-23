@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"slices"
 	"time"
 
 	"github.com/cardrank/cardrank"
@@ -24,27 +25,27 @@ func main() {
 		r := rand.New(rand.NewSource(seed))
 		fmt.Printf("------ %s %d ------\n", typ, seed)
 		// setup dealer and display
-		d := typ.Dealer(r, 3, players)
+		d := typ.Dealer(r, players)
 		desc := typ.Desc()
 		fmt.Printf("Eval: %l\n", typ)
 		fmt.Printf("Desc: %s/%s\n", desc.HiDesc, desc.LoDesc)
 		// display deck
-		deck := d.Deck.All()
+		deck := slices.Collect(d.Deck().All())
 		fmt.Printf("Deck: %s [%d]\n", desc.Deck, len(deck))
 		for i := 0; i < len(deck); i += 8 {
 			fmt.Printf("  %v\n", deck[i:min(i+8, len(deck))])
 		}
 		// iterate deal streets
 		last := -1
-		for d.Next() {
-			i, run := d.Run()
+		for i, run := range d.Deal() {
 			if last != i {
 				fmt.Printf("Run %d:\n", i)
 			}
 			last = i
 			fmt.Printf("  %s\n", d)
+			street := d.Street()
 			// display pockets
-			if d.HasPocket() {
+			if street.Pocket != 0 {
 				for i := range players {
 					fmt.Printf("    %d: %v\n", i, run.Pockets[i])
 				}
@@ -54,41 +55,39 @@ func main() {
 				fmt.Printf("    Discard: %v\n", v)
 			}
 			// display board
-			if d.HasBoard() {
+			if street.Board != 0 {
 				fmt.Printf("    Board: %v\n", run.Hi)
-				if d.Double {
+				if typ.Double() {
 					fmt.Printf("           %v\n", run.Lo)
 				}
 			}
 			// change runs to 3, after the flop
-			if d.Id() == 'f' && i == 0 {
-				if success := d.ChangeRuns(3); !success {
-					fmt.Println("unable to change runs")
+			if street.ID == 'f' && i == 0 {
+				if err := d.ChangeRuns(3); err != nil {
+					fmt.Println("unable to change runs:", err)
 					return
 				}
 			}
 		}
 		// iterate eval results
 		fmt.Printf("Showdown:\n")
-		for d.NextResult() {
-			run, res := d.Result()
+		for run, res := range d.Results() {
 			fmt.Printf("  Run %d:\n", run)
 			for i := range players {
-				if d.Active[i] {
-					hi := res.Evals[i].Desc(false)
+				if d.Active(i) {
+					hi := res.Evals[i].Hi
 					fmt.Printf("    %d: %v %v %s\n", i, hi.Best, hi.Unused, hi)
-					if d.Low || d.Double {
-						lo := res.Evals[i].Desc(true)
+					if typ.Low() || typ.Double() {
+						lo := res.Evals[i].Lo
 						fmt.Printf("       %v %v %s\n", lo.Best, lo.Unused, lo)
 					}
 				} else {
 					fmt.Printf("    %d: inactive\n", i)
 				}
 			}
-			hi, lo := res.Win()
-			fmt.Printf("    Result: %d with %s\n", hi, hi)
-			if lo != nil {
-				fmt.Printf("            %d with %s\n", lo, lo)
+			fmt.Printf("    Result: %d with %s\n", res.Hi, res.Hi)
+			if res.Lo.Valid() {
+				fmt.Printf("            %d with %s\n", res.Lo, res.Lo)
 			}
 		}
 	}

@@ -14,7 +14,7 @@ func TestMax(t *testing.T) {
 	for _, typ := range Types() {
 		for n := 2; n <= typ.Max(); n++ {
 			t.Run(fmt.Sprintf("%s/%d", typ, n), func(t *testing.T) {
-				pockets, _ := typ.Deal(rnd, 1, n)
+				pockets, _ := typ.Deal(rnd, n)
 				if l := len(pockets); l != n {
 					t.Fatalf("expected %d, got: %d", n, l)
 				}
@@ -62,16 +62,16 @@ func TestHoldem(t *testing.T) {
 	for i, test := range tests {
 		pocket, best, unused := Must(test.v), Must(test.b), Must(test.u)
 		ev := Holdem.Eval(pocket, nil)
-		if r, exp := ev.HiRank, test.r; r != exp {
+		if r, exp := ev.Hi.Rank, test.r; r != exp {
 			t.Errorf("test %d %v expected %d, got: %d", i, pocket, exp, r)
 		}
-		if !slices.Equal(ev.HiBest, best) {
-			t.Errorf("test %d %v expected %v, got: %v", i, pocket, best, ev.HiBest)
+		if !slices.Equal(ev.Hi.Best, best) {
+			t.Errorf("test %d %v expected %v, got: %v", i, pocket, best, ev.Hi.Best)
 		}
-		if !slices.Equal(ev.HiUnused, unused) {
-			t.Errorf("test %d %v expected %v, got: %v", i, pocket, unused, ev.HiUnused)
+		if !slices.Equal(ev.Hi.Unused, unused) {
+			t.Errorf("test %d %v expected %v, got: %v", i, pocket, unused, ev.Hi.Unused)
 		}
-		desc := ev.Desc(false)
+		desc := ev.Hi
 		if s, exp := fmt.Sprintf("%s %b", desc, desc.Best), test.s; s != exp {
 			t.Errorf("test %d expected %q, got: %q", i, exp, s)
 		}
@@ -93,16 +93,16 @@ func TestDallas(t *testing.T) {
 	for i, test := range tests {
 		pocket, best, unused := Must(test.v), Must(test.b), Must(test.u)
 		ev := Dallas.Eval(pocket[:2], pocket[2:])
-		if r, exp := ev.HiRank, test.r; r != exp {
+		if r, exp := ev.Hi.Rank, test.r; r != exp {
 			t.Errorf("test %d %v expected %d, got: %d", i, pocket, exp, r)
 		}
-		if !slices.Equal(ev.HiBest, best) {
-			t.Errorf("test %d %v expected %v, got: %v", i, pocket, best, ev.HiBest)
+		if !slices.Equal(ev.Hi.Best, best) {
+			t.Errorf("test %d %v expected %v, got: %v", i, pocket, best, ev.Hi.Best)
 		}
-		if !slices.Equal(ev.HiUnused, unused) {
-			t.Errorf("test %d %v expected %v, got: %v", i, pocket, unused, ev.HiUnused)
+		if !slices.Equal(ev.Hi.Unused, unused) {
+			t.Errorf("test %d %v expected %v, got: %v", i, pocket, unused, ev.Hi.Unused)
 		}
-		desc := ev.Desc(false)
+		desc := ev.Hi
 		if s, exp := fmt.Sprintf("%s %b", desc, desc.Best), test.s; s != exp {
 			t.Errorf("test %d expected %q, got: %q", i, exp, s)
 		}
@@ -134,16 +134,16 @@ func TestShort(t *testing.T) {
 	for i, test := range tests {
 		pocket, best, unused := Must(test.v), Must(test.b), Must(test.u)
 		ev := Short.Eval(pocket, nil)
-		if r, exp := ev.HiRank, test.r; r != exp {
+		if r, exp := ev.Hi.Rank, test.r; r != exp {
 			t.Errorf("test %d %v expected %d, got: %d", i, pocket, exp, r)
 		}
-		if !slices.Equal(ev.HiBest, best) {
-			t.Errorf("test %d %v expected %v, got: %v", i, pocket, best, ev.HiBest)
+		if !slices.Equal(ev.Hi.Best, best) {
+			t.Errorf("test %d %v expected %v, got: %v", i, pocket, best, ev.Hi.Best)
 		}
-		if !slices.Equal(ev.HiUnused, unused) {
-			t.Errorf("test %d %v expected %v, got: %v", i, pocket, unused, ev.HiUnused)
+		if !slices.Equal(ev.Hi.Unused, unused) {
+			t.Errorf("test %d %v expected %v, got: %v", i, pocket, unused, ev.Hi.Unused)
 		}
-		desc := ev.Desc(false)
+		desc := ev.Hi
 		if s, exp := fmt.Sprintf("%s %b", desc, desc.Best), test.s; s != exp {
 			t.Errorf("test %d expected %q, got: %q", i, exp, s)
 		}
@@ -172,16 +172,16 @@ func TestManila(t *testing.T) {
 	for i, test := range tests {
 		v, best, unused := Must(test.v), Must(test.b), Must(test.u)
 		ev := Manila.Eval(v[:2], v[2:])
-		if r, exp := ev.HiRank, test.r; r != exp {
+		if r, exp := ev.Hi.Rank, test.r; r != exp {
 			t.Errorf("test %d %v expected %d, got: %d", i, v, exp, r)
 		}
-		if !slices.Equal(ev.HiBest, best) {
-			t.Errorf("test %d %v expected %v, got: %v", i, v, best, ev.HiBest)
+		if !slices.Equal(ev.Hi.Best, best) {
+			t.Errorf("test %d %v expected %v, got: %v", i, v, best, ev.Hi.Best)
 		}
-		if !slices.Equal(ev.HiUnused, unused) {
-			t.Errorf("test %d %v expected %v, got: %v", i, v, unused, ev.HiUnused)
+		if !slices.Equal(ev.Hi.Unused, unused) {
+			t.Errorf("test %d %v expected %v, got: %v", i, v, unused, ev.Hi.Unused)
 		}
-		desc := ev.Desc(false)
+		desc := ev.Hi
 		if s, exp := fmt.Sprintf("%s %b", desc, desc.Best), test.s; s != exp {
 			t.Errorf("test %d expected %q, got: %q", i, exp, s)
 		}
@@ -208,14 +208,14 @@ func TestRazz(t *testing.T) {
 	for i, test := range tests {
 		pocket, best, unused := Must(test.v), Must(test.b), Must(test.u)
 		ev := Razz.Eval(pocket, nil)
-		if ev.HiRank != test.r {
-			t.Errorf("test %d %v expected rank %d, got: %d", i, pocket, test.r, ev.HiRank)
+		if ev.Hi.Rank != test.r {
+			t.Errorf("test %d %v expected rank %d, got: %d", i, pocket, test.r, ev.Hi.Rank)
 		}
-		if !slices.Equal(ev.HiBest, best) {
-			t.Errorf("test %d %v expected best %v, got: %v", i, pocket, best, ev.HiBest)
+		if !slices.Equal(ev.Hi.Best, best) {
+			t.Errorf("test %d %v expected best %v, got: %v", i, pocket, best, ev.Hi.Best)
 		}
-		if !slices.Equal(ev.HiUnused, unused) {
-			t.Errorf("test %d %v expected unused %v, got: %v", i, pocket, unused, ev.HiUnused)
+		if !slices.Equal(ev.Hi.Unused, unused) {
+			t.Errorf("test %d %v expected unused %v, got: %v", i, pocket, unused, ev.Hi.Unused)
 		}
 	}
 }
@@ -251,14 +251,14 @@ func TestBadugi(t *testing.T) {
 	for i, test := range tests {
 		pocket, best, unused := Must(test.v), Must(test.b), Must(test.u)
 		ev := Badugi.Eval(pocket, nil)
-		if ev.HiRank != test.exp {
-			t.Errorf("test %d %v expected rank %d, got: %d", i, pocket, test.exp, ev.HiRank)
+		if ev.Hi.Rank != test.exp {
+			t.Errorf("test %d %v expected rank %d, got: %d", i, pocket, test.exp, ev.Hi.Rank)
 		}
-		if !slices.Equal(ev.HiBest, best) {
-			t.Errorf("test %d %v expected best %v, got: %v", i, pocket, best, ev.HiBest)
+		if !slices.Equal(ev.Hi.Best, best) {
+			t.Errorf("test %d %v expected best %v, got: %v", i, pocket, best, ev.Hi.Best)
 		}
-		if !slices.Equal(ev.HiUnused, unused) {
-			t.Errorf("test %d %v expected unused %v, got: %v", i, pocket, unused, ev.HiUnused)
+		if !slices.Equal(ev.Hi.Unused, unused) {
+			t.Errorf("test %d %v expected unused %v, got: %v", i, pocket, unused, ev.Hi.Unused)
 		}
 		if s := fmt.Sprintf("%s", ev); s != test.s {
 			t.Errorf("test %d %v expected %q, got: %q", i, pocket, test.s, s)
@@ -306,13 +306,13 @@ func TestLowball(t *testing.T) {
 	for i, test := range tests {
 		pocket := Must(test.v)
 		ev := Lowball.Eval(pocket, nil)
-		if ev.HiRank != test.exp {
-			t.Errorf("test %d %v expected rank %d, got: %d", i, pocket, test.exp, ev.HiRank)
+		if ev.Hi.Rank != test.exp {
+			t.Errorf("test %d %v expected rank %d, got: %d", i, pocket, test.exp, ev.Hi.Rank)
 		}
-		if best := Must(test.b); !slices.Equal(ev.HiBest, best) {
-			t.Errorf("test %d expected %v, got: %v", i, best, ev.HiBest)
+		if best := Must(test.b); !slices.Equal(ev.Hi.Best, best) {
+			t.Errorf("test %d expected %v, got: %v", i, best, ev.Hi.Best)
 		}
-		if s, exp := fmt.Sprintf("%s", ev.Desc(false)), test.s; s != exp {
+		if s, exp := fmt.Sprintf("%s", ev.Hi), test.s; s != exp {
 			t.Errorf("test %d expected %q, got: %q", i, exp, s)
 		}
 	}
@@ -366,13 +366,13 @@ func TestTypeComp(t *testing.T) {
 	for i, test := range tests {
 		board := Must(test.board)
 		a, b := test.typ.Eval(Must(test.a), board), test.typ.Eval(Must(test.b), board)
-		if r, exp := a.HiRank, test.j; r != exp {
+		if r, exp := a.Hi.Rank, test.j; r != exp {
 			t.Errorf("test %d %s expected %d, got: %d", i, test.typ, exp, r)
 		}
-		if r, exp := b.HiRank, test.k; r != exp {
+		if r, exp := b.Hi.Rank, test.k; r != exp {
 			t.Errorf("test %d %s expected %d, got: %d", i, test.typ, exp, r)
 		}
-		if n := a.Comp(b, false); n != test.exp {
+		if n := a.Hi.Compare(b.Hi); n != test.exp {
 			t.Errorf("test %d %s compare expected %d, got: %d", i, test.typ, test.exp, n)
 		}
 	}
@@ -419,8 +419,8 @@ func TestTypeUnmarshal(t *testing.T) {
 
 func TestIdToType(t *testing.T) {
 	for _, desc := range DefaultTypes() {
-		s := desc.Type.Id()
-		typ, err := IdToType(s)
+		s := desc.Type.ID()
+		typ, err := ParseType(s)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -491,7 +491,7 @@ func TestDescType(t *testing.T) {
 	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			ev := test.typ.Eval(Must(test.v), nil)
-			desc := ev.Desc(false)
+			desc := ev.Hi
 			if s, exp := fmt.Sprintf(test.s, desc), test.exp; s != test.exp {
 				t.Errorf("%s %q expected %q, got: %q", test.typ, test.v, exp, s)
 			}
@@ -503,10 +503,48 @@ func TestRegisterTypeDuplicateStreetId(t *testing.T) {
 	desc := Holdem.Desc()
 	desc.Type = Type(0x7a7a)
 	desc.Streets = append(desc.Streets, desc.Streets[0])
-	if err := RegisterType(desc); !errors.Is(err, ErrInvalidId) {
+	if err := RegisterType(desc); !errors.Is(err, ErrInvalidID) {
 		t.Fatalf("expected ErrInvalidId, got: %v", err)
 	}
 	if _, ok := descs[desc.Type]; ok {
 		t.Errorf("expected type not to be registered")
+	}
+}
+
+// countingEvaluator counts evals, delegating to e.
+type countingEvaluator struct {
+	Evaluator
+	n *int
+}
+
+func (e countingEvaluator) Eval(ev *Eval, pocket, board []Card) {
+	*e.n++
+	e.Evaluator.Eval(ev, pocket, board)
+}
+
+func TestTypeDescEvaluator(t *testing.T) {
+	desc, err := NewType("Xe", Type('X'<<8|'e'), "Custom", WithHoldem(false))
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	var n int
+	desc.Evaluator = countingEvaluator{Holdem.Evaluator(), &n}
+	if err := RegisterType(*desc); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	defer func() {
+		delete(descs, desc.Type)
+		delete(evaluators, desc.Type)
+	}()
+	pocket, board := Must("Ah Kh"), Must("Qh Jh Th 2s 3s")
+	if r, exp := desc.Type.Eval(pocket, board).Hi.Rank, Holdem.Eval(pocket, board).Hi.Rank; r != exp {
+		t.Errorf("expected %d, got: %d", exp, r)
+	}
+	// rebuilding (such as when registering a Two-Plus-Two eval func) keeps the
+	// custom evaluator
+	rebuild()
+	desc.Type.Eval(pocket, board)
+	if n != 2 {
+		t.Errorf("expected custom evaluator to be used 2 times, got: %d", n)
 	}
 }

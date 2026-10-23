@@ -9,8 +9,8 @@ import (
 	"unicode"
 )
 
-// AlternateEmoji are alternate emoji pips.
-var AlternateEmoji = [4]string{
+// alternateEmoji are alternate emoji pips.
+var alternateEmoji = [4]string{
 	"♠️",
 	"♥️",
 	"🔷",
@@ -311,13 +311,13 @@ func (suit Suit) Emoji() string {
 func (suit Suit) AlternateEmoji() string {
 	switch suit {
 	case Spade:
-		return AlternateEmoji[0]
+		return alternateEmoji[0]
 	case Heart:
-		return AlternateEmoji[1]
+		return alternateEmoji[1]
 	case Diamond:
-		return AlternateEmoji[2]
+		return alternateEmoji[2]
 	case Club:
-		return AlternateEmoji[3]
+		return alternateEmoji[3]
 	}
 	return ""
 }
@@ -386,8 +386,8 @@ func FromIndex(i int) Card {
 //   - unicode playing card runes (ex: "🃆", "🂣").
 //
 // Returns a single slice of all cards from all strings in v.
-func Parse(v ...string) ([]Card, error) {
-	var cards []Card
+func Parse(v ...string) (Cards, error) {
+	var cards Cards
 	for n, s := range v {
 		for i, r := 0, []rune(s); i < len(r); i++ {
 			switch {
@@ -440,7 +440,7 @@ func Parse(v ...string) ([]Card, error) {
 // Returns a single slice of all cards from all strings in v.
 //
 // See [Parse] for overview of accepted string representations.
-func Must(v ...string) []Card {
+func Must(v ...string) Cards {
 	cards, err := Parse(v...)
 	if err == nil {
 		return cards
@@ -584,8 +584,8 @@ func (c Card) String() string {
 //	H - white unicode pip rune (as in h) without rank (♤♡♢♧)
 //	e - rank (as in s) and the emoji pip (♠️ ❤️ ♦️ ♣️ ) (ex: K♠️ A❤️ )
 //	E - emoji pip (as in e) without rank (♠️ ❤️ ♦️ ♣️ )
-//	a - rank (as in s) and the alternate emoji pip (see [AlternateEmoji])
-//	A - alternate emoji pip (see [AlternateEmoji])
+//	a - rank (as in s) and the alternate emoji pip (see [alternateEmoji])
+//	A - alternate emoji pip (see [alternateEmoji])
 //	c - playing card rune (ex: 🂡  🂱  🃁  🃑)
 //	C - playing card rune (as in c), substituting knights for jacks (ex: 🂬  🂼  🃌  🃜)
 //	n - rank name, lower cased (ex: one two jack queen king ace)
@@ -666,12 +666,12 @@ func (c Card) Format(f fmt.State, verb rune) {
 	_, _ = f.Write(buf)
 }
 
-// Formatter wraps formatting a set of cards. Allows `go test` to function
+// Cards wraps formatting a set of cards. Allows `go test` to function
 // without disabling vet.
-type Formatter []Card
+type Cards []Card
 
 // Format satisfies the [fmt.Formatter] interface.
-func (v Formatter) Format(f fmt.State, verb rune) {
+func (v Cards) Format(f fmt.State, verb rune) {
 	_, _ = f.Write([]byte{'['})
 	for i, c := range v {
 		if i != 0 {
@@ -683,7 +683,7 @@ func (v Formatter) Format(f fmt.State, verb rune) {
 }
 
 // Combine combines the cards in v.
-func (v Formatter) Combine() Card {
+func (v Cards) Combine() Card {
 	n := len(v)
 	if n == 0 {
 		return InvalidCard
@@ -692,7 +692,7 @@ func (v Formatter) Combine() Card {
 }
 
 // combine combines the cards in v.
-func (v Formatter) combine(n int) Card {
+func (v Cards) combine(n int) Card {
 	c := v[0]
 	for i := 1; i < n; i++ {
 		c |= v[i]
@@ -701,7 +701,7 @@ func (v Formatter) combine(n int) Card {
 }
 
 // Suits returns unused suits in v.
-func (v Formatter) Suits() []Suit {
+func (v Cards) Suits() []Suit {
 	n := len(v)
 	if n == 0 {
 		return []Suit{Spade, Heart, Diamond, Club}
@@ -717,7 +717,7 @@ func (v Formatter) Suits() []Suit {
 }
 
 // Ranks returns unused ranks in v.
-func (v Formatter) Ranks() []Rank {
+func (v Cards) Ranks() []Rank {
 	n := len(v)
 	if n == 0 {
 		return []Rank{Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Three, Two}
@@ -770,7 +770,7 @@ const (
 )
 
 // Exclude returns a copy of v excluding any specified cards.
-func Exclude(v []Card, ex ...[]Card) []Card {
+func (v Cards) Exclude(ex ...Cards) Cards {
 	if len(ex) == 0 {
 		return slices.Clone(v)
 	}
@@ -780,7 +780,7 @@ func Exclude(v []Card, ex ...[]Card) []Card {
 			m[c] = true
 		}
 	}
-	var u []Card
+	var u Cards
 	for _, c := range v {
 		if !m[c] {
 			u = append(u, c)

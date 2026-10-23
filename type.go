@@ -95,7 +95,7 @@ import (
 // [DeckFrench]), comprising a pocket of 5 cards, no community cards, with a
 // Ante and River. 5 pocket cards are dealt on the Ante, all up. Up to 5 pocket
 // cards can be drawn (exchanged) on the River. Uses a qualifier of
-// [JacksOrBetter] for eval (see [NewJacksOrBetterEval]).
+// [JacksOrBetter] for eval (see [newJacksOrBetterEval]).
 //
 // [Omaha] is a [Holdem] variant with 4 pocket cards instead of 2, requiring
 // use of 2 of 4 the pocket cards and any 3 of the 5 board cards to make the
@@ -158,7 +158,7 @@ import (
 // of 52 cards (see [DeckFrench]), comprising 4 pocket cards, no community
 // cards, and Ante, 5th, 6th, and River streets. Up to 4 cards can be drawn
 // (exchanged) multiple times on the 5th, 6th, or River streets. See
-// [NewBadugiEval] for more details.
+// [newBadugiEval] for more details.
 //
 // [Kuhn] is a best high card game, using a 3 card deck ([King], [Queen],
 // [Jack]), having 1 pocket card and no community board cards. Useful for game
@@ -265,7 +265,7 @@ func DefaultTypes() []TypeDesc {
 		// {Leduc, "Leduc", WithLeduc()},
 		// {RhodeIsland, "RhodeIsland", WithRhodeIsland()},
 	} {
-		desc, err := NewType(d.typ.Id(), d.typ, d.name, d.opt)
+		desc, err := NewType(d.typ.ID(), d.typ, d.name, d.opt)
 		if err != nil {
 			panic(err)
 		}
@@ -274,20 +274,20 @@ func DefaultTypes() []TypeDesc {
 	return v
 }
 
-// IdToType converts id to a type.
-func IdToType(id string) (Type, error) {
+// ParseType converts id to a type.
+func ParseType(id string) (Type, error) {
 	switch {
 	case len(id) != 2,
 		!unicode.IsLetter(rune(id[0])) && !unicode.IsNumber(rune(id[0])),
 		!unicode.IsLetter(rune(id[1])) && !unicode.IsNumber(rune(id[1])):
-		return 0, ErrInvalidId
+		return 0, ErrInvalidID
 	}
 	return Type(id[0])<<8 | Type(id[1]), nil
 }
 
 // MarshalText satisfies the [encoding.TextMarshaler] interface.
 func (typ Type) MarshalText() ([]byte, error) {
-	return []byte(typ.Id()), nil
+	return []byte(typ.ID()), nil
 }
 
 // UnmarshalText satisfies the [encoding.TextUnmarshaler] interface.
@@ -300,7 +300,7 @@ func (typ *Type) UnmarshalText(buf []byte) error {
 		}
 	}
 	if len(name) == 2 {
-		if id, err := IdToType(string(buf)); err == nil {
+		if id, err := ParseType(string(buf)); err == nil {
 			*typ = id
 			return nil
 		}
@@ -308,8 +308,8 @@ func (typ *Type) UnmarshalText(buf []byte) error {
 	return ErrInvalidType
 }
 
-// Id returns the type's id.
-func (typ Type) Id() string {
+// ID returns the type's id.
+func (typ Type) ID() string {
 	return string([]byte{byte(typ >> 8), byte(typ)})
 }
 
@@ -323,7 +323,7 @@ func (typ Type) Format(f fmt.State, verb rune) {
 	var buf []byte
 	switch verb {
 	case 'c':
-		buf = []byte(typ.Id())
+		buf = []byte(typ.ID())
 	case 's', 'v':
 		if desc, ok := descs[typ]; ok {
 			buf = []byte(desc.Name)
@@ -450,22 +450,22 @@ func (typ Type) Deck() *Deck {
 	return descs[typ].Deck.New()
 }
 
-// Dealer creates a new dealer with a deck shuffled by shuffles, with specified
-// pocket count.
-func (typ Type) Dealer(shuffler Shuffler, shuffles, count int) *Dealer {
+// Dealer creates a new dealer for the type and number of players, with a
+// deck shuffled by the shuffler.
+func (typ Type) Dealer(shuffler Shuffler, players int) *Dealer {
 	if desc, ok := descs[typ]; ok {
-		return NewShuffledDealer(desc, shuffler, shuffles, count)
+		return NewDealer(typ, desc.Deck.Shuffle(shuffler), players)
 	}
 	return nil
 }
 
-// Deal creates a new dealer for the type, shuffling the deck by shuffles,
-// returning the specified pocket count and Hi board.
-func (typ Type) Deal(shuffler Shuffler, shuffles, count int) ([][]Card, []Card) {
-	if d := typ.Dealer(shuffler, shuffles, count); d != nil {
-		for d.Next() {
+// Deal deals all streets for the type and number of players, with a deck
+// shuffled by the shuffler, returning the pockets and the Hi board.
+func (typ Type) Deal(shuffler Shuffler, players int) ([]Cards, Cards) {
+	if d := typ.Dealer(shuffler, players); d != nil {
+		for range d.Deal() {
 		}
-		return d.Runs[0].Pockets, d.Runs[0].Hi
+		return d.runs[0].Pockets, d.runs[0].Hi
 	}
 	return nil, nil
 }
@@ -483,13 +483,18 @@ func (typ Type) FlushOver() bool {
 // Eval creates a new eval for the type, evaluating the pocket and board.
 func (typ Type) Eval(pocket, board []Card) *Eval {
 	ev := EvalOf(typ)
-	evals[typ](ev, pocket, board)
+	evaluators[typ].Eval(ev, pocket, board)
 	return ev
+}
+
+// Evaluator returns the type's evaluator.
+func (typ Type) Evaluator() Evaluator {
+	return evaluators[typ]
 }
 
 // EvalPockets creates new evals for the type, evaluating each of the pockets
 // and board.
-func (typ Type) EvalPockets(pockets [][]Card, board []Card) []*Eval {
+func (typ Type) EvalPockets(pockets []Cards, board Cards) []*Eval {
 	evs := make([]*Eval, len(pockets))
 	for i, pocket := range pockets {
 		evs[i] = typ.Eval(pocket, board)
@@ -497,15 +502,15 @@ func (typ Type) EvalPockets(pockets [][]Card, board []Card) []*Eval {
 	return evs
 }
 
-// Odds calculates the odds for the pockets, board.
-func (typ Type) Odds(ctx context.Context, pockets [][]Card, board []Card, opts ...CalcOption) (*Odds, *Odds, bool) {
-	return NewOddsCalc(typ, append(opts, WithPocketsBoard(pockets, board))...).Calc(ctx)
+// Odds calculates the odds for the pockets and board (see [CalcOdds]).
+func (typ Type) Odds(ctx context.Context, pockets []Cards, board Cards, opts ...OddsOption) (RunOdds, error) {
+	return CalcOdds(ctx, typ, []*Run{{Pockets: pockets, Hi: board}}, opts...)
 }
 
-// ExpValue calculates expected value for a single pocket. Use [WithBoard] to
-// pass a board.
-func (typ Type) ExpValue(ctx context.Context, pocket []Card, opts ...CalcOption) (*ExpValue, bool) {
-	return NewExpValueCalc(typ, pocket, opts...).Calc(ctx)
+// ExpValue calculates the expected value for the pocket and board (see
+// [CalcExpValue]).
+func (typ Type) ExpValue(ctx context.Context, pocket, board Cards, opts ...ExpValueOption) (ExpValue, error) {
+	return CalcExpValue(ctx, typ, pocket, board, opts...)
 }
 
 // TypeDesc is a type description.
@@ -540,6 +545,9 @@ type TypeDesc struct {
 	HiDesc DescType
 	// LoDesc is the Lo description type.
 	LoDesc DescType
+	// Evaluator is the evaluator for the type. When nil, the built-in
+	// evaluator for the Eval type is used.
+	Evaluator Evaluator
 
 	pocket        int
 	pocketDiscard int
@@ -551,11 +559,11 @@ type TypeDesc struct {
 // NewType creates a new type description. Created type descriptions must be
 // registered with [RegisterType] before being used for eval.
 func NewType(id string, typ Type, name string, opts ...TypeOption) (*TypeDesc, error) {
-	switch id, err := IdToType(id); {
+	switch id, err := ParseType(id); {
 	case err != nil:
 		return nil, err
 	case id != typ:
-		return nil, ErrInvalidId
+		return nil, ErrInvalidID
 	}
 	desc := &TypeDesc{
 		Type:   typ,
@@ -631,7 +639,7 @@ func WithManila(opts ...StreetOption) TypeOption {
 		desc.HiDesc = DescFlushOver
 		desc.Streets[0].Board = 1
 		desc.Streets = slices.Insert(desc.Streets, 1, StreetDesc{
-			Id:    'd',
+			ID:    'd',
 			Name:  "Drop",
 			Board: 1,
 		})
@@ -650,7 +658,7 @@ func WithSpanish(opts ...StreetOption) TypeOption {
 		desc.HiDesc = DescFlushOver
 		desc.Streets[0].Board = 1
 		desc.Streets = slices.Insert(desc.Streets, 1, StreetDesc{
-			Id:    'd',
+			ID:    'd',
 			Name:  "Drop",
 			Board: 1,
 		})
@@ -968,7 +976,7 @@ func WithKuhn(opts ...StreetOption) TypeOption {
 		desc.Blinds = StudBlinds()
 		desc.Streets = []StreetDesc{
 			{
-				Id:     'p',
+				ID:     'p',
 				Name:   "Pre-Flop",
 				Pocket: 1,
 			},
@@ -988,12 +996,12 @@ func WithLeduc(opts ...StreetOption) TypeOption {
 		desc.Blinds = StudBlinds()
 		desc.Streets = []StreetDesc{
 			{
-				Id:     'p',
+				ID:     'p',
 				Name:   "Pre-Flop",
 				Pocket: 1,
 			},
 			{
-				Id:    'f',
+				ID:    'f',
 				Name:  "Flop",
 				Board: 1,
 			},
@@ -1021,8 +1029,8 @@ func WithRhodeIsland(opts ...StreetOption) TypeOption {
 
 // StreetDesc is a type's street description.
 type StreetDesc struct {
-	// Id is the id of the street.
-	Id byte
+	// ID is the id of the street.
+	ID byte
 	// Name is the name of the street.
 	Name string
 	// Pocket is the count of cards to deal.
@@ -1064,7 +1072,7 @@ func (desc StreetDesc) Desc() string {
 	if len(v) != 0 {
 		s = " (" + strings.Join(v, ", ") + ")"
 	}
-	return fmt.Sprintf("%c: %s%s", desc.Id, desc.Name, s)
+	return fmt.Sprintf("%c: %s%s", desc.ID, desc.Name, s)
 }
 
 // HoldemBlinds returns the [Holdem] blind names.
@@ -1092,7 +1100,7 @@ func HoldemStreets(pocket, discard, flop, turn, river int) []StreetDesc {
 			n = 0
 		}
 		return StreetDesc{
-			Id:           id,
+			ID:           id,
 			Name:         name,
 			Pocket:       pocket,
 			Board:        board,
@@ -1130,14 +1138,14 @@ func NumberedStreets(pockets ...int) []StreetDesc {
 		case i == len(pockets)-1:
 			name = "River"
 			if pocket == 0 && i != 0 {
-				id = v[i-1].Id + 1
+				id = v[i-1].ID + 1
 			}
 		case i != 0 && pocket == 0:
-			n := int(v[i-1].Id-'0') + 1
+			n := int(v[i-1].ID-'0') + 1
 			name, id = ordinal(n), '0'+byte(n)
 		}
 		v = append(v, StreetDesc{
-			Id:     id,
+			ID:     id,
 			Name:   name,
 			Pocket: pocket,
 		})
@@ -1163,31 +1171,31 @@ const (
 	EvalHigh          EvalType = 'h'
 )
 
-// New creates an eval func for the type.
-func (typ EvalType) New(board int, normalize, low bool) EvalFunc {
+// newEvalFunc creates an eval func for the type.
+func (typ EvalType) newEvalFunc(board int, normalize, low bool) evalFunc {
 	switch typ {
 	case EvalCactus:
-		return NewCactusEval(board, normalize, low)
+		return newCactusEval(board, normalize, low)
 	case EvalJacksOrBetter:
-		return NewJacksOrBetterEval(normalize)
+		return newJacksOrBetterEval(normalize)
 	case EvalShort:
-		return NewModifiedEval(RankShort, Rank(DeckShort), EvalRank.FromFlushOver, normalize, false)
+		return newModifiedEval(RankShort, Rank(DeckShort), EvalRank.FromFlushOver, normalize, false)
 	case EvalManila:
-		return NewOmahaEval(RankManila, Rank(DeckManila), EvalRank.FromFlushOver, normalize, false)
+		return newOmahaEval(RankManila, Rank(DeckManila), EvalRank.FromFlushOver, normalize, false)
 	case EvalSpanish:
-		return NewOmahaEval(RankSpanish, Rank(DeckSpanish), EvalRank.FromFlushOver, normalize, false)
+		return newOmahaEval(RankSpanish, Rank(DeckSpanish), EvalRank.FromFlushOver, normalize, false)
 	case EvalOmaha:
-		return NewOmahaEval(RankCactus, Rank(DeckFrench), nil, normalize, low)
+		return newOmahaEval(RankCactus, Rank(DeckFrench), nil, normalize, low)
 	case EvalSoko:
-		return NewSokoEval(normalize, low)
+		return newSokoEval(normalize, low)
 	case EvalLowball:
-		return NewLowballEval(normalize)
+		return newLowballEval(normalize)
 	case EvalRazz:
-		return NewRazzEval(normalize)
+		return newRazzEval(normalize)
 	case EvalBadugi:
-		return NewBadugiEval(normalize)
+		return newBadugiEval(normalize)
 	case EvalHigh:
-		return NewHighEval()
+		return newHighEval()
 		/*
 			case EvalThree:
 				return NewThreeEval()
@@ -1375,30 +1383,30 @@ func (typ DescType) Desc(f fmt.State, verb rune, rank EvalRank, best, unused []C
 	case 'd':
 		fmt.Fprintf(f, "%d", int(rank))
 	case 'u':
-		Formatter(unused).Format(f, 's')
+		Cards(unused).Format(f, 's')
 	default:
 		switch typ {
 		case DescCactus:
-			CactusDesc(f, verb, rank, best, unused)
+			cactusDesc(f, verb, rank, best, unused)
 		case DescLow:
-			LowDesc(f, verb, rank, best, unused)
+			lowDesc(f, verb, rank, best, unused)
 		case DescFlushOver:
-			FlushOverDesc(f, verb, rank, best, unused)
+			flushOverDesc(f, verb, rank, best, unused)
 		case DescRazz:
-			RazzDesc(f, verb, rank, best, unused)
+			razzDesc(f, verb, rank, best, unused)
 		case DescLowball:
-			LowballDesc(f, verb, rank, best, unused)
+			lowballDesc(f, verb, rank, best, unused)
 		case DescSoko:
-			SokoDesc(f, verb, rank, best, unused)
+			sokoDesc(f, verb, rank, best, unused)
 		case DescHigh:
-			HighDesc(f, verb, rank, best, unused)
+			highDesc(f, verb, rank, best, unused)
 		case DescThree:
-			ThreeDesc(f, verb, rank, best, unused)
+			threeDesc(f, verb, rank, best, unused)
 		}
 	}
 }
 
-// CactusDesc writes a Cactus description to f for the rank, best, and unused
+// cactusDesc writes a Cactus description to f for the rank, best, and unused
 // cards.
 //
 // Examples:
@@ -1414,7 +1422,7 @@ func (typ DescType) Desc(f fmt.State, verb rune, rank EvalRank, best, unused []C
 //	Two Pair, Nines over Sixes, kicker Jack
 //	Pair, Aces, kickers King, Queen, Nine
 //	Seven-high, kickers Six, Five, Three, Two
-func CactusDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+func cactusDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	switch r := rank.Fixed(); {
 	case r == 0, r == Invalid:
 		fmt.Fprint(f, "None")
@@ -1489,17 +1497,17 @@ func CactusDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	}
 }
 
-// FlushOverDesc writes a FlushOver description to f for the rank, best, and
+// flushOverDesc writes a FlushOver description to f for the rank, best, and
 // unused cards.
-func FlushOverDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
-	CactusDesc(f, verb, rank.FromFlushOver(), best, unused)
+func flushOverDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+	cactusDesc(f, verb, rank.FromFlushOver(), best, unused)
 }
 
-// SokoDesc writes a [Soko] description to f for the rank, best, and unused cards.
-func SokoDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+// sokoDesc writes a [Soko] description to f for the rank, best, and unused cards.
+func sokoDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	switch {
 	case rank <= TwoPair:
-		CactusDesc(f, verb, rank, best, unused)
+		cactusDesc(f, verb, rank, best, unused)
 	case rank <= SokoFlush:
 		fmt.Fprint(f, "Four Flush")
 		if verb != 'e' {
@@ -1517,12 +1525,12 @@ func SokoDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 			}
 		}
 	default:
-		CactusDesc(f, verb, rank-SokoStraight+TwoPair, best, unused)
+		cactusDesc(f, verb, rank-SokoStraight+TwoPair, best, unused)
 	}
 }
 
-// LowDesc writes a Low description to f for the rank, best, and unused cards.
-func LowDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+// lowDesc writes a Low description to f for the rank, best, and unused cards.
+func lowDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	switch {
 	case rank == 0, rank == Invalid:
 		_, _ = f.Write([]byte("None"))
@@ -1540,38 +1548,38 @@ func LowDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	}
 }
 
-// LowballDesc writes a [Lowball] description to f for the rank, best, and
+// lowballDesc writes a [Lowball] description to f for the rank, best, and
 // unused cards.
-func LowballDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+func lowballDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	switch r := rank.FromLowball(); {
 	case rank <= StraightFlush:
-		LowDesc(f, verb, r, best, unused)
+		lowDesc(f, verb, r, best, unused)
 		if verb != 'e' {
 			fmt.Fprintf(f, ", No. %d", int(rank))
 		}
 	case Pair < r && r <= Nothing || r == Straight:
-		LowDesc(f, verb, r, best, unused)
+		lowDesc(f, verb, r, best, unused)
 	case r == StraightFlush:
-		CactusDesc(f, verb, Flush, best, unused)
+		cactusDesc(f, verb, Flush, best, unused)
 	default:
-		CactusDesc(f, verb, r, best, unused)
+		cactusDesc(f, verb, r, best, unused)
 	}
 }
 
-// RazzDesc writes a [Razz] description to f for the rank, best, and unused
+// razzDesc writes a [Razz] description to f for the rank, best, and unused
 // cards.
-func RazzDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+func razzDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	switch {
 	case rank < AceFiveLow:
-		LowDesc(f, verb, rank, best, unused)
+		lowDesc(f, verb, rank, best, unused)
 	default:
-		CactusDesc(f, verb, Invalid-rank, best, unused)
+		cactusDesc(f, verb, Invalid-rank, best, unused)
 	}
 }
 
-// HighDesc writes a [High] description to f for the rank, best, and unused
+// highDesc writes a [High] description to f for the rank, best, and unused
 // cards.
-func HighDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+func highDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	if rank == 0 || rank == Invalid {
 		fmt.Fprintf(f, "%s", Invalid)
 	} else {
@@ -1579,9 +1587,9 @@ func HighDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 	}
 }
 
-// ThreeDesc writes a [Three] description to f for the rank, best, and unused
+// threeDesc writes a [Three] description to f for the rank, best, and unused
 // cards.
-func ThreeDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
+func threeDesc(f fmt.State, verb rune, rank EvalRank, best, unused []Card) {
 }
 
 // ordinal returns the ordinal string for n (1st, 2nd, ...).

@@ -7,7 +7,7 @@ import (
 
 func BenchmarkCactus(b *testing.B) {
 	for _, t := range cactusTests(true, false) {
-		for i, benchf := range []func(*testing.B, EvalFunc, int){
+		for i, benchf := range []func(*testing.B, evalFunc, int){
 			bench5, bench6, bench7,
 		} {
 			test, f := t, benchf
@@ -18,7 +18,7 @@ func BenchmarkCactus(b *testing.B) {
 	}
 }
 
-func bench5(b *testing.B, f EvalFunc, n int) {
+func bench5(b *testing.B, f evalFunc, n int) {
 	b.Helper()
 	u, count, ev, v := shuffled(DeckFrench), 0, EvalOf(Holdem), make([]Card, 5)
 	for c0 := range 52 {
@@ -26,10 +26,10 @@ func bench5(b *testing.B, f EvalFunc, n int) {
 			for c2 := c1 + 1; c2 < 52; c2++ {
 				for c3 := c2 + 1; c3 < 52; c3++ {
 					for c4 := c3 + 1; c4 < 52; c4++ {
-						ev.HiRank, ev.LoRank = Invalid, Invalid
+						ev.Hi.Rank, ev.Lo.Rank = Invalid, Invalid
 						v[0], v[1], v[2], v[3], v[4] = u[c0], u[c1], u[c2], u[c3], u[c4]
 						f(ev, v[:2], v[2:])
-						if benchR = ev.HiRank; benchR == 0 || benchR == Invalid || HighCard < benchR {
+						if benchR = ev.Hi.Rank; benchR == 0 || benchR == Invalid || HighCard < benchR {
 							b.Fail()
 						}
 						count++
@@ -44,7 +44,7 @@ func bench5(b *testing.B, f EvalFunc, n int) {
 	}
 }
 
-func bench6(b *testing.B, f EvalFunc, n int) {
+func bench6(b *testing.B, f evalFunc, n int) {
 	b.Helper()
 	u, count, ev, v := shuffled(DeckFrench), 0, EvalOf(Holdem), make([]Card, 6)
 	for c0 := range 52 {
@@ -53,10 +53,10 @@ func bench6(b *testing.B, f EvalFunc, n int) {
 				for c3 := c2 + 1; c3 < 52; c3++ {
 					for c4 := c3 + 1; c4 < 52; c4++ {
 						for c5 := c4 + 1; c5 < 52; c5++ {
-							ev.HiRank, ev.LoRank = Invalid, Invalid
+							ev.Hi.Rank, ev.Lo.Rank = Invalid, Invalid
 							v[0], v[1], v[2], v[3], v[4], v[5] = u[c0], u[c1], u[c2], u[c3], u[c4], u[c5]
 							f(ev, v[:2], v[2:])
-							if benchR = ev.HiRank; benchR == 0 || benchR == Invalid || HighCard < benchR {
+							if benchR = ev.Hi.Rank; benchR == 0 || benchR == Invalid || HighCard < benchR {
 								b.Fail()
 							}
 							count++
@@ -72,7 +72,7 @@ func bench6(b *testing.B, f EvalFunc, n int) {
 	}
 }
 
-func bench7(b *testing.B, f EvalFunc, n int) {
+func bench7(b *testing.B, f evalFunc, n int) {
 	b.Helper()
 	u, count, ev, v := shuffled(DeckFrench), 0, EvalOf(Holdem), make([]Card, 7)
 	for c0 := range 52 {
@@ -82,10 +82,10 @@ func bench7(b *testing.B, f EvalFunc, n int) {
 					for c4 := c3 + 1; c4 < 52; c4++ {
 						for c5 := c4 + 1; c5 < 52; c5++ {
 							for c6 := c5 + 1; c6 < 52; c6++ {
-								ev.HiRank, ev.LoRank = Invalid, Invalid
+								ev.Hi.Rank, ev.Lo.Rank = Invalid, Invalid
 								v[0], v[1], v[2], v[3], v[4], v[5], v[6] = u[c0], u[c1], u[c2], u[c3], u[c4], u[c5], u[c6]
 								f(ev, v[:2], v[2:])
-								if benchR = ev.HiRank; benchR == 0 || benchR == Invalid || HighCard < benchR {
+								if benchR = ev.Hi.Rank; benchR == 0 || benchR == Invalid || HighCard < benchR {
 									b.Fail()
 								}
 								count++
@@ -136,17 +136,15 @@ func BenchmarkType(b *testing.B) {
 func benchType(b *testing.B, typ Type, n int, eval bool) {
 	b.Helper()
 	v, p, m, count, ev := shuffled(typ.DeckType()), typ.Pocket(), typ.Board(), 0, EvalOf(typ)
-	var f EvalFunc
+	f := evaluators[typ].Rank
 	if eval {
-		f = evals[typ]
-	} else {
-		f = calcs[typ]
+		f = evaluators[typ].Eval
 	}
 	for {
 		for i := range len(v) - p - m {
-			ev.HiRank, ev.LoRank = Invalid, Invalid
+			ev.Hi.Rank, ev.Lo.Rank = Invalid, Invalid
 			f(ev, v[i:i+p], v[i+p:i+p+m])
-			if benchE = ev.HiRank; benchE == 0 || benchE == Invalid {
+			if benchE = ev.Hi.Rank; benchE == 0 || benchE == Invalid {
 				b.Fail()
 			}
 		}

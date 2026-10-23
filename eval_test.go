@@ -34,23 +34,24 @@ func TestOrder(t *testing.T) {
 	}
 	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			d := NewDeck()
+			d := DeckFrench.New()
 			// note: use a real random source
-			d.Shuffle(rand.New(rand.NewSource(test.r)), 1)
+			d.Shuffle(rand.New(rand.NewSource(test.r)))
 			board := d.Draw(5)
 			t.Logf("board: %b", board)
 			var evals []*Eval
 			for i := range test.n {
 				pocket := d.Draw(2)
 				ev := Holdem.Eval(pocket, board)
-				desc := ev.Desc(false)
+				desc := ev.Hi
 				t.Logf("player %d: %b", i, pocket)
 				t.Logf("  best: %b", desc.Best)
 				t.Logf("  unused: %b", desc.Unused)
 				t.Logf("  desc: %s", desc)
 				evals = append(evals, ev)
 			}
-			v, pivot := Order(evals, false)
+			r := Order(hands(evals, false))
+			v, pivot := r.Order, r.Pivot
 			if pivot != test.p {
 				t.Errorf("test %d expected pivot %d, got: %d", i, test.p, pivot)
 			}
@@ -63,7 +64,7 @@ func TestOrder(t *testing.T) {
 					typ = "wins  "
 				}
 				ev := evals[v[j-1]]
-				t.Logf("player %d %s %b %b %s", v[j-1], typ, ev.HiBest, ev.HiUnused, ev.Desc(false))
+				t.Logf("player %d %s %b %b %s", v[j-1], typ, ev.Hi.Best, ev.Hi.Unused, ev.Hi)
 			}
 			if !slices.Equal(v, test.exp) {
 				t.Errorf("test %d expected %v, got: %v", i, test.exp, v)
@@ -105,29 +106,29 @@ func TestEvalComp(t *testing.T) {
 	for i, test := range tests {
 		a, b := test.typ.Eval(Must(test.a), nil), test.typ.Eval(Must(test.b), nil)
 		var ev *Eval
-		r := a.Comp(b, false)
+		r := a.Hi.Compare(b.Hi)
 		if r != test.exp {
 			t.Errorf("test %d expected comp of %d, got: %d", i, test.exp, r)
 		}
 		switch {
 		case r == +0:
-			if a.HiRank != b.HiRank || a.HiRank != test.r {
-				t.Errorf("test %d expected %d == %d == %d", i, a.HiRank, b.HiRank, test.r)
+			if a.Hi.Rank != b.Hi.Rank || a.Hi.Rank != test.r {
+				t.Errorf("test %d expected %d == %d == %d", i, a.Hi.Rank, b.Hi.Rank, test.r)
 			}
 			ev = a
 		case r == -1:
-			if b.HiRank <= a.HiRank {
-				t.Errorf("test %d expected %d < %d", i, a.HiRank, b.HiRank)
+			if b.Hi.Rank <= a.Hi.Rank {
+				t.Errorf("test %d expected %d < %d", i, a.Hi.Rank, b.Hi.Rank)
 			}
 			ev = a
 		case r == +1:
-			if a.HiRank <= b.HiRank {
-				t.Errorf("test %d expected %d < %d", i, b.HiRank, a.HiRank)
+			if a.Hi.Rank <= b.Hi.Rank {
+				t.Errorf("test %d expected %d < %d", i, b.Hi.Rank, a.Hi.Rank)
 			}
 			ev = b
 		}
-		if ev.HiRank != test.r {
-			t.Errorf("test %d expected %d, got: %d", i, test.r, ev.HiRank)
+		if ev.Hi.Rank != test.r {
+			t.Errorf("test %d expected %d, got: %d", i, test.r, ev.Hi.Rank)
 		}
 		if s := fmt.Sprintf("%s", ev); s != test.s {
 			t.Errorf("test %d expected %q, got: %q", i, test.s, s)
@@ -147,10 +148,10 @@ func TestEval(t *testing.T) {
 					v := Must(test.v)
 					ev := EvalOf(0)
 					r.eval(ev, v[:2], v[2:])
-					if r, exp := ev.HiRank, test.r; r != exp {
+					if r, exp := ev.Hi.Rank, test.r; r != exp {
 						t.Errorf("test %d %d expected %d, got: %d", i, j, exp, r)
 					}
-					if s := fmt.Sprintf("%b %b", ev, ev.HiUnused); s != test.desc {
+					if s := fmt.Sprintf("%b %b", ev, ev.Hi.Unused); s != test.desc {
 						t.Errorf("test %d %d expected %q, got: %q", i, j, test.desc, s)
 					}
 				}
@@ -180,13 +181,13 @@ func TestNewSplitEval(t *testing.T) {
 		{RankEightOrBetter, EightOrBetter, "Ah Kh Qh Jh Th", 1, Invalid},
 	}
 	for i, test := range tests {
-		p, f := Must(test.v), NewSplitEval(RankCactus, test.f, test.max)
+		p, f := Must(test.v), newSplitEval(RankCactus, test.f, test.max)
 		ev := EvalOf(0)
 		f(ev, p, nil)
-		if r, exp := ev.HiRank, test.hi; r != exp {
+		if r, exp := ev.Hi.Rank, test.hi; r != exp {
 			t.Errorf("test %d expected rank %d, got: %d", i, exp, r)
 		}
-		if r, exp := ev.LoRank, test.lo; r != exp {
+		if r, exp := ev.Lo.Rank, test.lo; r != exp {
 			t.Errorf("test %d expected rank %d, got: %d", i, exp, r)
 		}
 	}
@@ -288,7 +289,7 @@ func TestLowballCards(t *testing.T) {
 		t.Skip("skipping: $ENV{TESTS} does not contain 'lowball' or 'all'")
 	}
 	t.Parallel()
-	u, c, l, ev, uv := shuffled(DeckFrench), NewCactusEval(0, false, false), NewLowballEval(false), EvalOf(Holdem), EvalOf(Lowball)
+	u, c, l, ev, uv := shuffled(DeckFrench), newCactusEval(0, false, false), newLowballEval(false), EvalOf(Holdem), EvalOf(Lowball)
 	for c0 := range 52 {
 		for c1 := c0 + 1; c1 < 52; c1++ {
 			for c2 := c1 + 1; c2 < 52; c2++ {
@@ -297,7 +298,7 @@ func TestLowballCards(t *testing.T) {
 						v := []Card{u[c0], u[c1], u[c2], u[c3], u[c4]}
 						c(ev, v, nil)
 						l(uv, v, nil)
-						if r, exp := uv.HiRank.FromLowball(), ev.HiRank; r != exp {
+						if r, exp := uv.Hi.Rank.FromLowball(), ev.Hi.Rank; r != exp {
 							t.Fatalf("expected equal ranks for %v %d, got: %d", v, exp, r)
 						}
 					}
@@ -318,7 +319,7 @@ func shuffled(typ DeckType) []Card {
 
 type cactusTest struct {
 	name string
-	eval EvalFunc
+	eval evalFunc
 }
 
 func cactusTests(base, normalize bool) []cactusTest {
@@ -330,29 +331,29 @@ func cactusTests(base, normalize bool) []cactusTest {
 		tests,
 		cactusTest{"CactusFast", wrapCactus(CactusFast, normalize)},
 		cactusTest{"TwoPlusTwo", wrapTwoPlusTwo(normalize)},
-		cactusTest{"Hybrid", newHybridEval(normalize, false, testTwoPlusTwo)},
+		cactusTest{"Hybrid", newHybridEvalWith(normalize, false, testTwoPlusTwo)},
 	)
 }
 
-func wrapCactus(f RankFunc, normalize bool) EvalFunc {
+func wrapCactus(f RankFunc, normalize bool) evalFunc {
 	if !normalize {
-		return NewEval(f)
+		return newEval(f)
 	}
-	g := NewEval(f)
+	g := newEval(f)
 	return func(ev *Eval, p, b []Card) {
 		g(ev, p, b)
-		bestCactus(ev.HiRank, ev.HiBest, ev.HiUnused, 0, nil)
+		bestCactus(ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused, 0, nil)
 	}
 }
 
-func wrapTwoPlusTwo(normalize bool) EvalFunc {
+func wrapTwoPlusTwo(normalize bool) evalFunc {
 	if !normalize {
 		return func(ev *Eval, p, b []Card) {
 			n, m := len(p), len(b)
 			v := make([]Card, n+m)
 			copy(v, p)
 			copy(v[n:], b)
-			ev.HiRank = testTwoPlusTwo(v)
+			ev.Hi.Rank = testTwoPlusTwo(v)
 		}
 	}
 	return func(ev *Eval, p, b []Card) {
@@ -360,8 +361,8 @@ func wrapTwoPlusTwo(normalize bool) EvalFunc {
 		v := make([]Card, n+m)
 		copy(v, p)
 		copy(v[n:], b)
-		ev.HiRank = testTwoPlusTwo(v)
-		ev.HiBest, ev.HiUnused = bestCactusSplit(ev.HiRank, v, 0)
+		ev.Hi.Rank = testTwoPlusTwo(v)
+		ev.Hi.Best, ev.Hi.Unused = bestCactusSplit(ev.Hi.Rank, v, 0)
 	}
 }
 
@@ -462,11 +463,11 @@ func TestCactusEvalFlop(t *testing.T) {
 	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			ev := test.typ.Eval(Must(test.pocket), Must(test.board))
-			if s := fmt.Sprintf("%s %v", ev.Desc(false), ev.HiBest); s != test.hi {
+			if s := fmt.Sprintf("%s %v", ev.Hi, ev.Hi.Best); s != test.hi {
 				t.Errorf("expected hi %q, got: %q", test.hi, s)
 			}
 			if test.lo != "" {
-				if s := fmt.Sprintf("%s %v", ev.Desc(true), ev.LoBest); s != test.lo {
+				if s := fmt.Sprintf("%s %v", ev.Lo, ev.Lo.Best); s != test.lo {
 					t.Errorf("expected lo %q, got: %q", test.lo, s)
 				}
 			}
@@ -475,27 +476,27 @@ func TestCactusEvalFlop(t *testing.T) {
 	// pocket and flop evals must match the rank of all 5 cards
 	r := rand.New(rand.NewSource(0x7f10))
 	for range 1000 {
-		v := DeckFrench.Shuffle(r, 1).Draw(5)
+		v := DeckFrench.Shuffle(r).Draw(5)
 		exp := RankCactus(v[0], v[1], v[2], v[3], v[4])
 		for _, typ := range []Type{Holdem, Split} {
 			ev := typ.Eval(v[:2], v[2:])
-			if ev.HiRank != exp {
-				t.Fatalf("%s %v %v: expected hi rank %d, got: %d", typ, v[:2], v[2:], exp, ev.HiRank)
+			if ev.Hi.Rank != exp {
+				t.Fatalf("%s %v %v: expected hi rank %d, got: %d", typ, v[:2], v[2:], exp, ev.Hi.Rank)
 			}
 			if typ.Low() {
 				lo := RankEightOrBetter(v[0], v[1], v[2], v[3], v[4])
 				if lo >= EightOrBetter {
 					lo = Invalid
 				}
-				if ev.LoRank != lo {
-					t.Fatalf("%s %v %v: expected lo rank %d, got: %d", typ, v[:2], v[2:], lo, ev.LoRank)
+				if ev.Lo.Rank != lo {
+					t.Fatalf("%s %v %v: expected lo rank %d, got: %d", typ, v[:2], v[2:], lo, ev.Lo.Rank)
 				}
 			}
 		}
 	}
 	// pre-flop evals use the pocket's starting rank
 	pocket := Must("Ah Kh")
-	if r, exp := Holdem.Eval(pocket, nil).HiRank, StartingEvalRank(pocket); r != exp {
+	if r, exp := Holdem.Eval(pocket, nil).Hi.Rank, startingHandRank(pocket); r != exp {
 		t.Errorf("expected pre-flop rank %d, got: %d", exp, r)
 	}
 }

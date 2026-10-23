@@ -3,6 +3,7 @@ package cardrank
 import (
 	"context"
 	"fmt"
+	"iter"
 	"slices"
 	"strconv"
 	"strings"
@@ -194,15 +195,15 @@ func (typ DeckType) New() *Deck {
 }
 
 // Shuffle returns a new deck, shuffled by the shuffler.
-func (typ DeckType) Shuffle(shuffler Shuffler, shuffles int) *Deck {
+func (typ DeckType) Shuffle(shuffler Shuffler) *Deck {
 	d := typ.Shoe(1)
-	d.Shuffle(shuffler, shuffles)
+	d.Shuffle(shuffler)
 	return d
 }
 
-// Exclude returns a set of unshuffled cards excluding any supplied cards.
-func (typ DeckType) Exclude(ex ...[]Card) []Card {
-	return Exclude(typ.v(), ex...)
+// Exclude returns the deck's unshuffled cards, excluding any supplied cards.
+func (typ DeckType) Exclude(ex ...Cards) Cards {
+	return Cards(typ.v()).Exclude(ex...)
 }
 
 // Deck is a set of playing cards.
@@ -218,16 +219,6 @@ func DeckOf(cards ...Card) *Deck {
 		v: cards,
 		l: len(cards),
 	}
-}
-
-// NewDeck creates a French deck of 52 unshuffled cards.
-func NewDeck() *Deck {
-	return DeckFrench.New()
-}
-
-// NewShoe creates a card shoe with multiple sets of 52 unshuffled cards.
-func NewShoe(count int) *Deck {
-	return DeckFrench.Shoe(count)
 }
 
 // Limit limits the cards for the deck, for use with card shoes composed of
@@ -250,9 +241,10 @@ func (d *Deck) Remaining() int {
 	return 0
 }
 
-// All returns a copy of all cards in the deck, without advancing.
-func (d *Deck) All() []Card {
-	return slices.Clone(d.v[:d.l])
+// All returns an iterator over all cards in the deck, including drawn cards,
+// without drawing.
+func (d *Deck) All() iter.Seq[Card] {
+	return slices.Values(d.v[:d.l])
 }
 
 // Reset resets the deck.
@@ -261,11 +253,11 @@ func (d *Deck) Reset() {
 }
 
 // Draw draws count cards from the top (front) of the deck.
-func (d *Deck) Draw(count int) []Card {
+func (d *Deck) Draw(count int) Cards {
 	if count < 0 {
 		return nil
 	}
-	var cards []Card
+	var cards Cards
 	for l := min(d.i+count, d.l); d.i < l; d.i++ {
 		cards = append(cards, d.v[d.i])
 	}
@@ -273,63 +265,124 @@ func (d *Deck) Draw(count int) []Card {
 }
 
 // Shuffle shuffles the deck's cards using the shuffler.
-func (d *Deck) Shuffle(shuffler Shuffler, shuffles int) {
-	for range shuffles {
-		shuffler.Shuffle(len(d.v), func(i, j int) {
-			d.v[i], d.v[j] = d.v[j], d.v[i]
-		})
-	}
+func (d *Deck) Shuffle(shuffler Shuffler) {
+	shuffler.Shuffle(len(d.v), func(i, j int) {
+		d.v[i], d.v[j] = d.v[j], d.v[i]
+	})
 }
 
-// Dealer maintains deal state for a type, streets, deck, positions, runs,
-// results, and wins. Use as a street and run iterator for a [Type]. See usage
-// details in the [package example].
+// Dealer deals the streets of a [Type], handling multiple run outs, and
+// determining the results of each run. See usage details in the [package
+// example].
 //
 // [package example]: https://pkg.go.dev/github.com/cardrank/cardrank#example-package
 type Dealer struct {
-	TypeDesc
-	Deck    *Deck
-	Count   int
-	Active  map[int]bool
-	Runs    []*Run
-	Results []*Result
-	runs    int
+	desc    TypeDesc
+	deck    *Deck
+	count   int
+	active  []bool
+	runs    []*Run
+	results []*Result
+	n       int
 	st      int
 	s       int
 	r       int
 	e       int
 }
 
-// NewDealer creates a new dealer for a provided deck and pocket count.
-func NewDealer(desc TypeDesc, deck *Deck, count int) *Dealer {
+// NewDealer creates a new dealer for the type, dealing from the deck to the
+// number of players.
+func NewDealer(typ Type, deck *Deck, players int) *Dealer {
 	d := &Dealer{
-		TypeDesc: desc,
-		Deck:     deck,
-		Count:    count,
+		desc:  typ.Desc(),
+		deck:  deck,
+		count: players,
 	}
 	d.init()
 	return d
 }
 
-// NewShuffledDealer creates a new deck and dealer, shuffling the deck multiple
-// times and returning the dealer with the created deck and pocket count.
-func NewShuffledDealer(desc TypeDesc, shuffler Shuffler, shuffles, count int) *Dealer {
-	return NewDealer(desc, desc.Deck.Shuffle(shuffler, shuffles), count)
-}
-
 // init inits the street position and active positions.
 func (d *Dealer) init() {
-	d.Active = make(map[int]bool)
-	d.Runs = []*Run{NewRun(d.Count)}
-	d.Results = nil
-	d.runs = 1
+	d.active = make([]bool, d.count)
+	for i := range d.active {
+		d.active[i] = true
+	}
+	d.runs = []*Run{NewRun(d.count)}
+	d.results = nil
+	d.n = 1
 	d.st = -1
 	d.s = -1
 	d.r = -1
 	d.e = -1
-	for i := range d.Count {
-		d.Active[i] = true
+}
+
+// Type returns the dealer's type.
+func (d *Dealer) Type() Type {
+	return d.desc.Type
+}
+
+// Deck returns the dealer's deck.
+func (d *Dealer) Deck() *Deck {
+	return d.deck
+}
+
+// Players returns the number of players.
+func (d *Dealer) Players() int {
+	return d.count
+}
+
+// Active returns true when the position has not folded.
+func (d *Dealer) Active(position int) bool {
+	return 0 <= position && position < len(d.active) && d.active[position]
+}
+
+// activeCount returns the number of active positions.
+func (d *Dealer) activeCount() int {
+	var n int
+	for _, active := range d.active {
+		if active {
+			n++
+		}
 	}
+	return n
+}
+
+// Fold folds the positions, which will not be dealt further cards and will not
+// be included in results. Positions cannot be folded after the runs have been
+// changed.
+func (d *Dealer) Fold(positions ...int) error {
+	if d.r != -1 && d.r != 0 {
+		return ErrInvalidState
+	}
+	for _, position := range positions {
+		if position < 0 || len(d.active) <= position {
+			return ErrInvalidPosition
+		}
+	}
+	for _, position := range positions {
+		d.active[position] = false
+	}
+	return nil
+}
+
+// Street returns the current street, or a zero street description when no
+// street has been dealt.
+func (d *Dealer) Street() StreetDesc {
+	if 0 <= d.s && d.s < len(d.desc.Streets) {
+		return d.desc.Streets[d.s]
+	}
+	return StreetDesc{}
+}
+
+// StreetIndex returns the index of the current street (see [Dealer.Street]) in
+// the type's streets (see [Type.Streets]), or -1 when no street is being
+// dealt (before dealing, or after dealing is complete).
+func (d *Dealer) StreetIndex() int {
+	if 0 <= d.s && d.s < len(d.desc.Streets) {
+		return d.s
+	}
+	return -1
 }
 
 // Format satisfies the [fmt.Formatter] interface.
@@ -337,10 +390,10 @@ func (d *Dealer) Format(f fmt.State, verb rune) {
 	var buf []byte
 	switch verb {
 	case 'n': // name
-		buf = []byte(d.Name())
+		buf = []byte(d.Street().Name)
 	case 's':
-		if 0 <= d.s && d.s < len(d.Streets) {
-			buf = []byte(d.Streets[d.s].Desc())
+		if street := d.Street(); street.ID != 0 {
+			buf = []byte(street.Desc())
 		}
 	default:
 		buf = []byte(fmt.Sprintf("%%!%c(ERROR=unknown verb, dealer)", verb))
@@ -348,276 +401,155 @@ func (d *Dealer) Format(f fmt.State, verb rune) {
 	_, _ = f.Write(buf)
 }
 
-// Inactive returns the inactive positions.
-func (d *Dealer) Inactive() []int {
-	var v []int
-	for i := range d.Count {
-		if !d.Active[i] {
-			v = append(v, i)
+// Deal returns an iterator that deals each street of each run, discarding
+// cards prior to dealing pocket and board cards, yielding the run index and
+// run. Positions can be folded, and the runs changed, from within the loop.
+//
+// Streets are dealt while there are at least 2 active positions for a [Type]
+// having Max greater than 1.
+func (d *Dealer) Deal() iter.Seq2[int, *Run] {
+	return func(yield func(int, *Run) bool) {
+		for d.next() {
+			if !yield(d.r, d.runs[d.r]) {
+				return
+			}
 		}
 	}
-	return v
 }
 
-// Deactivate deactivates positions, which will not be dealt further cards and
-// will not be included during eval.
-func (d *Dealer) Deactivate(positions ...int) bool {
-	if d.r != -1 && d.r != 0 {
-		return false
+// Results returns an iterator over each run's index and result. Call after
+// dealing all streets (see [Dealer.Deal]).
+func (d *Dealer) Results() iter.Seq2[int, *Result] {
+	return func(yield func(int, *Result) bool) {
+		for d.nextResult() {
+			if !yield(d.e, d.results[d.e]) {
+				return
+			}
+		}
 	}
-	for _, position := range positions {
-		delete(d.Active, position)
-	}
-	return true
 }
 
-// Id returns the current street id.
-func (d *Dealer) Id() byte {
-	if 0 <= d.s && d.s < len(d.Streets) {
-		return d.Streets[d.s].Id
-	}
-	return 0
-}
-
-// Name returns the current street name.
-func (d *Dealer) Name() string {
-	if 0 <= d.s && d.s < len(d.Streets) {
-		return d.Streets[d.s].Name
-	}
-	return ""
-}
-
-// NextId returns the next street id.
-func (d *Dealer) NextId() byte {
-	if -1 <= d.s && d.s < len(d.Streets)-1 {
-		return d.Streets[d.s+1].Id
-	}
-	return 0
-}
-
-// HasNext returns true when there is one or more remaining streets.
-func (d *Dealer) HasNext() bool {
-	n := len(d.Streets)
-	return n != 0 && d.s < n-1
-}
-
-// HasPocket returns true when one or more pocket cards are dealt for the
-// current street.
-func (d *Dealer) HasPocket() bool {
-	return 0 <= d.s && d.s < len(d.Streets) && 0 < d.Streets[d.s].Pocket
-}
-
-// HasBoard returns true when one or more board cards are dealt for the
-// current street.
-func (d *Dealer) HasBoard() bool {
-	return 0 <= d.s && d.s < len(d.Streets) && 0 < d.Streets[d.s].Board
-}
-
-// HasActive returns true when there is more than 1 active positions.
-func (d *Dealer) HasActive() bool {
-	return 0 <= d.s && (d.Type.Max() == 1 || 1 < len(d.Active))
+// hasActive returns true when there is more than 1 active positions.
+func (d *Dealer) hasActive() bool {
+	return 0 <= d.s && (d.desc.Max == 1 || 1 < d.activeCount())
 }
 
 // HasCalc returns true when odds are available for calculation.
 func (d *Dealer) HasCalc() bool {
-	if d.Count != 0 && 0 <= d.r && d.r < d.runs && d.Type.Cactus() {
-		p, b := d.Type.Pocket(), d.Type.Board()
+	if d.count != 0 && 0 <= d.r && d.r < d.n && d.desc.Type.Cactus() {
+		p, b := d.desc.Type.Pocket(), d.desc.Type.Board()
 		if p != 2 && d.s == 0 {
 			return false
 		}
-		return b != 0 && len(d.Runs[d.r].Pockets[0]) >= p
+		return b != 0 && len(d.runs[d.r].Pockets[0]) >= p
 	}
 	return false
 }
 
-// Pocket returns the number of pocket cards to be dealt on the current street.
-func (d *Dealer) Pocket() int {
-	if 0 <= d.s && d.s < len(d.Streets) {
-		return d.Streets[d.s].Pocket
-	}
-	return 0
-}
-
-// PocketUp returns the number of pocket cards to be turned up on the current
-// street.
-func (d *Dealer) PocketUp() int {
-	if 0 <= d.s && d.s < len(d.Streets) {
-		return d.Streets[d.s].PocketUp
-	}
-	return 0
-}
-
-// PocketDiscard returns the number of cards to be discarded prior to dealing
-// pockets on the current street.
-func (d *Dealer) PocketDiscard() int {
-	if 0 <= d.s && d.s < len(d.Streets) {
-		return d.Streets[d.s].PocketDiscard
-	}
-	return 0
-}
-
-// PocketDraw returns the number of pocket cards that can be drawn on the
-// current street.
-func (d *Dealer) PocketDraw() int {
-	if 0 <= d.s && d.s < len(d.Streets) {
-		return d.Streets[d.s].PocketDraw
-	}
-	return 0
-}
-
-// Board returns the number of board cards to be dealt on the current street.
-func (d *Dealer) Board() int {
-	if 0 <= d.s && d.s < len(d.Streets) {
-		return d.Streets[d.s].Board
-	}
-	return 0
-}
-
-// BoardDiscard returns the number of board cards to be discarded prior to
-// dealing a board on the current street.
-func (d *Dealer) BoardDiscard() int {
-	if 0 <= d.s && d.s < len(d.Streets) {
-		return d.Streets[d.s].BoardDiscard
-	}
-	return 0
-}
-
-// Street returns the current street.
-func (d *Dealer) Street() int {
-	return d.s
-}
-
 // Discarded returns the cards discarded on the current street and run.
 func (d *Dealer) Discarded() []Card {
-	if 0 <= d.s && d.s <= len(d.Streets) && 0 <= d.r && d.r < d.runs {
-		return d.Runs[d.r].Discard
+	if 0 <= d.s && d.s <= len(d.desc.Streets) && 0 <= d.r && d.r < d.n {
+		return d.runs[d.r].Discard
 	}
 	return nil
 }
 
-// Run returns the current run.
-func (d *Dealer) Run() (int, *Run) {
-	if 0 <= d.r && d.r < d.runs {
-		return d.r, d.Runs[d.r]
+// Odds calculates the current run's odds.
+func (d *Dealer) Odds(ctx context.Context, opts ...OddsOption) (RunOdds, error) {
+	if d.r < 0 || d.n <= d.r {
+		return RunOdds{}, ErrInvalidState
 	}
-	return -1, nil
-}
-
-// Calc calculates the run odds, including whether or not to include folded
-// positions.
-func (d *Dealer) Calc(ctx context.Context, folded bool, opts ...CalcOption) (*Odds, *Odds, bool) {
-	if 0 <= d.r && d.r < d.runs {
-		return NewOddsCalc(
-			d.Type,
-			append(
-				opts,
-				WithRuns(d.Runs[:d.r+1]),
-				WithActive(d.Active, folded),
-			)...,
-		).Calc(ctx)
-	}
-	return nil, nil, false
-}
-
-// Result returns the current result.
-func (d *Dealer) Result() (int, *Result) {
-	if 0 <= d.e && d.e < d.runs {
-		return d.e, d.Results[d.e]
-	}
-	return -1, nil
+	return CalcOdds(ctx, d.desc.Type, d.runs[:d.r+1], append([]OddsOption{WithActive(d.active)}, opts...)...)
 }
 
 // Reset resets the dealer and deck.
 func (d *Dealer) Reset() {
-	d.Deck.Reset()
+	d.deck.Reset()
 	d.init()
 }
 
-// ChangeRuns changes the number of runs, returning true if successful.
-func (d *Dealer) ChangeRuns(runs int) bool {
+// ChangeRuns changes the number of runs. Can only be called once, while
+// dealing the first run.
+func (d *Dealer) ChangeRuns(runs int) error {
 	switch {
-	// check state
 	case d.r != 0,
-		d.runs != 1,
-		len(d.Runs) != 1,
-		len(d.Streets) <= d.s,
-		!d.HasActive():
-		return false
+		d.n != 1,
+		len(d.runs) != 1,
+		len(d.desc.Streets) <= d.s,
+		!d.hasActive(),
+		runs < 1:
+		return ErrInvalidState
 	}
-	d.Runs = append(d.Runs, make([]*Run, runs-1)...)
+	d.runs = append(d.runs, make([]*Run, runs-1)...)
 	for run := 1; run < runs; run++ {
-		d.Runs[run] = d.Runs[0].Dupe()
+		d.runs[run] = d.runs[0].Dupe()
 	}
-	d.st, d.runs = d.s, runs
-	return true
+	d.st, d.n = d.s, runs
+	return nil
 }
 
-// Next iterates the current street and run, discarding cards prior to dealing
-// additional pocket and board cards for each street and run. Returns true when
-// there are at least 2 active positions for a [Type] having Max greater than 1
-// and when there are additional streets or runs.
-func (d *Dealer) Next() bool {
+// next iterates the current street and run, dealing the street. Returns true
+// when there are at least 2 active positions for a [Type] having Max greater
+// than 1 and when there are additional streets or runs.
+func (d *Dealer) next() bool {
 	switch {
 	case d.s == -1 && d.r == -1:
 		d.s, d.r = 0, 0
 	default:
 		d.s++
 	}
-	switch n := len(d.Streets); {
-	case n <= d.s && d.r == d.runs-1, !d.HasActive():
+	switch n := len(d.desc.Streets); {
+	case n <= d.s && d.r == d.n-1, !d.hasActive():
 		return false
-	case len(d.Streets) <= d.s && d.r < d.runs:
+	case len(d.desc.Streets) <= d.s && d.r < d.n:
 		d.s, d.r = d.st+1, d.r+1
 	}
-	d.Deal(d.s, d.Runs[d.r])
-	return d.s < len(d.Streets) || d.r < d.runs-1
+	d.deal(d.s, d.runs[d.r])
+	return d.s < len(d.desc.Streets) || d.r < d.n-1
 }
 
-// NextResult iterates the next result.
-func (d *Dealer) NextResult() bool {
-	if d.Results == nil {
-		switch n := len(d.Active); {
-		case d.Results != nil:
-		case n == 1 && d.runs == 1 && d.Max != 1:
-			// only one active position
-			var i int
-			for ; i < d.Count && !d.Active[i]; i++ {
+// nextResult iterates the next result.
+func (d *Dealer) nextResult() bool {
+	if d.results == nil {
+		switch n := d.activeCount(); {
+		case n == 1 && d.n == 1 && d.desc.Max != 1:
+			// only one active position, which wins
+			i := slices.Index(d.active, true)
+			evs := make([]*Eval, d.count)
+			evs[i] = EvalOf(d.desc.Type)
+			r := Ranking{Order: []int{i}, Pivot: 1}
+			res := &Result{Evals: evs}
+			res.Hi = Win{Ranking: r, evals: evs}
+			if d.desc.Low || d.desc.Double {
+				res.Lo = Win{Ranking: r, evals: evs, low: true}
 			}
-			res := &Result{
-				Evals:   []*Eval{EvalOf(d.Type)},
-				HiOrder: []int{i},
-				HiPivot: 1,
-			}
-			if d.Low || d.Double {
-				res.LoOrder, res.LoPivot = res.HiOrder, res.HiPivot
-			}
-			d.Results = []*Result{res}
-		case n > 1 || d.Max == 1:
-			d.Results = make([]*Result, d.runs)
-			for i := range d.runs {
-				d.Results[i] = NewResult(d.Type, d.Runs[i], d.Active, false)
+			d.results = []*Result{res}
+		case n > 1 || d.desc.Max == 1:
+			d.results = make([]*Result, d.n)
+			for i := range d.n {
+				d.results[i] = newResult(d.desc.Type, d.runs[i], d.active, false)
 			}
 		}
 	}
-	if d.runs <= d.e {
+	if d.n <= d.e {
 		return false
 	}
 	d.e++
-	return d.e < d.runs
+	return d.e < d.n && d.e < len(d.results)
 }
 
-// Deal deals pocket and board cards for the street and run, discarding cards
+// deal deals pocket and board cards for the street and run, discarding cards
 // accordingly.
-func (d *Dealer) Deal(street int, run *Run) {
-	desc := d.Streets[street]
+func (d *Dealer) deal(street int, run *Run) {
+	desc := d.desc.Streets[street]
 	// pockets
 	if p := desc.Pocket; 0 < p {
 		if n := desc.PocketDiscard; 0 < n {
-			run.Discard = append(run.Discard, d.Deck.Draw(n)...)
+			run.Discard = append(run.Discard, d.deck.Draw(n)...)
 		}
 		for range p {
-			for i := range d.Count {
-				run.Pockets[i] = append(run.Pockets[i], d.Deck.Draw(1)...)
+			for i := range d.count {
+				run.Pockets[i] = append(run.Pockets[i], d.deck.Draw(1)...)
 			}
 		}
 	}
@@ -626,31 +558,31 @@ func (d *Dealer) Deal(street int, run *Run) {
 		// hi
 		disc := desc.BoardDiscard
 		if 0 < disc {
-			run.Discard = append(run.Discard, d.Deck.Draw(disc)...)
+			run.Discard = append(run.Discard, d.deck.Draw(disc)...)
 		}
-		run.Hi = append(run.Hi, d.Deck.Draw(b)...)
+		run.Hi = append(run.Hi, d.deck.Draw(b)...)
 		// lo
-		if d.Double {
+		if d.desc.Double {
 			if 0 < disc {
-				run.Discard = append(run.Discard, d.Deck.Draw(disc)...)
+				run.Discard = append(run.Discard, d.deck.Draw(disc)...)
 			}
-			run.Lo = append(run.Lo, d.Deck.Draw(b)...)
+			run.Lo = append(run.Lo, d.deck.Draw(b)...)
 		}
 	}
 }
 
 // Run holds pockets, and a Hi/Lo board for a deal.
 type Run struct {
-	Discard []Card
-	Pockets [][]Card
-	Hi      []Card
-	Lo      []Card
+	Discard Cards
+	Pockets []Cards
+	Hi      Cards
+	Lo      Cards
 }
 
 // NewRun creates a new run for the pocket count.
 func NewRun(count int) *Run {
 	return &Run{
-		Pockets: make([][]Card, count),
+		Pockets: make([]Cards, count),
 	}
 }
 
@@ -662,7 +594,7 @@ func (run *Run) Dupe() *Run {
 		Lo: slices.Clone(run.Lo),
 	}
 	if run.Pockets != nil {
-		r.Pockets = make([][]Card, len(run.Pockets))
+		r.Pockets = make([]Cards, len(run.Pockets))
 		for i, pocket := range run.Pockets {
 			r.Pockets[i] = slices.Clone(pocket)
 		}
@@ -670,15 +602,15 @@ func (run *Run) Dupe() *Run {
 	return r
 }
 
-// Eval returns the evals for the run.
-func (run *Run) Eval(typ Type, active map[int]bool, calc bool) []*Eval {
+// eval returns the evals for the run's active positions (or all positions
+// when active is nil), ranking only when calc is true.
+func (run *Run) eval(typ Type, active []bool, calc bool) []*Eval {
 	n := len(run.Pockets)
 	evs := make([]*Eval, n)
-	var f EvalFunc
+	e := evaluators[typ]
+	f := e.Eval
 	if calc {
-		f = calcs[typ]
-	} else {
-		f = evals[typ]
+		f = e.Rank
 	}
 	for i, double := 0, typ.Double(); i < n; i++ {
 		if active == nil || active[i] {
@@ -687,25 +619,25 @@ func (run *Run) Eval(typ Type, active map[int]bool, calc bool) []*Eval {
 			if double {
 				ev := EvalOf(typ)
 				f(ev, run.Pockets[i], run.Lo)
-				evs[i].LoRank, evs[i].LoBest, evs[i].LoUnused = ev.HiRank, ev.HiBest, ev.HiUnused
+				evs[i].Lo.Rank, evs[i].Lo.Best, evs[i].Lo.Unused = ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused
 			}
 		}
 	}
 	return evs
 }
 
-// CalcStart returns the run's starting odds.
-func (run *Run) CalcStart(low bool) (*Odds, *Odds) {
+// calcStart returns the run's starting odds.
+func (run *Run) calcStart(low bool) (*Odds, *Odds) {
 	count := len(run.Pockets)
-	hi := NewOdds(count, nil)
+	hi := newOdds(count, nil)
 	hi.Total = startingTotal
 	var lo *Odds
 	if low {
-		lo = NewOdds(count, nil)
+		lo = newOdds(count, nil)
 		lo.Total = startingTotal
 	}
 	for i, pocket := range run.Pockets {
-		expv := StartingExpValue(pocket)
+		expv := startingHandExpValue(pocket)
 		if expv == nil {
 			return nil, nil
 		}
@@ -717,122 +649,109 @@ func (run *Run) CalcStart(low bool) (*Odds, *Odds) {
 	return hi, lo
 }
 
-// Result contains dealer eval results.
+// Result contains a run's evals and Hi and Lo wins.
 type Result struct {
-	Evals   []*Eval
-	HiOrder []int
-	HiPivot int
-	LoOrder []int
-	LoPivot int
-}
-
-// NewResult creates a result for the run, storing the calculated or evaluated
-// result.
-func NewResult(typ Type, run *Run, active map[int]bool, calc bool) *Result {
-	evs := run.Eval(typ, active, calc)
-	hiOrder, hiPivot := Order(evs, false)
-	var loOrder []int
-	var loPivot int
-	if typ.Low() || typ.Double() {
-		loOrder, loPivot = Order(evs, true)
-	}
-	return &Result{
-		Evals:   evs,
-		HiOrder: hiOrder,
-		HiPivot: hiPivot,
-		LoOrder: loOrder,
-		LoPivot: loPivot,
-	}
-}
-
-// Win returns the Hi and Lo win.
-func (res *Result) Win(names ...string) (*Win, *Win) {
-	low := res.Evals[res.HiOrder[0]].Type.Low()
-	var lo *Win
-	if res.LoOrder != nil && res.LoPivot != 0 {
-		lo = NewWin(res.Evals, res.LoOrder, res.LoPivot, true, false, names)
-	}
-	hi := NewWin(res.Evals, res.HiOrder, res.HiPivot, false, low && lo == nil, names)
-	return hi, lo
-}
-
-// Win formats win information.
-type Win struct {
+	// Evals are the evals for each position, nil for inactive positions.
 	Evals []*Eval
-	Order []int
-	Pivot int
-	Low   bool
-	Scoop bool
-	Names []string
+	// Hi is the Hi win.
+	Hi Win
+	// Lo is the Lo win, which is not valid when there is no qualifying Lo or
+	// the type has no Lo.
+	Lo Win
 }
 
-// NewWin creates a new win.
-func NewWin(evs []*Eval, order []int, pivot int, low, scoop bool, names []string) *Win {
-	return &Win{
-		Evals: evs,
-		Order: order,
-		Pivot: pivot,
-		Low:   low,
-		Scoop: scoop,
-		Names: names,
+// newResult creates a result for the run, storing the calculated or evaluated
+// result.
+func newResult(typ Type, run *Run, active []bool, calc bool) *Result {
+	evs := run.eval(typ, active, calc)
+	res := &Result{Evals: evs}
+	if typ.Low() || typ.Double() {
+		res.Lo = Win{Ranking: Order(hands(evs, true)), evals: evs, low: true}
+	}
+	res.Hi = Win{
+		Ranking: Order(hands(evs, false)),
+		Scoop:   typ.Low() && !res.Lo.Valid(),
+		evals:   evs,
+	}
+	return res
+}
+
+// Win is the winning positions of a result's Hi or Lo.
+type Win struct {
+	Ranking
+	// Scoop is true when the Hi winners also win the Lo.
+	Scoop bool
+	evals []*Eval
+	low   bool
+}
+
+// Valid returns true when there are valid winners.
+func (win Win) Valid() bool {
+	if win.Pivot == 0 || len(win.evals) == 0 || len(win.Order) == 0 {
+		return false
+	}
+	return win.hand(win.Order[0]).Valid()
+}
+
+// hand returns the Hi or Lo hand for the position.
+func (win Win) hand(position int) Hand {
+	switch ev := win.evals[position]; {
+	case ev == nil:
+		return Hand{Rank: Invalid}
+	case win.low:
+		return ev.Lo
+	default:
+		return ev.Hi
 	}
 }
 
-// Desc returns the eval descriptions.
-func (win *Win) Desc() []*EvalDesc {
-	var v []*EvalDesc
-	for i := range win.Pivot {
-		if d := win.Evals[win.Order[i]].Desc(win.Low); d != nil && d.Rank != 0 && d.Rank != Invalid {
-			v = append(v, d)
+// Hands returns the winning hands.
+func (win Win) Hands() []Hand {
+	var v []Hand
+	for _, i := range win.Winners() {
+		if h := win.hand(i); h.Valid() {
+			v = append(v, h)
 		}
 	}
 	return v
 }
 
-// Invalid returns true when there are no valid winners.
-func (win *Win) Invalid() bool {
-	switch {
-	case win == nil, win.Pivot == 0,
-		len(win.Evals) == 0, len(win.Order) == 0:
-		return true
+// Describe describes the win, using names for the positions (or the position
+// numbers for positions without a name).
+func (win Win) Describe(names ...string) string {
+	if !win.Valid() {
+		return "None"
 	}
-	d := win.Evals[win.Order[0]].Desc(win.Low)
-	return d == nil || d.Rank == 0 || d.Rank == Invalid
+	var v []string
+	for _, i := range win.Winners() {
+		if i < len(names) {
+			v = append(v, names[i])
+		} else {
+			v = append(v, strconv.Itoa(i))
+		}
+	}
+	return fmt.Sprintf("%s %s with %s", strings.Join(v, ", "), win.Verb(), win.hand(win.Order[0]))
 }
 
 // Format satisfies the [fmt.Formatter] interface.
-func (win *Win) Format(f fmt.State, verb rune) {
+func (win Win) Format(f fmt.State, verb rune) {
 	switch verb {
 	case 'd':
 		var v []string
-		for i := range win.Pivot {
-			v = append(v, strconv.Itoa(win.Order[i]))
+		for _, i := range win.Winners() {
+			v = append(v, strconv.Itoa(i))
 		}
 		fmt.Fprint(f, strings.Join(v, ", ")+" "+win.Verb())
 	case 's':
-		win.Evals[win.Order[0]].Desc(win.Low).Format(f, 's')
+		win.hand(win.Order[0]).Format(f, 's')
 	case 'S':
-		if !win.Invalid() {
-			var v []string
-			for i := range win.Pivot {
-				pos := win.Order[i]
-				if pos < len(win.Names) {
-					v = append(v, win.Names[win.Order[i]])
-				} else {
-					v = append(v, strconv.Itoa(win.Order[i]))
-				}
-			}
-			fmt.Fprintf(f, "%s %s with %s", strings.Join(v, ", "), win.Verb(), win)
-		} else {
-			fmt.Fprint(f, "None")
-		}
+		fmt.Fprint(f, win.Describe())
 	case 'V':
 		fmt.Fprint(f, win.Verb())
 	case 'v':
 		var v []string
-		for i := range win.Pivot {
-			desc := win.Evals[win.Order[i]].Desc(win.Low)
-			v = append(v, fmt.Sprintf("%v", desc.Best))
+		for _, i := range win.Winners() {
+			v = append(v, fmt.Sprintf("%v", win.hand(i).Best))
 		}
 		fmt.Fprint(f, strings.Join(v, ", "))
 	default:
@@ -841,7 +760,7 @@ func (win *Win) Format(f fmt.State, verb rune) {
 }
 
 // Verb returns the win verb.
-func (win *Win) Verb() string {
+func (win Win) Verb() string {
 	switch {
 	case win.Scoop:
 		return "scoops"

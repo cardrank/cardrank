@@ -15,7 +15,7 @@ func TestCactus(t *testing.T) {
 	}
 	const total = 133784560
 	t.Parallel()
-	u, f, tests, exp, ev := shuffled(DeckFrench), NewEval(Cactus), cactusTests(false, true), EvalOf(Holdem), EvalOf(Holdem)
+	u, f, tests, exp, ev := shuffled(DeckFrench), newEval(Cactus), cactusTests(false, true), EvalOf(Holdem), EvalOf(Holdem)
 	v := make([]Card, 7)
 	var i int
 	for c0 := range 52 {
@@ -26,18 +26,18 @@ func TestCactus(t *testing.T) {
 						for c5 := c4 + 1; c5 < 52; c5++ {
 							for c6 := c5 + 1; c6 < 52; c6++ {
 								v[0], v[1], v[2], v[3], v[4], v[5], v[6] = u[c0], u[c1], u[c2], u[c3], u[c4], u[c5], u[c6]
-								exp.HiRank = Invalid
+								exp.Hi.Rank = Invalid
 								f(exp, v, nil)
-								if r := exp.HiRank; r == 0 || r == Invalid {
+								if r := exp.Hi.Rank; r == 0 || r == Invalid {
 									t.Fatalf("test cactus %v expected valid rank, got: %d", v, r)
 								}
-								bestCactus(exp.HiRank, exp.HiBest, exp.HiUnused, 0, nil)
-								expDesc := fmt.Sprintf("%s", exp.Desc(false))
+								bestCactus(exp.Hi.Rank, exp.Hi.Best, exp.Hi.Unused, 0, nil)
+								expDesc := fmt.Sprintf("%s", exp.Hi)
 								for _, test := range tests {
-									ev.HiRank = Invalid
+									ev.Hi.Rank = Invalid
 									test.eval(ev, v, nil)
-									desc := fmt.Sprintf("%s", ev.Desc(false))
-									switch r, exp := ev.HiRank, exp.HiRank; {
+									desc := fmt.Sprintf("%s", ev.Hi)
+									switch r, exp := ev.Hi.Rank, exp.Hi.Rank; {
 									case r == 0, r == Invalid:
 										t.Errorf("test %s %v expected valid rank, got: %d", test.name, v, r)
 									case r != exp:
@@ -193,7 +193,7 @@ func TestSokoCards(t *testing.T) {
 		t.Skip("skipping: $ENV{TESTS} does not contain 'soko' or 'all'")
 	}
 	t.Parallel()
-	u, f, ev, uv := shuffled(DeckFrench), NewSokoEval(true, false), EvalOf(Soko), EvalOf(Soko)
+	u, f, ev, uv := shuffled(DeckFrench), newSokoEval(true, false), EvalOf(Soko), EvalOf(Soko)
 	for c0 := range 52 {
 		for c1 := c0 + 1; c1 < 52; c1++ {
 			for c2 := c1 + 1; c2 < 52; c2++ {
@@ -201,7 +201,7 @@ func TestSokoCards(t *testing.T) {
 					for c4 := c3 + 1; c4 < 52; c4++ {
 						v := []Card{u[c0], u[c1], u[c2], u[c3], u[c4]}
 						f(ev, v, nil)
-						switch r := ev.HiRank; {
+						switch r := ev.Hi.Rank; {
 						case r == 0, r == Invalid:
 							t.Fatalf("%v expected valid rank, got: %d", v, r)
 						case r <= TwoPair:
@@ -224,8 +224,8 @@ func TestSokoCards(t *testing.T) {
 							})
 						}
 						f(uv, u, nil)
-						if ev.HiRank != uv.HiRank {
-							t.Fatalf("expected equal ranks for %v %v, got: %d", v, u, uv.HiRank)
+						if ev.Hi.Rank != uv.Hi.Rank {
+							t.Fatalf("expected equal ranks for %v %v, got: %d", v, u, uv.Hi.Rank)
 						}
 						if s, z := fmt.Sprintf("%s", ev), fmt.Sprintf("%s", uv); s != z {
 							t.Errorf("expected %q == %q %v %v", s, z, v, u)

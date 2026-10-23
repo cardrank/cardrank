@@ -331,12 +331,53 @@ func RankLowball(c0, c1, c2, c3, c4 Card) EvalRank {
 	return RankCactus(c0, c1, c2, c3, c4).ToLowball()
 }
 
-// EvalFunc is an eval func.
-type EvalFunc func(*Eval, []Card, []Card)
+// Evaluator evaluates pocket and board cards for a [Type].
+type Evaluator interface {
+	// Rank sets the eval's Hi and Lo ranks. The best and unused cards may be
+	// unordered. Used when calculating odds.
+	Rank(ev *Eval, pocket, board []Card)
+	// Eval sets the eval's Hi and Lo ranks, and orders the best and unused
+	// cards.
+	Eval(ev *Eval, pocket, board []Card)
+}
 
-// NewEval returns an eval func that ranks 5, 6, or 7 cards using f. The
+// RankEvaluator returns an evaluator that ranks the best 5 of 5, 6, or 7 cards
+// using f, storing the results on the eval's Hi. The evaluator's Eval orders
+// the best and unused cards, and f must return Cactus Kev ranks (such as
+// [CactusFast]).
+func RankEvaluator(f RankFunc) Evaluator {
+	rank := newEval(f)
+	return funcEvaluator{
+		rank: rank,
+		eval: func(ev *Eval, p, b []Card) {
+			rank(ev, p, b)
+			bestCactus(ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused, 0, nil)
+		},
+	}
+}
+
+// funcEvaluator is an [Evaluator] using rank and eval funcs.
+type funcEvaluator struct {
+	rank evalFunc
+	eval evalFunc
+}
+
+// Rank satisfies the [Evaluator] interface.
+func (e funcEvaluator) Rank(ev *Eval, pocket, board []Card) {
+	e.rank(ev, pocket, board)
+}
+
+// Eval satisfies the [Evaluator] interface.
+func (e funcEvaluator) Eval(ev *Eval, pocket, board []Card) {
+	e.eval(ev, pocket, board)
+}
+
+// evalFunc is an eval func.
+type evalFunc func(*Eval, []Card, []Card)
+
+// newEval returns an eval func that ranks 5, 6, or 7 cards using f. The
 // returned eval func will store the results on an eval's Hi.
-func NewEval(f RankFunc) EvalFunc {
+func newEval(f RankFunc) evalFunc {
 	return func(ev *Eval, p, b []Card) {
 		var eval func(RankFunc, []Card)
 		np, nb := len(p), len(b)
@@ -344,11 +385,11 @@ func NewEval(f RankFunc) EvalFunc {
 		default:
 			return
 		case 5:
-			eval = ev.Hi5
+			eval = ev.hi5
 		case 6:
-			eval = ev.Hi6
+			eval = ev.hi6
 		case 7:
-			eval = ev.Hi7
+			eval = ev.hi7
 		}
 		v := make([]Card, np+nb)
 		copy(v, p)
@@ -357,11 +398,11 @@ func NewEval(f RankFunc) EvalFunc {
 	}
 }
 
-// NewMaxEval returns an eval func that ranks 5, 6, or 7 cards using f and max.
+// newMaxEval returns an eval func that ranks 5, 6, or 7 cards using f and max.
 //
 // The returned eval func will store results on an eval's Hi only when lower
 // than max.
-func NewMaxEval(f RankFunc, maximum EvalRank, low bool) EvalFunc {
+func newMaxEval(f RankFunc, maximum EvalRank, low bool) evalFunc {
 	return func(ev *Eval, p, b []Card) {
 		var eval func(RankFunc, []Card, EvalRank, bool)
 		np, nb := len(p), len(b)
@@ -369,11 +410,11 @@ func NewMaxEval(f RankFunc, maximum EvalRank, low bool) EvalFunc {
 		default:
 			return
 		case 5:
-			eval = ev.Max5
+			eval = ev.max5
 		case 6:
-			eval = ev.Max6
+			eval = ev.max6
 		case 7:
-			eval = ev.Max7
+			eval = ev.max7
 		}
 		v := make([]Card, np+nb)
 		copy(v, p)
@@ -382,13 +423,13 @@ func NewMaxEval(f RankFunc, maximum EvalRank, low bool) EvalFunc {
 	}
 }
 
-// NewSplitEval returns an eval func that ranks 5, 6, or 7 cards using hi, lo
+// newSplitEval returns an eval func that ranks 5, 6, or 7 cards using hi, lo
 // and max.
 //
 // The returned eval func will store results on an eval's Hi and Lo depending
 // on the result of hi and lo, respectively. Will store the Lo value only when
 // lower than max.
-func NewSplitEval(hi, lo RankFunc, maximum EvalRank) EvalFunc {
+func newSplitEval(hi, lo RankFunc, maximum EvalRank) evalFunc {
 	return func(ev *Eval, p, b []Card) {
 		var eval func(RankFunc, RankFunc, []Card, EvalRank)
 		np, nb := len(p), len(b)
@@ -396,11 +437,11 @@ func NewSplitEval(hi, lo RankFunc, maximum EvalRank) EvalFunc {
 		default:
 			return
 		case 5:
-			eval = ev.HiLo5
+			eval = ev.hiLo5
 		case 6:
-			eval = ev.HiLo6
+			eval = ev.hiLo6
 		case 7:
-			eval = ev.HiLo7
+			eval = ev.hiLo7
 		}
 		v := make([]Card, np+nb)
 		copy(v, p)
@@ -409,25 +450,25 @@ func NewSplitEval(hi, lo RankFunc, maximum EvalRank) EvalFunc {
 	}
 }
 
-// NewHybridEval creates a hybrid Cactus and Two-Plus-Two eval func, using
+// newHybridEval creates a hybrid Cactus and Two-Plus-Two eval func, using
 // [RankCactus] for 5 and 6 cards, and the registered Two-Plus-Two eval func
 // (see [RegisterTwoPlusTwo]) for 7 cards. Uses [RankCactus] for 7 cards when
 // no Two-Plus-Two eval func is registered.
 //
 // Gives optimal performance when evaluating the best-5 of any 5, 6, or 7 cards
 // of a combined pocket and board.
-func NewHybridEval(normalize, low bool) EvalFunc {
-	return newHybridEval(normalize, low, twoPlusTwo)
+func newHybridEval(normalize, low bool) evalFunc {
+	return newHybridEvalWith(normalize, low, twoPlusTwo)
 }
 
-// newHybridEval creates a hybrid Cactus and Two-Plus-Two eval func, using
+// newHybridEvalWith creates a hybrid Cactus and Two-Plus-Two eval func, using
 // twoPlusTwo (when not nil) for 7 cards.
-func newHybridEval(normalize, low bool, twoPlusTwo func([]Card) EvalRank) EvalFunc {
-	var f EvalFunc
+func newHybridEvalWith(normalize, low bool, twoPlusTwo func([]Card) EvalRank) evalFunc {
+	var f evalFunc
 	if low {
-		f = NewSplitEval(RankCactus, RankEightOrBetter, EightOrBetter)
+		f = newSplitEval(RankCactus, RankEightOrBetter, EightOrBetter)
 	} else {
-		f = NewEval(RankCactus)
+		f = newEval(RankCactus)
 	}
 	return func(ev *Eval, p, b []Card) {
 		switch np, nb := len(p), len(b); {
@@ -435,110 +476,110 @@ func newHybridEval(normalize, low bool, twoPlusTwo func([]Card) EvalRank) EvalFu
 			v := make([]Card, np+nb)
 			copy(v, p)
 			copy(v[np:], b)
-			ev.HiRank = twoPlusTwo(v)
+			ev.Hi.Rank = twoPlusTwo(v)
 			if normalize {
-				ev.HiBest, ev.HiUnused = bestCactusSplit(ev.HiRank, v, 0)
+				ev.Hi.Best, ev.Hi.Unused = bestCactusSplit(ev.Hi.Rank, v, 0)
 			}
 			if low {
 				u := make([]Card, np+nb)
 				copy(u, p)
 				copy(u[np:], b)
-				ev.Max7(RankEightOrBetter, u, EightOrBetter, true)
-				if normalize && ev.LoRank < EightOrBetter {
-					bestAceLow(ev.LoBest)
-					bestAceHigh(ev.LoUnused)
+				ev.max7(RankEightOrBetter, u, EightOrBetter, true)
+				if normalize && ev.Lo.Rank < EightOrBetter {
+					bestAceLow(ev.Lo.Best)
+					bestAceHigh(ev.Lo.Unused)
 				}
 			}
 		case 5 <= np+nb && np+nb <= 7:
 			f(ev, p, b)
 			if normalize {
-				bestCactus(ev.HiRank, ev.HiBest, ev.HiUnused, 0, nil)
-				if low && ev.LoRank < EightOrBetter {
-					bestAceLow(ev.LoBest)
-					bestAceHigh(ev.LoUnused)
+				bestCactus(ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused, 0, nil)
+				if low && ev.Lo.Rank < EightOrBetter {
+					bestAceLow(ev.Lo.Best)
+					bestAceHigh(ev.Lo.Unused)
 				}
 			}
 		}
 	}
 }
 
-// NewCactusEval creates a Cactus eval func.
-func NewCactusEval(board int, normalize, low bool) EvalFunc {
-	var f EvalFunc
+// newCactusEval creates a Cactus eval func.
+func newCactusEval(board int, normalize, low bool) evalFunc {
+	var f evalFunc
 	hybrid := twoPlusTwo != nil
 	switch {
 	case hybrid:
-		f = NewHybridEval(normalize, low)
+		f = newHybridEval(normalize, low)
 	case low:
-		f = NewSplitEval(RankCactus, RankEightOrBetter, EightOrBetter)
+		f = newSplitEval(RankCactus, RankEightOrBetter, EightOrBetter)
 	default:
-		f = NewEval(RankCactus)
+		f = newEval(RankCactus)
 	}
 	return func(ev *Eval, p, b []Card) {
 		// fewer than 5 cards (ie, pre-flop), use the pocket's starting rank
 		if np, nb := len(p), len(b); np < 3 && np+nb < 5 {
-			if r := StartingEvalRank(p); r != 0 && r != Invalid {
-				ev.HiRank, ev.HiBest = r, make([]Card, 5)
-				copy(ev.HiBest, p)
-				copy(ev.HiBest[np:], b)
-				bestAceHigh(ev.HiBest)
+			if r := startingHandRank(p); r != 0 && r != Invalid {
+				ev.Hi.Rank, ev.Hi.Best = r, make([]Card, 5)
+				copy(ev.Hi.Best, p)
+				copy(ev.Hi.Best[np:], b)
+				bestAceHigh(ev.Hi.Best)
 				return
 			}
 		}
 		f(ev, p, b)
 		if normalize && !hybrid {
-			bestCactus(ev.HiRank, ev.HiBest, ev.HiUnused, 0, nil)
+			bestCactus(ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused, 0, nil)
 			if low {
-				bestAceLow(ev.LoBest)
-				bestAceHigh(ev.LoUnused)
+				bestAceLow(ev.Lo.Best)
+				bestAceHigh(ev.Lo.Unused)
 			}
 		}
 	}
 }
 
-// NewModifiedEval creates a modified Cactus eval.
-func NewModifiedEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize, low bool) EvalFunc {
-	var f EvalFunc
+// newModifiedEval creates a modified Cactus eval.
+func newModifiedEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize, low bool) evalFunc {
+	var f evalFunc
 	if low {
-		f = NewSplitEval(hi, RankEightOrBetter, EightOrBetter)
+		f = newSplitEval(hi, RankEightOrBetter, EightOrBetter)
 	} else {
-		f = NewEval(hi)
+		f = newEval(hi)
 	}
 	return func(ev *Eval, p, b []Card) {
 		f(ev, p, b)
 		if normalize {
-			bestCactus(ev.HiRank, ev.HiBest, ev.HiUnused, base, inv)
+			bestCactus(ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused, base, inv)
 			if low {
-				bestAceLow(ev.LoBest)
-				bestAceHigh(ev.LoUnused)
+				bestAceLow(ev.Lo.Best)
+				bestAceHigh(ev.Lo.Unused)
 			}
 		}
 	}
 }
 
-// NewJacksOrBetterEval creates a JacksOrBetter eval func, used for [Video].
-func NewJacksOrBetterEval(normalize bool) EvalFunc {
-	hi := NewMaxEval(RankCactus, JacksOrBetter, false)
+// newJacksOrBetterEval creates a JacksOrBetter eval func, used for [Video].
+func newJacksOrBetterEval(normalize bool) evalFunc {
+	hi := newMaxEval(RankCactus, JacksOrBetter, false)
 	return func(ev *Eval, p, b []Card) {
 		hi(ev, p, b)
 		if normalize {
-			bestCactus(ev.HiRank, ev.HiBest, ev.HiUnused, 0, nil)
+			bestCactus(ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused, 0, nil)
 		}
 	}
 }
 
-// NewOmahaEval creates an [Omaha] eval func.
+// newOmahaEval creates an [Omaha] eval func.
 //
 // Uses any 2 from 2, 3, 4, 5, or 6 pocket cards, and any 3 from 3, 4 or 5
 // board cards to make a best-5.
-func NewOmahaEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize, low bool) EvalFunc {
+func newOmahaEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize, low bool) evalFunc {
 	return func(ev *Eval, p, b []Card) {
 		np, nb := len(p), len(b)
 		switch {
 		case np < 2, 6 < np:
 			return
 		case nb < 3:
-			ev.HiRank, ev.HiBest = StartingEvalRank(p), p
+			ev.Hi.Rank, ev.Hi.Best = startingHandRank(p), p
 			return
 		case 5 < nb:
 			return
@@ -550,7 +591,7 @@ func NewOmahaEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize
 		for j, board := range boards {
 			v[j] = [3]Card{b[board[0]], b[board[1]], b[board[2]]}
 		}
-		hi, hiRank, loRank := hi, ev.HiRank, ev.LoRank
+		hi, hiRank, loRank := hi, ev.Hi.Rank, ev.Lo.Rank
 		hiPocket, hiBoard, loPocket, loBoard := -1, -1, -1, -1
 		for i, pocket := range pockets {
 			c0, c1 := p[pocket[0]], p[pocket[1]]
@@ -572,27 +613,27 @@ func NewOmahaEval(hi RankFunc, base Rank, inv func(EvalRank) EvalRank, normalize
 				}
 			}
 		}
-		ev.HiRank, ev.LoRank = hiRank, loRank
+		ev.Hi.Rank, ev.Lo.Rank = hiRank, loRank
 		if hiPocket != -1 {
-			ev.HiBest, ev.HiUnused = omahaBest(p, b, pockets[hiPocket], boards[hiBoard])
+			ev.Hi.Best, ev.Hi.Unused = omahaBest(p, b, pockets[hiPocket], boards[hiBoard])
 		} else {
-			ev.HiUnused = make([]Card, np+nb-5)
+			ev.Hi.Unused = make([]Card, np+nb-5)
 		}
 		switch {
-		case low && ev.LoRank != Invalid && loPocket != -1:
-			ev.LoBest, ev.LoUnused = omahaBest(p, b, pockets[loPocket], boards[loBoard])
-		case low && ev.LoRank != Invalid:
-			ev.LoBest, ev.LoUnused = nil, make([]Card, np+nb-5)
+		case low && ev.Lo.Rank != Invalid && loPocket != -1:
+			ev.Lo.Best, ev.Lo.Unused = omahaBest(p, b, pockets[loPocket], boards[loBoard])
+		case low && ev.Lo.Rank != Invalid:
+			ev.Lo.Best, ev.Lo.Unused = nil, make([]Card, np+nb-5)
 		}
 		if normalize {
-			bestCactus(ev.HiRank, ev.HiBest, nil, base, inv)
-			bestAceHigh(ev.HiUnused)
+			bestCactus(ev.Hi.Rank, ev.Hi.Best, nil, base, inv)
+			bestAceHigh(ev.Hi.Unused)
 			switch {
-			case low && ev.LoRank < EightOrBetter:
-				bestAceLow(ev.LoBest)
-				bestAceHigh(ev.LoUnused)
+			case low && ev.Lo.Rank < EightOrBetter:
+				bestAceLow(ev.Lo.Best)
+				bestAceHigh(ev.Lo.Unused)
 			case low:
-				ev.LoBest, ev.LoUnused = nil, nil
+				ev.Lo.Best, ev.Lo.Unused = nil, nil
 			}
 		}
 	}
@@ -636,63 +677,63 @@ func init() {
 	}
 }
 
-// NewSokoEval creates a [Soko] eval func.
-func NewSokoEval(normalize, low bool) EvalFunc {
-	var f EvalFunc
+// newSokoEval creates a [Soko] eval func.
+func newSokoEval(normalize, low bool) evalFunc {
+	var f evalFunc
 	if low {
-		f = NewSplitEval(RankSoko, RankEightOrBetter, EightOrBetter)
+		f = newSplitEval(RankSoko, RankEightOrBetter, EightOrBetter)
 	} else {
-		f = NewEval(RankSoko)
+		f = newEval(RankSoko)
 	}
 	return func(ev *Eval, p, b []Card) {
 		f(ev, p, b)
 		if normalize {
-			bestSoko(ev.HiRank, ev.HiBest, ev.HiUnused)
+			bestSoko(ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused)
 			if low {
-				bestAceLow(ev.LoBest)
-				bestAceHigh(ev.LoUnused)
+				bestAceLow(ev.Lo.Best)
+				bestAceHigh(ev.Lo.Unused)
 			}
 		}
 	}
 }
 
-// NewLowballEval creates a [Lowball] eval func.
-func NewLowballEval(normalize bool) EvalFunc {
-	f := NewEval(RankLowball)
+// newLowballEval creates a [Lowball] eval func.
+func newLowballEval(normalize bool) evalFunc {
+	f := newEval(RankLowball)
 	return func(ev *Eval, p, b []Card) {
 		f(ev, p, b)
 		if normalize {
-			bestAceHigh(ev.HiBest)
-			bestAceHigh(ev.HiUnused)
+			bestAceHigh(ev.Hi.Best)
+			bestAceHigh(ev.Hi.Unused)
 		}
 	}
 }
 
-// NewRazzEval creates a [Razz] eval func.
-func NewRazzEval(normalize bool) EvalFunc {
-	f := NewEval(RankRazz)
+// newRazzEval creates a [Razz] eval func.
+func newRazzEval(normalize bool) evalFunc {
+	f := newEval(RankRazz)
 	return func(ev *Eval, p, b []Card) {
 		f(ev, p, b)
 		if normalize {
-			if ev.HiRank < AceFiveLow {
-				bestAceLow(ev.HiBest)
+			if ev.Hi.Rank < AceFiveLow {
+				bestAceLow(ev.Hi.Best)
 			} else {
-				switch (Invalid - ev.HiRank).Fixed() {
+				switch (Invalid - ev.Hi.Rank).Fixed() {
 				case FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, Pair:
-					bestSet(ev.HiBest)
+					bestSet(ev.Hi.Best)
 				}
 			}
-			bestAceHigh(ev.HiUnused)
+			bestAceHigh(ev.Hi.Unused)
 		}
 	}
 }
 
-// NewBadugiEval creates a [Badugi] eval func.
+// newBadugiEval creates a [Badugi] eval func.
 //
 //	4 cards, low evaluation of separate suits
 //	All 4 face down pre-flop
 //	3 rounds of player discards (up to 4)
-func NewBadugiEval(normalize bool) EvalFunc {
+func newBadugiEval(normalize bool) evalFunc {
 	return func(ev *Eval, p, _ []Card) {
 		s := make([][]Card, 4)
 		for i := 0; i < len(p) && i < 4; i++ {
@@ -726,12 +767,12 @@ func NewBadugiEval(normalize bool) EvalFunc {
 			bestAceLow(best)
 			bestAceHigh(unused)
 		}
-		ev.HiRank, ev.HiBest, ev.HiUnused = EvalRank(count<<13|rank), best, unused
+		ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused = EvalRank(count<<13|rank), best, unused
 	}
 }
 
-// NewHighEval creates a high card eval func.
-func NewHighEval() EvalFunc {
+// newHighEval creates a high card eval func.
+func newHighEval() evalFunc {
 	return func(ev *Eval, p, b []Card) {
 		np, nb := len(p), len(b)
 		if 0 < np+nb && p[0].Rank() <= Ace {
@@ -739,10 +780,10 @@ func NewHighEval() EvalFunc {
 			copy(v, p)
 			copy(v[np:], b)
 			bestAceHigh(v)
-			ev.HiRank = EvalRank(Ace-v[0].Rank()) + 1
-			ev.HiBest = []Card{v[0]}
+			ev.Hi.Rank = EvalRank(Ace-v[0].Rank()) + 1
+			ev.Hi.Best = []Card{v[0]}
 			if 1 < np+nb {
-				ev.HiUnused = v[1:]
+				ev.Hi.Unused = v[1:]
 			}
 		}
 	}
@@ -771,133 +812,118 @@ func NewLeducEval() EvalFunc {
 }
 */
 
-// Eval contains the eval results of a type's Hi/Lo.
+// Eval contains the eval results of a type's Hi and Lo.
 type Eval struct {
-	Type     Type
-	HiRank   EvalRank
-	HiBest   []Card
-	HiUnused []Card
-	LoRank   EvalRank
-	LoBest   []Card
-	LoUnused []Card
+	Type Type
+	Hi   Hand
+	Lo   Hand
 }
 
 // EvalOf creates an eval for the type.
 func EvalOf(typ Type) *Eval {
+	desc := descs[typ]
 	return &Eval{
-		Type:   typ,
-		HiRank: Invalid,
-		LoRank: Invalid,
+		Type: typ,
+		Hi:   Hand{Rank: Invalid, desc: desc.HiDesc},
+		Lo:   Hand{Rank: Invalid, desc: desc.LoDesc},
 	}
 }
 
 // Eval evaluates the pocket, board.
 func (ev *Eval) Eval(pocket, board []Card) {
-	evals[ev.Type](ev, pocket, board)
-}
-
-// Comp compares the eval's Hi/Lo to b's Hi/Lo.
-func (ev *Eval) Comp(b *Eval, low bool) int {
-	switch {
-	case ev == nil && b == nil:
-		return -1
-	case ev == nil:
-		return +1
-	case b == nil:
-		return -1
-	case !low && ev.HiRank < b.HiRank:
-		return -1
-	case !low && b.HiRank < ev.HiRank:
-		return +1
-	case low && ev.LoRank < b.LoRank:
-		return -1
-	case low && b.LoRank < ev.LoRank:
-		return +1
-	}
-	return 0
-}
-
-// Desc returns a descriptior for the eval's Hi/Lo.
-func (ev *Eval) Desc(low bool) *EvalDesc {
-	switch {
-	case ev == nil:
-		return nil
-	case !low:
-		return &EvalDesc{
-			Type:   ev.Type.Desc().HiDesc,
-			Rank:   ev.HiRank,
-			Best:   ev.HiBest,
-			Unused: ev.HiUnused,
-		}
-	}
-	return &EvalDesc{
-		Type:   ev.Type.Desc().LoDesc,
-		Rank:   ev.LoRank,
-		Best:   ev.LoBest,
-		Unused: ev.LoUnused,
-	}
+	evaluators[ev.Type].Eval(ev, pocket, board)
 }
 
 // Format satisfies the [fmt.Formatter] interface.
 func (ev *Eval) Format(f fmt.State, verb rune) {
 	switch verb {
 	case 'd':
-		fmt.Fprintf(f, "%d", uint16(ev.HiRank))
+		fmt.Fprintf(f, "%d", uint16(ev.Hi.Rank))
 	case 's', 'v':
-		fmt.Fprintf(f, "%s %s", ev.Desc(false), ev.HiBest)
+		fmt.Fprintf(f, "%s %s", ev.Hi, ev.Hi.Best)
 	case 'e':
-		fmt.Fprintf(f, "%s %e", ev.Desc(false), ev.HiBest)
+		fmt.Fprintf(f, "%s %e", ev.Hi, ev.Hi.Best)
 	case 'a':
-		fmt.Fprintf(f, "%s %a", ev.Desc(false), Formatter(ev.HiBest))
+		fmt.Fprintf(f, "%s %a", ev.Hi, ev.Hi.Best)
 	case 'q':
-		fmt.Fprintf(f, "\"%s %s\"", ev.Desc(false), ev.HiBest)
+		fmt.Fprintf(f, "\"%s %s\"", ev.Hi, ev.Hi.Best)
 	case 'S':
-		fmt.Fprintf(f, "%S", ev.Desc(false))
+		fmt.Fprintf(f, "%S", ev.Hi)
 	case 'b':
-		fmt.Fprintf(f, "%s %b", ev.Desc(false), ev.HiBest)
+		fmt.Fprintf(f, "%s %b", ev.Hi, ev.Hi.Best)
 	case 'h':
-		fmt.Fprintf(f, "%s %h", ev.Desc(false), Formatter(ev.HiBest))
+		fmt.Fprintf(f, "%s %h", ev.Hi, ev.Hi.Best)
 	case 'c':
-		fmt.Fprintf(f, "%s %c", ev.Desc(false), ev.HiBest)
+		fmt.Fprintf(f, "%s %c", ev.Hi, ev.Hi.Best)
 	case 'C':
-		fmt.Fprintf(f, "%s %C", ev.Desc(false), Formatter(ev.HiBest))
+		fmt.Fprintf(f, "%s %C", ev.Hi, ev.Hi.Best)
 	case 'f':
-		for _, c := range ev.HiBest {
+		for _, c := range ev.Hi.Best {
 			c.Format(f, 's')
 		}
 	default:
-		fmt.Fprintf(f, "%%!%c(ERROR=unknown verb, Eval<%s>: %s/%s %d)", verb, ev.Type, ev.HiBest, ev.HiUnused, ev.HiRank)
+		fmt.Fprintf(f, "%%!%c(ERROR=unknown verb, Eval<%s>: %s/%s %d)", verb, ev.Type, ev.Hi.Best, ev.Hi.Unused, ev.Hi.Rank)
 	}
 }
 
-// Hi5 evaluates the 5 cards in v, using f.
-func (ev *Eval) Hi5(f RankFunc, v []Card) {
-	ev.HiRank, ev.HiBest = f(v[0], v[1], v[2], v[3], v[4]), v
+// Hand is the Hi or Lo result of an eval.
+type Hand struct {
+	// Rank is the hand's rank. Lower ranks are better, and [Invalid] is no
+	// hand (such as when there is no qualifying Lo).
+	Rank EvalRank
+	// Best are the best cards.
+	Best Cards
+	// Unused are the unused cards.
+	Unused Cards
+	// desc is the description type, used for formatting.
+	desc DescType
 }
 
-// HiLo5 evaluates the 5 cards in v, using hi, lo.
-func (ev *Eval) HiLo5(hi, lo RankFunc, v []Card, maximum EvalRank) {
-	ev.HiRank, ev.HiBest = hi(v[0], v[1], v[2], v[3], v[4]), v
+// Valid returns true when the hand's rank is not [Invalid].
+func (h Hand) Valid() bool {
+	return h.Rank != Invalid
+}
+
+// Compare compares the hand to o, returning -1 when the hand is better, +1
+// when o is better, or 0 when they are equal.
+func (h Hand) Compare(o Hand) int {
+	return cmp.Compare(h.Rank, o.Rank)
+}
+
+// Format satisfies the [fmt.Formatter] interface, formatting the hand's
+// description (see [DescType]).
+func (h Hand) Format(f fmt.State, verb rune) {
+	h.desc.Desc(f, verb, h.Rank, h.Best, h.Unused)
+}
+
+// hi5 evaluates the 5 cards in v, using f.
+func (ev *Eval) hi5(f RankFunc, v []Card) {
+	ev.Hi.Rank, ev.Hi.Best = f(v[0], v[1], v[2], v[3], v[4]), v
+}
+
+// hiLo5 evaluates the 5 cards in v, using hi, lo.
+func (ev *Eval) hiLo5(hi, lo RankFunc, v []Card, maximum EvalRank) {
+	ev.Hi.Rank, ev.Hi.Best = hi(v[0], v[1], v[2], v[3], v[4]), v
 	if r := lo(v[0], v[1], v[2], v[3], v[4]); r < maximum {
 		// copy, as Hi and Lo best are ordered separately
-		ev.LoRank, ev.LoBest = r, slices.Clone(v)
+		ev.Lo.Rank, ev.Lo.Best = r, slices.Clone(v)
 	}
 }
 
-// Max5 evaluates the 5 cards in v, using f, storing only when below max.
-func (ev *Eval) Max5(f RankFunc, v []Card, maximum EvalRank, low bool) {
+// max5 evaluates the 5 cards in v, using f, storing only when below max.
+func (ev *Eval) max5(f RankFunc, v []Card, maximum EvalRank, low bool) {
 	if r := f(v[0], v[1], v[2], v[3], v[4]); r < maximum {
 		if !low {
-			ev.HiRank, ev.HiBest = r, v
+			ev.Hi.Rank, ev.Hi.Best = r, v
 		} else {
-			ev.LoRank, ev.LoBest = r, v
+			ev.Lo.Rank, ev.Lo.Best = r, v
 		}
 	}
 }
 
-// Hi6 evaluates the 6 cards in v, using f.
-func (ev *Eval) Hi6(f RankFunc, v []Card) {
-	ev.HiRank, ev.HiBest, ev.HiUnused = Invalid, make([]Card, 5), make([]Card, 1)
+// hi6 evaluates the 6 cards in v, using f.
+func (ev *Eval) hi6(f RankFunc, v []Card) {
+	ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused = Invalid, make([]Card, 5), make([]Card, 1)
 	for i, r := 0, EvalRank(0); i < 6; i++ {
 		if r = f(
 			v[t6c5[i][0]],
@@ -905,18 +931,18 @@ func (ev *Eval) Hi6(f RankFunc, v []Card) {
 			v[t6c5[i][2]],
 			v[t6c5[i][3]],
 			v[t6c5[i][4]],
-		); r < ev.HiRank {
-			ev.HiRank = r
-			ev.HiBest[0], ev.HiBest[1] = v[t6c5[i][0]], v[t6c5[i][1]]
-			ev.HiBest[2], ev.HiBest[3] = v[t6c5[i][2]], v[t6c5[i][3]]
-			ev.HiBest[4] = v[t6c5[i][4]]
-			ev.HiUnused[0] = v[t6c5[i][5]]
+		); r < ev.Hi.Rank {
+			ev.Hi.Rank = r
+			ev.Hi.Best[0], ev.Hi.Best[1] = v[t6c5[i][0]], v[t6c5[i][1]]
+			ev.Hi.Best[2], ev.Hi.Best[3] = v[t6c5[i][2]], v[t6c5[i][3]]
+			ev.Hi.Best[4] = v[t6c5[i][4]]
+			ev.Hi.Unused[0] = v[t6c5[i][5]]
 		}
 	}
 }
 
-// Max6 evaluates the 6 cards in v, using f, storing only when below max.
-func (ev *Eval) Max6(f RankFunc, v []Card, maximum EvalRank, low bool) {
+// max6 evaluates the 6 cards in v, using f, storing only when below max.
+func (ev *Eval) max6(f RankFunc, v []Card, maximum EvalRank, low bool) {
 	rank, best, unused := Invalid, make([]Card, 5), make([]Card, 1)
 	for i, r := 0, EvalRank(0); i < 6; i++ {
 		if r = f(
@@ -935,16 +961,16 @@ func (ev *Eval) Max6(f RankFunc, v []Card, maximum EvalRank, low bool) {
 	}
 	if rank < maximum {
 		if !low {
-			ev.HiRank, ev.HiBest, ev.HiUnused = rank, best, unused
+			ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused = rank, best, unused
 		} else {
-			ev.LoRank, ev.LoBest, ev.LoUnused = rank, best, unused
+			ev.Lo.Rank, ev.Lo.Best, ev.Lo.Unused = rank, best, unused
 		}
 	}
 }
 
-// HiLo6 evaluates the 6 cards in v, using hi, lo.
-func (ev *Eval) HiLo6(hi, lo RankFunc, v []Card, maximum EvalRank) {
-	ev.HiRank, ev.HiBest, ev.HiUnused = Invalid, make([]Card, 5), make([]Card, 1)
+// hiLo6 evaluates the 6 cards in v, using hi, lo.
+func (ev *Eval) hiLo6(hi, lo RankFunc, v []Card, maximum EvalRank) {
+	ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused = Invalid, make([]Card, 5), make([]Card, 1)
 	rank, best, unused := Invalid, make([]Card, 5), make([]Card, 1)
 	for i, r := 0, EvalRank(0); i < 6; i++ {
 		if r = hi(
@@ -953,12 +979,12 @@ func (ev *Eval) HiLo6(hi, lo RankFunc, v []Card, maximum EvalRank) {
 			v[t6c5[i][2]],
 			v[t6c5[i][3]],
 			v[t6c5[i][4]],
-		); r < ev.HiRank {
-			ev.HiRank = r
-			ev.HiBest[0], ev.HiBest[1] = v[t6c5[i][0]], v[t6c5[i][1]]
-			ev.HiBest[2], ev.HiBest[3] = v[t6c5[i][2]], v[t6c5[i][3]]
-			ev.HiBest[4] = v[t6c5[i][4]]
-			ev.HiUnused[0] = v[t6c5[i][5]]
+		); r < ev.Hi.Rank {
+			ev.Hi.Rank = r
+			ev.Hi.Best[0], ev.Hi.Best[1] = v[t6c5[i][0]], v[t6c5[i][1]]
+			ev.Hi.Best[2], ev.Hi.Best[3] = v[t6c5[i][2]], v[t6c5[i][3]]
+			ev.Hi.Best[4] = v[t6c5[i][4]]
+			ev.Hi.Unused[0] = v[t6c5[i][5]]
 		}
 		if r = lo(
 			v[t6c5[i][0]],
@@ -975,13 +1001,13 @@ func (ev *Eval) HiLo6(hi, lo RankFunc, v []Card, maximum EvalRank) {
 		}
 	}
 	if rank < maximum {
-		ev.LoRank, ev.LoBest, ev.LoUnused = rank, best, unused
+		ev.Lo.Rank, ev.Lo.Best, ev.Lo.Unused = rank, best, unused
 	}
 }
 
-// Hi7 evaluates the 7 cards in v, using f.
-func (ev *Eval) Hi7(f RankFunc, v []Card) {
-	ev.HiRank, ev.HiBest, ev.HiUnused = Invalid, make([]Card, 5), make([]Card, 2)
+// hi7 evaluates the 7 cards in v, using f.
+func (ev *Eval) hi7(f RankFunc, v []Card) {
+	ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused = Invalid, make([]Card, 5), make([]Card, 2)
 	for i, r := 0, EvalRank(0); i < 21; i++ {
 		if r = f(
 			v[t7c5[i][0]],
@@ -989,18 +1015,18 @@ func (ev *Eval) Hi7(f RankFunc, v []Card) {
 			v[t7c5[i][2]],
 			v[t7c5[i][3]],
 			v[t7c5[i][4]],
-		); r < ev.HiRank {
-			ev.HiRank = r
-			ev.HiBest[0], ev.HiBest[1] = v[t7c5[i][0]], v[t7c5[i][1]]
-			ev.HiBest[2], ev.HiBest[3] = v[t7c5[i][2]], v[t7c5[i][3]]
-			ev.HiBest[4] = v[t7c5[i][4]]
-			ev.HiUnused[0], ev.HiUnused[1] = v[t7c5[i][5]], v[t7c5[i][6]]
+		); r < ev.Hi.Rank {
+			ev.Hi.Rank = r
+			ev.Hi.Best[0], ev.Hi.Best[1] = v[t7c5[i][0]], v[t7c5[i][1]]
+			ev.Hi.Best[2], ev.Hi.Best[3] = v[t7c5[i][2]], v[t7c5[i][3]]
+			ev.Hi.Best[4] = v[t7c5[i][4]]
+			ev.Hi.Unused[0], ev.Hi.Unused[1] = v[t7c5[i][5]], v[t7c5[i][6]]
 		}
 	}
 }
 
-// Max7 evaluates the 7 cards in v, using f, storing only when below max.
-func (ev *Eval) Max7(f RankFunc, v []Card, maximum EvalRank, low bool) {
+// max7 evaluates the 7 cards in v, using f, storing only when below max.
+func (ev *Eval) max7(f RankFunc, v []Card, maximum EvalRank, low bool) {
 	rank, best, unused := Invalid, make([]Card, 5), make([]Card, 2)
 	for i, r := 0, EvalRank(0); i < 21; i++ {
 		if r = f(
@@ -1019,16 +1045,16 @@ func (ev *Eval) Max7(f RankFunc, v []Card, maximum EvalRank, low bool) {
 	}
 	if rank < maximum {
 		if !low {
-			ev.HiRank, ev.HiBest, ev.HiUnused = rank, best, unused
+			ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused = rank, best, unused
 		} else {
-			ev.LoRank, ev.LoBest, ev.LoUnused = rank, best, unused
+			ev.Lo.Rank, ev.Lo.Best, ev.Lo.Unused = rank, best, unused
 		}
 	}
 }
 
-// HiLo7 evaluates the 7 cards in v, using hi, lo.
-func (ev *Eval) HiLo7(hi, lo RankFunc, v []Card, maximum EvalRank) {
-	ev.HiRank, ev.HiBest, ev.HiUnused = Invalid, make([]Card, 5), make([]Card, 2)
+// hiLo7 evaluates the 7 cards in v, using hi, lo.
+func (ev *Eval) hiLo7(hi, lo RankFunc, v []Card, maximum EvalRank) {
+	ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused = Invalid, make([]Card, 5), make([]Card, 2)
 	rank, best, unused := Invalid, make([]Card, 5), make([]Card, 2)
 	for i, r := 0, EvalRank(0); i < 21; i++ {
 		if r = hi(
@@ -1037,12 +1063,12 @@ func (ev *Eval) HiLo7(hi, lo RankFunc, v []Card, maximum EvalRank) {
 			v[t7c5[i][2]],
 			v[t7c5[i][3]],
 			v[t7c5[i][4]],
-		); r < ev.HiRank {
-			ev.HiRank = r
-			ev.HiBest[0], ev.HiBest[1] = v[t7c5[i][0]], v[t7c5[i][1]]
-			ev.HiBest[2], ev.HiBest[3] = v[t7c5[i][2]], v[t7c5[i][3]]
-			ev.HiBest[4] = v[t7c5[i][4]]
-			ev.HiUnused[0], ev.HiUnused[1] = v[t7c5[i][5]], v[t7c5[i][6]]
+		); r < ev.Hi.Rank {
+			ev.Hi.Rank = r
+			ev.Hi.Best[0], ev.Hi.Best[1] = v[t7c5[i][0]], v[t7c5[i][1]]
+			ev.Hi.Best[2], ev.Hi.Best[3] = v[t7c5[i][2]], v[t7c5[i][3]]
+			ev.Hi.Best[4] = v[t7c5[i][4]]
+			ev.Hi.Unused[0], ev.Hi.Unused[1] = v[t7c5[i][5]], v[t7c5[i][6]]
 		}
 		if r = lo(
 			v[t7c5[i][0]],
@@ -1059,116 +1085,100 @@ func (ev *Eval) HiLo7(hi, lo RankFunc, v []Card, maximum EvalRank) {
 		}
 	}
 	if rank < maximum {
-		ev.LoRank, ev.LoBest, ev.LoUnused = rank, best, unused
+		ev.Lo.Rank, ev.Lo.Best, ev.Lo.Unused = rank, best, unused
 	}
 }
 
-// HiLo23 evaluates the 2 cards c0, c1 and the 3 in b, using hi, lo.
-func (ev *Eval) HiLo23(hi, lo RankFunc, c0, c1 Card, b []Card, maximum EvalRank) {
-	ev.HiRank, ev.HiBest = hi(c0, c1, b[0], b[1], b[2]), []Card{c0, c1, b[0], b[1], b[2]}
+// hiLo23 evaluates the 2 cards c0, c1 and the 3 in b, using hi, lo.
+func (ev *Eval) hiLo23(hi, lo RankFunc, c0, c1 Card, b []Card, maximum EvalRank) {
+	ev.Hi.Rank, ev.Hi.Best = hi(c0, c1, b[0], b[1], b[2]), []Card{c0, c1, b[0], b[1], b[2]}
 	if lo != nil {
 		if r := lo(c0, c1, b[0], b[1], b[2]); r < maximum {
-			ev.LoRank, ev.LoBest = r, ev.HiBest
+			ev.Lo.Rank, ev.Lo.Best = r, ev.Hi.Best
 		}
 	}
 }
 
-// HiLo24 evaluates the 2 cards c0, c1 and the 4 in b, using hi, lo.
-func (ev *Eval) HiLo24(hi, lo RankFunc, c0, c1 Card, b []Card, maximum EvalRank) {
-	ev.HiBest, ev.HiUnused = []Card{c0, c1, 0, 0, 0}, make([]Card, 1)
+// hiLo24 evaluates the 2 cards c0, c1 and the 4 in b, using hi, lo.
+func (ev *Eval) hiLo24(hi, lo RankFunc, c0, c1 Card, b []Card, maximum EvalRank) {
+	ev.Hi.Best, ev.Hi.Unused = []Card{c0, c1, 0, 0, 0}, make([]Card, 1)
 	if lo != nil {
-		ev.LoBest, ev.LoUnused = []Card{c0, c1, 0, 0, 0}, make([]Card, 1)
+		ev.Lo.Best, ev.Lo.Unused = []Card{c0, c1, 0, 0, 0}, make([]Card, 1)
 	}
 	v, r := make([]Card, 3), EvalRank(0)
 	for i := range 4 {
 		v[0], v[1], v[2] = b[i], b[(i+1)%4], b[(i+2)%4]
-		if r = hi(c0, c1, v[0], v[1], v[2]); r < ev.HiRank {
-			ev.HiRank = r
-			copy(ev.HiBest[2:], v)
-			ev.HiUnused[0] = b[(i+3)%4]
+		if r = hi(c0, c1, v[0], v[1], v[2]); r < ev.Hi.Rank {
+			ev.Hi.Rank = r
+			copy(ev.Hi.Best[2:], v)
+			ev.Hi.Unused[0] = b[(i+3)%4]
 		}
 		if lo != nil {
-			if r = lo(c0, c1, v[0], v[1], v[2]); r < ev.LoRank && r < maximum {
-				ev.LoRank = r
-				copy(ev.LoBest[2:], v)
-				ev.LoUnused[0] = b[(i+3)%4]
+			if r = lo(c0, c1, v[0], v[1], v[2]); r < ev.Lo.Rank && r < maximum {
+				ev.Lo.Rank = r
+				copy(ev.Lo.Best[2:], v)
+				ev.Lo.Unused[0] = b[(i+3)%4]
 			}
 		}
 	}
 }
 
-// HiLo25 evaluates the 2 cards c0, c1 and the 5 in b, using hi, lo.
-func (ev *Eval) HiLo25(hi, lo RankFunc, c0, c1 Card, b []Card, maximum EvalRank) {
-	ev.HiBest, ev.HiUnused = []Card{c0, c1, 0, 0, 0}, make([]Card, 2)
+// hiLo25 evaluates the 2 cards c0, c1 and the 5 in b, using hi, lo.
+func (ev *Eval) hiLo25(hi, lo RankFunc, c0, c1 Card, b []Card, maximum EvalRank) {
+	ev.Hi.Best, ev.Hi.Unused = []Card{c0, c1, 0, 0, 0}, make([]Card, 2)
 	if lo != nil {
-		ev.LoBest, ev.LoUnused = []Card{c0, c1, 0, 0, 0}, make([]Card, 2)
+		ev.Lo.Best, ev.Lo.Unused = []Card{c0, c1, 0, 0, 0}, make([]Card, 2)
 	}
 	v, r := make([]Card, 3), EvalRank(0)
 	for i := range 10 {
 		v[0], v[1], v[2] = b[t5c3[i][0]], b[t5c3[i][1]], b[t5c3[i][2]]
-		if r = hi(c0, c1, v[0], v[1], v[2]); r < ev.HiRank {
-			ev.HiRank = r
-			copy(ev.HiBest[2:], v)
-			ev.HiUnused[0], ev.HiUnused[1] = b[t5c3[i][3]], b[t5c3[i][4]]
+		if r = hi(c0, c1, v[0], v[1], v[2]); r < ev.Hi.Rank {
+			ev.Hi.Rank = r
+			copy(ev.Hi.Best[2:], v)
+			ev.Hi.Unused[0], ev.Hi.Unused[1] = b[t5c3[i][3]], b[t5c3[i][4]]
 		}
 		if lo != nil {
-			if r = lo(c0, c1, v[0], v[1], v[2]); r < ev.LoRank && r < maximum {
-				ev.LoRank = r
-				copy(ev.LoBest[2:], v)
-				ev.LoUnused[0], ev.LoUnused[1] = b[t5c3[i][3]], b[t5c3[i][4]]
+			if r = lo(c0, c1, v[0], v[1], v[2]); r < ev.Lo.Rank && r < maximum {
+				ev.Lo.Rank = r
+				copy(ev.Lo.Best[2:], v)
+				ev.Lo.Unused[0], ev.Lo.Unused[1] = b[t5c3[i][3]], b[t5c3[i][4]]
 			}
 		}
 	}
 }
 
-// EvalDesc describes a Hi/Lo eval.
-type EvalDesc struct {
-	Type   DescType
-	Rank   EvalRank
-	Best   []Card
-	Unused []Card
+// Ranking is an ordering of hands.
+type Ranking struct {
+	// Order are the hand positions, best first.
+	Order []int
+	// Pivot is the number of winning positions in Order. Pivot is 0 when
+	// there are no valid hands (see [Hand.Valid]).
+	Pivot int
 }
 
-// Format satisfies the [fmt.Stringer] interface.
-func (desc *EvalDesc) Format(f fmt.State, verb rune) {
-	desc.Type.Desc(f, verb, desc.Rank, desc.Best, desc.Unused)
-}
-
-// Order builds an ordered slice of indices for the provided evals, ordered by
-// either Hi or Lo (per [Eval.Comp]), returning the slice of indices and a
-// pivot into the indices indicating the winning vs losing position.
-//
-// Pivot will always be 1 or higher when ordering by Hi's. When ordering by
-// Lo's, if there are no valid (ie, qualified) evals, the returned pivot will
-// be 0.
-func Order(evs []*Eval, low bool) ([]int, int) {
-	if len(evs) == 0 {
-		return nil, 0
+// Order ranks the hands, best first.
+func Order(hands []Hand) Ranking {
+	order := make([]int, len(hands))
+	for i := range order {
+		order[i] = i
 	}
-	n := len(evs)
-	i, m, v := 0, make(map[int]*Eval, n), make([]int, n)
-	// set up
-	for ; i < n; i++ {
-		m[i], v[i] = evs[i], i
-	}
-	// sort v based on mapped evals
-	slices.SortStableFunc(v, func(a, b int) int {
-		return m[a].Comp(m[b], low)
+	slices.SortStableFunc(order, func(a, b int) int {
+		return hands[a].Compare(hands[b])
 	})
-	if !low {
-		// determine hi pivot
-		for i = 1; i < n && m[v[i-1]] != nil && m[v[i]] != nil && m[v[i-1]].HiRank == m[v[i]].HiRank; i++ {
-		}
-	} else {
-		// determine if any qualified low evals
-		if m[v[0]] == nil || m[v[0]].LoRank == 0 || m[v[0]].LoRank == Invalid {
-			return nil, 0
-		}
-		// determine lo pivot
-		for i = 1; i < n && m[v[i-1]] != nil && m[v[i]] != nil && m[v[i-1]].LoRank == m[v[i]].LoRank; i++ {
+	var pivot int
+	if len(order) != 0 && hands[order[0]].Valid() {
+		for pivot = 1; pivot < len(order) && hands[order[pivot]].Rank == hands[order[0]].Rank; pivot++ {
 		}
 	}
-	return v, i
+	return Ranking{
+		Order: order,
+		Pivot: pivot,
+	}
+}
+
+// Winners returns the winning positions.
+func (r Ranking) Winners() []int {
+	return r.Order[:r.Pivot]
 }
 
 // bestCactus orders the best and unused cards in v and u, with the specified
@@ -1519,4 +1529,33 @@ func take6c2(v []Card) ([][]Card, int) {
 		}
 	}
 	return u, 15
+}
+
+// hands returns the Hi or Lo hands of the evals, using an [Invalid] hand for
+// any nil eval.
+func hands(evs []*Eval, low bool) []Hand {
+	v := make([]Hand, len(evs))
+	for i, ev := range evs {
+		switch {
+		case ev == nil:
+			v[i] = Hand{Rank: Invalid}
+		case low:
+			v[i] = ev.Lo
+		default:
+			v[i] = ev.Hi
+		}
+	}
+	return v
+}
+
+// HiOrder ranks the Hi hands of the evals (see [Order]), where nil evals (such
+// as for inactive positions) are ordered last.
+func HiOrder(evs []*Eval) Ranking {
+	return Order(hands(evs, false))
+}
+
+// LoOrder ranks the Lo hands of the evals (see [Order]), where nil evals (such
+// as for inactive positions) are ordered last.
+func LoOrder(evs []*Eval) Ranking {
+	return Order(hands(evs, true))
 }

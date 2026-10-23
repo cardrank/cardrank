@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -52,10 +53,10 @@ func ExampleCard_unmarshal() {
 }
 
 func ExampleDeck_Draw() {
-	d := cardrank.NewDeck()
+	d := cardrank.DeckFrench.New()
 	// note: use a real random source
 	r := rand.New(rand.NewSource(52))
-	d.Shuffle(r, 1)
+	d.Shuffle(r)
 	v := d.Draw(7)
 	fmt.Printf("%b\n", v)
 	// Output:
@@ -63,10 +64,10 @@ func ExampleDeck_Draw() {
 }
 
 func ExampleHoldem_Eval() {
-	d := cardrank.NewDeck()
+	d := cardrank.DeckFrench.New()
 	// note: use a real random source
 	r := rand.New(rand.NewSource(26076))
-	d.Shuffle(r, 1)
+	d.Shuffle(r)
 	ev := cardrank.Holdem.Eval(d.Draw(2), d.Draw(5))
 	fmt.Printf("%b\n", ev)
 	fmt.Printf("%S\n", ev)
@@ -79,7 +80,7 @@ func ExampleSpanish_Eval() {
 	d := cardrank.DeckSpanish.New()
 	// note: use a real random source
 	r := rand.New(rand.NewSource(2231))
-	d.Shuffle(r, 1)
+	d.Shuffle(r)
 	ev := cardrank.Spanish.Eval(d.Draw(2), d.Draw(5))
 	fmt.Printf("%b\n", ev)
 	// Output:
@@ -104,24 +105,24 @@ func Example() {
 		r := rand.New(rand.NewSource(game.seed))
 		fmt.Printf("------ FusionHiLo %d ------\n", i+1)
 		// setup dealer and display
-		d := cardrank.FusionHiLo.Dealer(r, 1, game.players)
+		d := cardrank.FusionHiLo.Dealer(r, game.players)
 		// display deck
-		deck := d.Deck.All()
+		deck := slices.Collect(d.Deck().All())
 		fmt.Println("Deck:")
 		for i := 0; i < len(deck); i += 8 {
 			n := min(i+8, len(deck))
 			fmt.Printf("  %v\n", deck[i:n])
 		}
 		last := -1
-		for d.Next() {
-			i, run := d.Run()
+		for i, run := range d.Deal() {
 			if last != i {
 				fmt.Printf("Run %d:\n", i)
 			}
 			last = i
 			fmt.Printf("  %s\n", d)
+			street := d.Street()
 			// display pockets
-			if d.HasPocket() {
+			if street.Pocket != 0 {
 				for i := range game.players {
 					fmt.Printf("    %d %s: %v\n", i, game.names[i], run.Pockets[i])
 				}
@@ -131,43 +132,40 @@ func Example() {
 				fmt.Printf("    Discard: %v\n", v)
 			}
 			// display board
-			if d.HasBoard() {
+			if street.Board != 0 {
 				fmt.Printf("    Board: %v\n", run.Hi)
-				if d.Double {
+				if d.Type().Double() {
 					fmt.Printf("           %v\n", run.Lo)
 				}
 			}
-			// change runs, deactivate positions
-			if d.Id() == game.change && i == 0 {
-				if success := d.ChangeRuns(game.runs); !success {
-					panic("unable to change runs")
+			// change runs, fold positions
+			if street.ID == game.change && i == 0 {
+				if err := d.ChangeRuns(game.runs); err != nil {
+					panic(err)
 				}
-				// deactivate
-				if success := d.Deactivate(game.inactive...); !success {
-					panic("unable to deactivate positions")
+				if err := d.Fold(game.inactive...); err != nil {
+					panic(err)
 				}
 			}
 		}
 		fmt.Println("Showdown:")
-		for d.NextResult() {
-			n, res := d.Result()
+		for n, res := range d.Results() {
 			fmt.Printf("  Run %d:\n", n)
 			for i := range game.players {
-				if d.Active[i] {
-					hi := res.Evals[i].Desc(false)
+				if d.Active(i) {
+					hi := res.Evals[i].Hi
 					fmt.Printf("    %d: %v %v %s\n", i, hi.Best, hi.Unused, hi)
-					if d.Low || d.Double {
-						lo := res.Evals[i].Desc(true)
+					if typ := d.Type(); typ.Low() || typ.Double() {
+						lo := res.Evals[i].Lo
 						fmt.Printf("       %v %v %s\n", lo.Best, lo.Unused, lo)
 					}
 				} else {
 					fmt.Printf("    %d: inactive\n", i)
 				}
 			}
-			hi, lo := res.Win(game.names...)
-			fmt.Printf("    Result: %S\n", hi)
-			if lo != nil {
-				fmt.Printf("            %S\n", lo)
+			fmt.Printf("    Result: %s\n", res.Hi.Describe(game.names...))
+			if res.Lo.Valid() {
+				fmt.Printf("            %s\n", res.Lo.Describe(game.names...))
 			}
 		}
 	}
@@ -467,22 +465,22 @@ func ExampleType_holdem() {
 	} {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
-		pockets, board := cardrank.Holdem.Deal(r, 1, game.players)
+		pockets, board := cardrank.Holdem.Deal(r, game.players)
 		evs := cardrank.Holdem.EvalPockets(pockets, board)
 		fmt.Printf("------ Holdem %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
 		for j := range game.players {
-			desc := evs[j].Desc(false)
+			desc := evs[j].Hi
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, pockets[j], desc, desc.Best, desc.Unused)
 		}
-		order, pivot := cardrank.Order(evs, false)
-		desc := evs[order[0]].Desc(false)
-		if pivot == 1 {
-			fmt.Printf("Result:   Player %d wins with %s\n", order[0]+1, desc)
+		hi := cardrank.HiOrder(evs)
+		desc := evs[hi.Order[0]].Hi
+		if hi.Pivot == 1 {
+			fmt.Printf("Result:   Player %d wins with %s\n", hi.Order[0]+1, desc)
 		} else {
 			var s []string
-			for j := range pivot {
-				s = append(s, strconv.Itoa(order[j]+1))
+			for _, j := range hi.Winners() {
+				s = append(s, strconv.Itoa(j+1))
 			}
 			fmt.Printf("Result:   Players %s push with %s\n", strings.Join(s, ", "), desc)
 		}
@@ -587,22 +585,22 @@ func ExampleType_short() {
 	} {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
-		pockets, board := cardrank.Short.Deal(r, 1, game.players)
+		pockets, board := cardrank.Short.Deal(r, game.players)
 		evs := cardrank.Short.EvalPockets(pockets, board)
 		fmt.Printf("------ Short %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
 		for j := range game.players {
-			desc := evs[j].Desc(false)
+			desc := evs[j].Hi
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, pockets[j], desc, desc.Best, desc.Unused)
 		}
-		order, pivot := cardrank.Order(evs, false)
-		desc := evs[order[0]].Desc(false)
-		if pivot == 1 {
-			fmt.Printf("Result:   Player %d wins with %s\n", order[0]+1, desc)
+		hi := cardrank.HiOrder(evs)
+		desc := evs[hi.Order[0]].Hi
+		if hi.Pivot == 1 {
+			fmt.Printf("Result:   Player %d wins with %s\n", hi.Order[0]+1, desc)
 		} else {
 			var s []string
-			for j := range pivot {
-				s = append(s, strconv.Itoa(order[j]+1))
+			for _, j := range hi.Winners() {
+				s = append(s, strconv.Itoa(j+1))
 			}
 			fmt.Printf("Result:   Players %s push with %s\n", strings.Join(s, ", "), desc)
 		}
@@ -680,22 +678,22 @@ func ExampleType_royal() {
 	} {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
-		pockets, board := cardrank.Royal.Deal(r, 1, game.players)
+		pockets, board := cardrank.Royal.Deal(r, game.players)
 		evs := cardrank.Royal.EvalPockets(pockets, board)
 		fmt.Printf("------ Royal %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
 		for j := range game.players {
-			desc := evs[j].Desc(false)
+			desc := evs[j].Hi
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, pockets[j], desc, desc.Best, desc.Unused)
 		}
-		order, pivot := cardrank.Order(evs, false)
-		desc := evs[order[0]].Desc(false)
-		if pivot == 1 {
-			fmt.Printf("Result:   Player %d wins with %s\n", order[0]+1, desc)
+		hi := cardrank.HiOrder(evs)
+		desc := evs[hi.Order[0]].Hi
+		if hi.Pivot == 1 {
+			fmt.Printf("Result:   Player %d wins with %s\n", hi.Order[0]+1, desc)
 		} else {
 			var s []string
-			for j := range pivot {
-				s = append(s, strconv.Itoa(order[j]+1))
+			for _, j := range hi.Winners() {
+				s = append(s, strconv.Itoa(j+1))
 			}
 			fmt.Printf("Result:   Players %s push with %s\n", strings.Join(s, ", "), desc)
 		}
@@ -768,22 +766,22 @@ func ExampleType_omaha() {
 	} {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
-		pockets, board := cardrank.Omaha.Deal(r, 1, game.players)
+		pockets, board := cardrank.Omaha.Deal(r, game.players)
 		evs := cardrank.Omaha.EvalPockets(pockets, board)
 		fmt.Printf("------ Omaha %d ------\n", i+1)
 		fmt.Printf("Board:    %b\n", board)
 		for j := range game.players {
-			desc := evs[j].Desc(false)
+			desc := evs[j].Hi
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, pockets[j], desc, desc.Best, desc.Unused)
 		}
-		order, pivot := cardrank.Order(evs, false)
-		desc := evs[order[0]].Desc(false)
-		if pivot == 1 {
-			fmt.Printf("Result:   Player %d wins with %s\n", order[0]+1, desc)
+		hi := cardrank.HiOrder(evs)
+		desc := evs[hi.Order[0]].Hi
+		if hi.Pivot == 1 {
+			fmt.Printf("Result:   Player %d wins with %s\n", hi.Order[0]+1, desc)
 		} else {
 			var s []string
-			for j := range pivot {
-				s = append(s, strconv.Itoa(order[j]+1))
+			for _, j := range hi.Winners() {
+				s = append(s, strconv.Itoa(j+1))
 			}
 			fmt.Printf("Result:   Players %s push with %s\n", strings.Join(s, ", "), desc)
 		}
@@ -844,41 +842,41 @@ func ExampleType_omahaHiLo() {
 	} {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
-		pockets, board := cardrank.OmahaHiLo.Deal(r, 1, game.players)
+		pockets, board := cardrank.OmahaHiLo.Deal(r, game.players)
 		evs := cardrank.OmahaHiLo.EvalPockets(pockets, board)
 		fmt.Printf("------ OmahaHiLo %d ------\n", i+1)
 		fmt.Printf("Board: %b\n", board)
 		for j := range game.players {
-			hi, lo := evs[j].Desc(false), evs[j].Desc(true)
+			hi, lo := evs[j].Hi, evs[j].Lo
 			fmt.Printf("Player %d: %b\n", j+1, pockets[j])
 			fmt.Printf("  Hi: %s %b %b\n", hi, hi.Best, hi.Unused)
 			fmt.Printf("  Lo: %s %b %b\n", lo, lo.Best, lo.Unused)
 		}
-		hiOrder, hiPivot := cardrank.Order(evs, false)
-		loOrder, loPivot := cardrank.Order(evs, true)
+		hi := cardrank.HiOrder(evs)
+		lo := cardrank.LoOrder(evs)
 		typ := "wins"
-		if loPivot == 0 {
+		if lo.Pivot == 0 {
 			typ = "scoops"
 		}
-		desc := evs[hiOrder[0]].Desc(false)
-		if hiPivot == 1 {
-			fmt.Printf("Result (Hi): Player %d %s with %s\n", hiOrder[0]+1, typ, desc)
+		desc := evs[hi.Order[0]].Hi
+		if hi.Pivot == 1 {
+			fmt.Printf("Result (Hi): Player %d %s with %s\n", hi.Order[0]+1, typ, desc)
 		} else {
 			var s []string
-			for j := range hiPivot {
-				s = append(s, strconv.Itoa(hiOrder[j]+1))
+			for _, j := range hi.Winners() {
+				s = append(s, strconv.Itoa(j+1))
 			}
 			fmt.Printf("Result (Hi): Players %s push with %s\n", strings.Join(s, ", "), desc)
 		}
-		if loPivot == 1 {
-			desc := evs[loOrder[0]].Desc(true)
-			fmt.Printf("Result (Lo): Player %d wins with %s\n", loOrder[0]+1, desc)
-		} else if loPivot > 1 {
+		if lo.Pivot == 1 {
+			desc := evs[lo.Order[0]].Lo
+			fmt.Printf("Result (Lo): Player %d wins with %s\n", lo.Order[0]+1, desc)
+		} else if lo.Pivot > 1 {
 			var s []string
-			for j := range loPivot {
-				s = append(s, strconv.Itoa(loOrder[j]+1))
+			for _, j := range lo.Winners() {
+				s = append(s, strconv.Itoa(j+1))
 			}
-			desc := evs[loOrder[0]].Desc(true)
+			desc := evs[lo.Order[0]].Lo
 			fmt.Printf("Result (Lo): Players %s push with %s\n", strings.Join(s, ", "), desc)
 		} else {
 			fmt.Printf("Result (Lo): no player made a lo\n")
@@ -995,21 +993,21 @@ func ExampleType_stud() {
 	} {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
-		pockets, _ := cardrank.Stud.Deal(r, 1, game.players)
+		pockets, _ := cardrank.Stud.Deal(r, game.players)
 		evs := cardrank.Stud.EvalPockets(pockets, nil)
 		fmt.Printf("------ Stud %d ------\n", i+1)
 		for j := range game.players {
-			desc := evs[j].Desc(false)
+			desc := evs[j].Hi
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, pockets[j], desc, desc.Best, desc.Unused)
 		}
-		order, pivot := cardrank.Order(evs, false)
-		desc := evs[order[0]].Desc(false)
-		if pivot == 1 {
-			fmt.Printf("Result:   Player %d wins with %s\n", order[0]+1, desc)
+		hi := cardrank.HiOrder(evs)
+		desc := evs[hi.Order[0]].Hi
+		if hi.Pivot == 1 {
+			fmt.Printf("Result:   Player %d wins with %s\n", hi.Order[0]+1, desc)
 		} else {
 			var s []string
-			for j := range pivot {
-				s = append(s, strconv.Itoa(order[j]+1))
+			for _, j := range hi.Winners() {
+				s = append(s, strconv.Itoa(j+1))
 			}
 			fmt.Printf("Result:   Players %s push with %s\n", strings.Join(s, ", "), desc)
 		}
@@ -1065,40 +1063,40 @@ func ExampleType_studHiLo() {
 	} {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
-		pockets, _ := cardrank.StudHiLo.Deal(r, 1, game.players)
+		pockets, _ := cardrank.StudHiLo.Deal(r, game.players)
 		evs := cardrank.StudHiLo.EvalPockets(pockets, nil)
 		fmt.Printf("------ StudHiLo %d ------\n", i+1)
 		for j := range game.players {
-			hi, lo := evs[j].Desc(false), evs[j].Desc(true)
+			hi, lo := evs[j].Hi, evs[j].Lo
 			fmt.Printf("Player %d: %b\n", j+1, pockets[j])
 			fmt.Printf("  Hi: %s %b %b\n", hi, hi.Best, hi.Unused)
 			fmt.Printf("  Lo: %s %b %b\n", lo, lo.Best, lo.Unused)
 		}
-		hiOrder, hiPivot := cardrank.Order(evs, false)
-		loOrder, loPivot := cardrank.Order(evs, true)
+		hi := cardrank.HiOrder(evs)
+		lo := cardrank.LoOrder(evs)
 		typ := "wins"
-		if loPivot == 0 {
+		if lo.Pivot == 0 {
 			typ = "scoops"
 		}
-		desc := evs[hiOrder[0]].Desc(false)
-		if hiPivot == 1 {
-			fmt.Printf("Result (Hi): Player %d %s with %s\n", hiOrder[0]+1, typ, desc)
+		desc := evs[hi.Order[0]].Hi
+		if hi.Pivot == 1 {
+			fmt.Printf("Result (Hi): Player %d %s with %s\n", hi.Order[0]+1, typ, desc)
 		} else {
 			var s []string
-			for j := range hiPivot {
-				s = append(s, strconv.Itoa(hiOrder[j]+1))
+			for _, j := range hi.Winners() {
+				s = append(s, strconv.Itoa(j+1))
 			}
 			fmt.Printf("Result (Hi): Players %s push with %s\n", strings.Join(s, ", "), desc)
 		}
-		if loPivot == 1 {
-			desc := evs[loOrder[0]].Desc(true)
-			fmt.Printf("Result (Lo): Player %d wins with %s\n", loOrder[0]+1, desc)
-		} else if loPivot > 1 {
+		if lo.Pivot == 1 {
+			desc := evs[lo.Order[0]].Lo
+			fmt.Printf("Result (Lo): Player %d wins with %s\n", lo.Order[0]+1, desc)
+		} else if lo.Pivot > 1 {
 			var s []string
-			for j := range loPivot {
-				s = append(s, strconv.Itoa(loOrder[j]+1))
+			for _, j := range lo.Winners() {
+				s = append(s, strconv.Itoa(j+1))
 			}
-			desc := evs[loOrder[0]].Desc(true)
+			desc := evs[lo.Order[0]].Lo
 			fmt.Printf("Result (Lo): Players %s push with %s\n", strings.Join(s, ", "), desc)
 		} else {
 			fmt.Printf("Result (Lo): no player made a lo\n")
@@ -1210,21 +1208,21 @@ func ExampleType_razz() {
 	} {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
-		pockets, _ := cardrank.Razz.Deal(r, 1, game.players)
+		pockets, _ := cardrank.Razz.Deal(r, game.players)
 		evs := cardrank.Razz.EvalPockets(pockets, nil)
 		fmt.Printf("------ Razz %d ------\n", i+1)
 		for j := range game.players {
-			desc := evs[j].Desc(false)
+			desc := evs[j].Hi
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, pockets[j], desc, desc.Best, desc.Unused)
 		}
-		order, pivot := cardrank.Order(evs, false)
-		desc := evs[order[0]].Desc(false)
-		if pivot == 1 {
-			fmt.Printf("Result:   Player %d wins with %s\n", order[0]+1, desc)
+		hi := cardrank.HiOrder(evs)
+		desc := evs[hi.Order[0]].Hi
+		if hi.Pivot == 1 {
+			fmt.Printf("Result:   Player %d wins with %s\n", hi.Order[0]+1, desc)
 		} else {
 			var s []string
-			for j := range pivot {
-				s = append(s, strconv.Itoa(order[j]+1))
+			for _, j := range hi.Winners() {
+				s = append(s, strconv.Itoa(j+1))
 			}
 			fmt.Printf("Result:   Players %s push with %s\n", strings.Join(s, ", "), desc)
 		}
@@ -1280,21 +1278,21 @@ func ExampleType_badugi() {
 	} {
 		// note: use a real random source
 		r := rand.New(rand.NewSource(game.seed))
-		pockets, _ := cardrank.Badugi.Deal(r, 1, game.players)
+		pockets, _ := cardrank.Badugi.Deal(r, game.players)
 		evs := cardrank.Badugi.EvalPockets(pockets, nil)
 		fmt.Printf("------ Badugi %d ------\n", i+1)
 		for j := range game.players {
-			desc := evs[j].Desc(false)
+			desc := evs[j].Hi
 			fmt.Printf("Player %d: %b %s %b %b\n", j+1, pockets[j], desc, desc.Best, desc.Unused)
 		}
-		order, pivot := cardrank.Order(evs, false)
-		desc := evs[order[0]].Desc(false)
-		if pivot == 1 {
-			fmt.Printf("Result:   Player %d wins with %s\n", order[0]+1, desc)
+		hi := cardrank.HiOrder(evs)
+		desc := evs[hi.Order[0]].Hi
+		if hi.Pivot == 1 {
+			fmt.Printf("Result:   Player %d wins with %s\n", hi.Order[0]+1, desc)
 		} else {
 			var s []string
-			for j := range pivot {
-				s = append(s, strconv.Itoa(order[j]+1))
+			for _, j := range hi.Winners() {
+				s = append(s, strconv.Itoa(j+1))
 			}
 			fmt.Printf("Result:   Players %s push with %s\n", strings.Join(s, ", "), desc)
 		}
@@ -1337,29 +1335,29 @@ func ExampleType_badugi() {
 	// Result:   Player 4 wins with Eight, Seven, Three-low
 }
 
-func ExampleOddsCalc() {
-	pockets := [][]cardrank.Card{
+func ExampleType_Odds() {
+	pockets := []cardrank.Cards{
 		cardrank.Must("Ah As Jc Qs"),
 		cardrank.Must("3h 2h Ks Tc"),
 	}
 	board := cardrank.Must("6h 6s Jh")
-	odds, _, ok := cardrank.Omaha.Odds(context.Background(), pockets, board)
-	if !ok {
-		panic("unable to calculate odds")
+	odds, err := cardrank.Omaha.Odds(context.Background(), pockets, board)
+	if err != nil {
+		panic(err)
 	}
 	for i := range pockets {
-		fmt.Printf("%d: %*v\n", i, i, odds)
+		fmt.Printf("%d: %*v\n", i, i, odds.Hi)
 	}
 	// Output:
 	// 0: 66.1% (542/820)
 	// 1: 33.9% (278/820)
 }
 
-func ExampleExpValueCalc() {
+func ExampleCalcExpValue() {
 	pocket, board := cardrank.Must("Kh 3h"), cardrank.Must("Ah 8h 3c")
-	expv, ok := cardrank.Holdem.ExpValue(context.Background(), pocket, cardrank.WithBoard(board))
-	if !ok {
-		panic("unable to calculate expected value")
+	expv, err := cardrank.CalcExpValue(context.Background(), cardrank.Holdem, pocket, board)
+	if err != nil {
+		panic(err)
 	}
 	fmt.Println("expected value:", expv)
 	// Output:
@@ -1368,9 +1366,9 @@ func ExampleExpValueCalc() {
 
 func Example_computerHand() {
 	pocket := cardrank.Must("Qh 7s")
-	expv, ok := cardrank.Holdem.ExpValue(context.Background(), pocket)
-	if !ok {
-		panic("unable to calculate expected value")
+	expv, err := cardrank.Holdem.ExpValue(context.Background(), pocket, nil)
+	if err != nil {
+		panic(err)
 	}
 	fmt.Println("expected value:", expv)
 	// Output:
@@ -1381,7 +1379,7 @@ func Example_holdemPreflop() {
 	pocket := cardrank.Must("2h 2d")
 	ev := cardrank.EvalOf(cardrank.Holdem)
 	ev.Eval(pocket, nil)
-	fmt.Println("rank:", ev.HiRank)
+	fmt.Println("rank:", ev.Hi.Rank)
 	// Output:
 	// rank: Pair
 }
@@ -1390,7 +1388,7 @@ func Example_omahaPreflop() {
 	pocket := cardrank.Must("Ah 7h Ad Jh")
 	ev := cardrank.EvalOf(cardrank.Omaha)
 	ev.Eval(pocket, nil)
-	fmt.Println("rank:", ev.HiRank)
+	fmt.Println("rank:", ev.Hi.Rank)
 	// Output:
 	// rank: Pair
 }
@@ -1416,3 +1414,37 @@ func ExampleType_calc() {
 	// 2: 21.4% (9/42) - any ♥
 }
 */
+
+func ExampleCombinations() {
+	pocket := cardrank.Must("Ah Kh Qs Js")
+	for v := range cardrank.Combinations(pocket, 2) {
+		fmt.Println(v)
+	}
+	// Output:
+	// [Ah Kh]
+	// [Ah Qs]
+	// [Ah Js]
+	// [Kh Qs]
+	// [Kh Js]
+	// [Qs Js]
+}
+
+func ExampleCombinationsUnused() {
+	for best, unused := range cardrank.CombinationsUnused(cardrank.Must("Ah Kh Qh Jh Th 2c"), 5) {
+		fmt.Println(cardrank.Holdem.Eval(best, nil), unused)
+	}
+	// Output:
+	// Straight Flush, Ace-high, Royal [Ah Kh Qh Jh Th] [2c]
+	// Ace-high, kickers King, Queen, Jack, Two [Ah Kh Qh Jh 2c] [Th]
+	// Ace-high, kickers King, Queen, Ten, Two [Ah Kh Qh Th 2c] [Jh]
+	// Ace-high, kickers King, Jack, Ten, Two [Ah Kh Jh Th 2c] [Qh]
+	// Ace-high, kickers Queen, Jack, Ten, Two [Ah Qh Jh Th 2c] [Kh]
+	// King-high, kickers Queen, Jack, Ten, Two [Kh Qh Jh Th 2c] [Ah]
+}
+
+func ExampleStartingHand() {
+	expv, rank := cardrank.StartingHand(cardrank.Must("Ah Kh"))
+	fmt.Printf("expected value: %s, worst rank: %d\n", expv, rank)
+	// Output:
+	// expected value: 67.0% (1389004215,34610976/2097572400), worst rank: 6349
+}

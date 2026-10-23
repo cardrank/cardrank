@@ -15,24 +15,24 @@ func main() {
 	seed := time.Now().UnixNano()
 	// note: use a better pseudo-random number generator
 	r := rand.New(rand.NewSource(seed))
-	pockets, board := cardrank.Holdem.Deal(r, 3, players)
+	pockets, board := cardrank.Holdem.Deal(r, players)
 	evs := cardrank.Holdem.EvalPockets(pockets, board)
 	fmt.Printf("------ Holdem %d ------\n", seed)
 	fmt.Printf("Board: %b\n", board)
 	for i := range players {
-		desc := evs[i].Desc(false)
-		fmt.Printf("  %d: %b %b %b %s\n", i+1, pockets[i], desc.Best, desc.Unused, desc)
+		hi := evs[i].Hi
+		fmt.Printf("  %d: %b %b %b %s\n", i+1, pockets[i], hi.Best, hi.Unused, hi)
 	}
-	order, pivot := cardrank.Order(evs, false)
-	desc := evs[order[0]].Desc(false)
-	if pivot == 1 {
-		fmt.Printf("Result: %d wins with %s %b\n", order[0]+1, desc, desc.Best)
+	win := cardrank.HiOrder(evs)
+	hi := evs[win.Order[0]].Hi
+	if win.Pivot == 1 {
+		fmt.Printf("Result: %d wins with %s %b\n", win.Order[0]+1, hi, hi.Best)
 	} else {
 		var s, b []string
-		for j := range pivot {
-			s = append(s, strconv.Itoa(order[j]+1))
-			b = append(b, fmt.Sprintf("%b", evs[order[j]].HiBest))
+		for _, i := range win.Winners() {
+			s = append(s, strconv.Itoa(i+1))
+			b = append(b, fmt.Sprintf("%b", evs[i].Hi.Best))
 		}
-		fmt.Printf("Result: %s push with %s %s\n", strings.Join(s, ", "), desc, strings.Join(b, ", "))
+		fmt.Printf("Result: %s push with %s %s\n", strings.Join(s, ", "), hi, strings.Join(b, ", "))
 	}
 }
