@@ -1448,3 +1448,101 @@ func ExampleStartingHand() {
 	// Output:
 	// expected value: 67.0% (1389004215,34610976/2097572400), worst rank: 6349
 }
+
+func ExampleType_Outs() {
+	pockets := []cardrank.Cards{
+		cardrank.Must("Kd 7s"),
+		cardrank.Must("Ah Qh"),
+		cardrank.Must("3c 4c"),
+	}
+	board := cardrank.Must("Ks 7d 2h 9h")
+	outs, err := cardrank.Holdem.Outs(context.Background(), pockets, board)
+	if err != nil {
+		panic(err)
+	}
+	for i, out := range outs.Hi {
+		fmt.Printf("%d (%s, %s): %s\n", i, out.Status, out.Hand, outs.Summary(i, false))
+	}
+	// Output:
+	// 0 (ahead, Two Pair, Kings over Sevens, kicker Nine): 7 fades: any ♥ except K♥ 7♥
+	// 1 (behind, Ace-high, kickers King, Queen, Nine, Seven): 7 outs: any ♥ except K♥ 7♥
+	// 2 (behind, King-high, kickers Nine, Seven, Four, Three): drawing dead
+}
+
+func ExampleDealer_Outs() {
+	names := []string{"Alice", "Bob", "Carl"}
+	// note: use a real random source
+	r := rand.New(rand.NewSource(10))
+	d := cardrank.Holdem.Dealer(r, len(names))
+	for _, run := range d.Deal() {
+		street := d.Street()
+		fmt.Printf("%s: %b\n", street.Name, run.Hi)
+		if street.ID == 'p' {
+			for i, name := range names {
+				fmt.Printf("  %s: %b\n", name, run.Pockets[i])
+			}
+		}
+		outs, err := d.Outs(context.Background())
+		if err != nil {
+			// pre-flop and the river have no outs
+			continue
+		}
+		for i, name := range names {
+			fmt.Printf("  %s (%s): %s\n", name, outs.Hi[i].Status, outs.Summary(i, false))
+		}
+	}
+	for _, res := range d.Results() {
+		fmt.Printf("Result: %s\n", res.Hi.Describe(names...))
+	}
+	// Output:
+	// Pre-Flop: []
+	//   Alice: [Q♠ 7♦]
+	//   Bob: [7♣ K♠]
+	//   Carl: [2♥ A♣]
+	// Flop: [2♣ 5♠ 5♣]
+	//   Alice (behind): 3 outs: any Q
+	//   Bob (behind): 5 outs: any K, 7♠ 7♥
+	//   Carl (ahead): 8 fades: any K, any Q, 7♠ 7♥
+	// Turn: [2♣ 5♠ 5♣ T♦]
+	//   Alice (behind): 3 outs: any Q
+	//   Bob (behind): 5 outs: any K, 7♠ 7♥
+	//   Carl (ahead): 8 fades: any K, any Q, 7♠ 7♥
+	// River: [2♣ 5♠ 5♣ T♦ T♣]
+	// Result: Carl wins with Two Pair, Tens over Fives, kicker Ace
+}
+
+func ExampleOuts_Describe() {
+	pockets := []cardrank.Cards{
+		cardrank.Must("Qs Js"),
+		cardrank.Must("Ah Ad"),
+	}
+	board := cardrank.Must("As Ks 4d")
+	outs, err := cardrank.Holdem.Outs(context.Background(), pockets, board)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(outs.Summary(0, false))
+	fmt.Println(outs.Describe(0, false))
+	// Output:
+	// 11 outs: any ♠ except 4♠, any T
+	// Straight Flush: T♠ (1); Flush: any ♠ except T♠ 4♠ (7); Straight: T♥ T♦ T♣ (3)
+}
+
+func ExampleDescribeCards() {
+	unseen := cardrank.Must("2s 3s 4s 5s 6s 7s 8s 9s Ts 7h 7d 7c")
+	for _, cards := range []string{
+		"2s 3s 4s 5s 6s 7s 8s 9s Ts",
+		"3s 4s 5s 6s 7s 8s 9s Ts",
+		"4s 5s 6s 7s 8s",
+		"7s 7h 7d 7c",
+		"7h 7d",
+	} {
+		fmt.Println(cardrank.DescribeCards(cardrank.Must(cards), unseen))
+	}
+	// Output:
+	// any ♠
+	// any ♠ except 2♠
+	// 8♠ 7♠ 6♠ 5♠ 4♠
+	// any 7
+	// 7♥ 7♦
+}

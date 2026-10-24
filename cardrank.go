@@ -27,8 +27,9 @@
 //
 // A [Dealer] deals the streets of a [Type] (see [Dealer.Deal]), handles
 // multiple run outs, and determines the results of each run (see
-// [Dealer.Results]). [CalcOdds] and [CalcExpValue] calculate a run's odds and
-// a pocket's expected value. [Combinations] and [CombinationsUnused] iterate
+// [Dealer.Results]). [CalcOdds], [CalcOuts], and [CalcExpValue] calculate a
+// run's odds, each position's outs for the next street, and a pocket's
+// expected value. [Combinations] and [CombinationsUnused] iterate
 // over combinations of cards.
 //
 // # Two-Plus-Two

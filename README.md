@@ -252,6 +252,41 @@ for run, res := range d.Results() {
 }
 ```
 
+#### Outs
+
+[`CalcOuts`][calc-outs] (and [`Type.Outs`][type.outs] and
+[`Dealer.Outs`][dealer.outs]) calculates each position's outs for the next
+street: the cards after which the position wins, ties, or loses. For a
+position that is ahead, the cards that cost it the lead are its fades. A
+position is drawing dead when it can't win or tie on any remaining board:
+
+```go
+pockets := []cardrank.Cards{
+	cardrank.Must("Kd 7s"),
+	cardrank.Must("Ah Qh"),
+	cardrank.Must("3c 4c"),
+}
+board := cardrank.Must("Ks 7d 2h 9h")
+outs, err := cardrank.Holdem.Outs(ctx, pockets, board)
+if err != nil {
+	panic(err)
+}
+for i, out := range outs.Hi {
+	fmt.Printf("%d (%s, %s): %s\n", i, out.Status, out.Hand, outs.Summary(i, false))
+}
+
+// Output:
+// 0 (ahead, Two Pair, Kings over Sevens, kicker Nine): 7 fades: any ♥ except K♥ 7♥
+// 1 (behind, Ace-high, kickers King, Queen, Nine, Seven): 7 outs: any ♥ except K♥ 7♥
+// 2 (behind, King-high, kickers Nine, Seven, Four, Three): drawing dead
+```
+
+Outs are calculated when the next street deals a single board card, such as
+on the flop and turn of Hold'em and Omaha (including Hi/Lo). Cards are described
+with [`DescribeCards`][describe-cards], using whichever is shortest: listing
+the cards, "any ♥", or "any ♥ except K♥ 7♥". See the [outs
+design](docs/OUTS.md) for details.
+
 ## Benchmarks
 
 The [`test`](/test) directory is a separate module that benchmarks `cardrank`
@@ -375,6 +410,10 @@ TESTS=all go test ./...
 [lo-order]: https://pkg.go.dev/github.com/cardrank/cardrank#LoOrder
 [dealer.deal]: https://pkg.go.dev/github.com/cardrank/cardrank#Dealer.Deal
 [dealer.results]: https://pkg.go.dev/github.com/cardrank/cardrank#Dealer.Results
+[calc-outs]: https://pkg.go.dev/github.com/cardrank/cardrank#CalcOuts
+[type.outs]: https://pkg.go.dev/github.com/cardrank/cardrank#Type.Outs
+[dealer.outs]: https://pkg.go.dev/github.com/cardrank/cardrank#Dealer.Outs
+[describe-cards]: https://pkg.go.dev/github.com/cardrank/cardrank#DescribeCards
 [rank-cactus]: https://pkg.go.dev/github.com/cardrank/cardrank#RankCactus
 [cactus]: https://pkg.go.dev/github.com/cardrank/cardrank#Cactus
 [cactus-fast]: https://pkg.go.dev/github.com/cardrank/cardrank#CactusFast

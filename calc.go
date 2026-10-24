@@ -95,10 +95,10 @@ func (c *oddsCalc) calc(ctx context.Context) (*Odds, *Odds, bool) {
 		run.Lo = append(run.Lo, make([]Card, k)...)
 	}
 	// setup odds
-	hi := newOdds(count, u)
+	hi := newOdds(count)
 	var lo *Odds
 	if low || double {
-		lo = newOdds(count, u)
+		lo = newOdds(count)
 	}
 	// iterate combinations
 	offset := b - k
@@ -117,12 +117,9 @@ func (c *oddsCalc) calc(ctx context.Context) (*Odds, *Odds, bool) {
 		// eval
 		evs := run.eval(c.typ, c.active, true)
 		// add to odds
-		hi.add(evs, run.Hi[offset:], false)
-		switch {
-		case low:
-			lo.add(evs, run.Hi[offset:], true)
-		case double:
-			lo.add(evs, run.Lo[offset:], true)
+		hi.add(evs, false)
+		if lo != nil {
+			lo.add(evs, true)
 		}
 	}
 	return hi, lo, true
@@ -134,33 +131,20 @@ type Odds struct {
 	Total int
 	// Counts is each position's outcome count for wins and splits.
 	Counts []int
-	// Outs are map of the available outs for a position.
-	Outs []map[Card]bool
-	// Suits [][]Suit
-	// Dead  bool
 }
 
 // newOdds creates a new odds.
-func newOdds(count int, u []Card) *Odds {
-	odds := &Odds{
+func newOdds(count int) *Odds {
+	return &Odds{
 		Counts: make([]int, count),
-		Outs:   make([]map[Card]bool, count),
-		// Suits: make([][]Suit, count),
 	}
-	for i := range count {
-		odds.Outs[i] = make(map[Card]bool)
-	}
-	return odds
 }
 
 // add adds the eval results to the odds.
-func (odds *Odds) add(evs []*Eval, v []Card, low bool) {
+func (odds *Odds) add(evs []*Eval, low bool) {
 	r := Order(hands(evs, low))
 	for _, i := range r.Winners() {
 		odds.Counts[i]++
-		for _, c := range v {
-			odds.Outs[i][c] = true
-		}
 	}
 	odds.Total += r.Pivot
 }
@@ -180,34 +164,6 @@ func (odds *Odds) Percent(pos int) float32 {
 	return float32(odds.Counts[pos]) / float32(max(odds.Total, 1)) * 100
 }
 
-/*
-// Outs returns the out cards and suits for pos.
-func (odds *Odds) Outs(pos int, distinct bool) ([]Card, []Suit) {
-	v, s := odds.outs(pos, distinct)
-	slices.SortFunc(v, func(a, b Card) int {
-		return cmp.Or(cmp.Compare(a.Suit(), b.Suit()), cmp.Compare(b.Rank(), a.Rank()))
-	})
-	slices.SortFunc(s, func(a, b Suit) int {
-		return cmp.Compare(b, a)
-	})
-	return v, s
-}
-
-// outs returns the out cards and suits for pos.
-func (odds *Odds) outs(pos int, distinct bool) ([]Card, []Suit) {
-	v := make([]Card, len(odds.OutsMap[pos]))
-	var j int
-	for c := range odds.OutsMap[pos] {
-		v[j] = c
-		j++
-	}
-	if !distinct {
-		return v, odds.Suits[pos]
-	}
-	return nil, nil
-}
-*/
-
 // Format satisfies the [fmt.Formatter] interface.
 func (odds *Odds) Format(f fmt.State, verb rune) {
 	switch verb {
@@ -215,55 +171,10 @@ func (odds *Odds) Format(f fmt.State, verb rune) {
 		if i, ok := f.Width(); ok {
 			fmt.Fprintf(f, "%0.1f%% (%d/%d)", odds.Percent(i), odds.Counts[i], odds.Total)
 		}
-	/*
-		case 'o', 'O':
-			odds.formatOuts(f, 's', verb == 'O')
-		case 'b', 'B':
-			odds.formatOuts(f, 'b', verb == 'B')
-	*/
 	default:
 		fmt.Fprintf(f, "%%!%c(ERROR=unknown verb, odds)", verb)
 	}
 }
-
-/*
-// formatOuts formats outs to f.
-func (odds *Odds) formatOuts(f fmt.State, verb rune, distinct bool) {
-	if _, ok := f.Width(); ok {
-		v, s := odds.Outs(i, distinct)
-		switch n, m := len(v), len(s); {
-		case n == 0 && m == 0:
-			if odds.Dead {
-				f.Write([]byte("drawing dead"))
-			} else {
-				f.Write([]byte("none"))
-			}
-		default:
-			if n != 0 {
-				CardFormatter(v).Format(f, verb)
-				if m != 0 {
-					f.Write(elemSep)
-				}
-			}
-			if m != 0 {
-				f.Write([]byte("any ["))
-				for i := range m {
-					if i != 0 {
-						f.Write(elemSep)
-					}
-					switch verb {
-					case 'b':
-						f.Write([]byte(string(s[i].UnicodeBlack())))
-					default:
-						f.Write([]byte(s[i].Name()))
-					}
-				}
-				f.Write([]byte{']'})
-			}
-		}
-	}
-}
-*/
 
 // expValueCalc is an expected value calculator.
 type expValueCalc struct {
@@ -447,10 +358,17 @@ type CalcOption interface {
 	ExpValueOption
 }
 
-// oddsOption is an [OddsOption] func.
-type oddsOption func(*oddsCalc)
+// RunOption is an option for both [CalcOdds] and [CalcOuts].
+type RunOption interface {
+	OddsOption
+	OutsOption
+}
 
-func (o oddsOption) applyOdds(c *oddsCalc) { o(c) }
+// runOption is a [RunOption] func.
+type runOption func(*oddsCalc)
+
+func (o runOption) applyOdds(c *oddsCalc) { o(c) }
+func (o runOption) applyOuts(c *outsCalc) { o(&c.oddsCalc) }
 
 // expValueOption is an [ExpValueOption] func.
 type expValueOption func(*expValueCalc)
@@ -470,26 +388,26 @@ func WithDeep(deep bool) CalcOption {
 	return deepOption(deep)
 }
 
-// WithActive is an odds option to set the active positions. Inactive
-// positions are not included in the odds.
-func WithActive(active []bool) OddsOption {
-	return oddsOption(func(c *oddsCalc) {
+// WithActive is a run option to set the active positions. Inactive positions
+// are not included in the odds or outs.
+func WithActive(active []bool) RunOption {
+	return runOption(func(c *oddsCalc) {
 		c.active = active
 	})
 }
 
-// WithFolded is an odds option to set whether the cards of inactive positions
+// WithFolded is a run option to set whether the cards of inactive positions
 // are unavailable (ie, they are known).
-func WithFolded(folded bool) OddsOption {
-	return oddsOption(func(c *oddsCalc) {
+func WithFolded(folded bool) RunOption {
+	return runOption(func(c *oddsCalc) {
 		c.folded = folded
 	})
 }
 
-// WithDiscard is an odds option to set whether the runs' discarded cards are
+// WithDiscard is a run option to set whether the runs' discarded cards are
 // unavailable (ie, they are known).
-func WithDiscard(discard bool) OddsOption {
-	return oddsOption(func(c *oddsCalc) {
+func WithDiscard(discard bool) RunOption {
+	return runOption(func(c *oddsCalc) {
 		c.discard = discard
 	})
 }

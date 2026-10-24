@@ -1,7 +1,26 @@
-# Migrating from v0.16
+# Migrating
 
-This guide covers migrating code using `cardrank` v0.16.x (the last release,
-v0.16.5) to the new API. It is written for both people and coding agents: the
+This guide covers migrating code using older versions of `cardrank`. It is
+written for both people and coding agents. To migrate from v0.16, also apply
+the changes for each later version.
+
+## From v0.17
+
+- **`Odds.Outs` is removed.** It marked every card of every winning runout,
+  so with 2 cards to come nearly every card was an "out". Use
+  [`CalcOuts`](OUTS.md) (or `Type.Outs` and `Dealer.Outs`), which calculates
+  the outs for the next street.
+- **`WithActive`, `WithFolded`, and `WithDiscard` return a `RunOption`**,
+  instead of an `OddsOption`, so that they can be passed to both `CalcOdds`
+  and `CalcOuts`. Calls and `OddsOption` variables are unaffected (a
+  `RunOption` is an `OddsOption`); only the functions themselves used as
+  values, such as `var f func([]bool) OddsOption = WithActive`, need their
+  type changed.
+
+## From v0.16
+
+This section covers migrating code using `cardrank` v0.16.x (v0.16.5) to
+v0.17. It is written for both people and coding agents: the
 [checklist](#checklist) gives the order of work, the [rename
 table](#renames) can be applied mechanically, and the [pattern
 sections](#patterns) show how code using the removed APIs is rewritten.
@@ -10,7 +29,7 @@ The new API evaluates hands identically: for the same cards, ranks and best
 and unused cards are unchanged, except for the [bug fixes](#behavior-changes)
 listed below.
 
-## Checklist
+### Checklist
 
 1. Require Go 1.27 or later (`go 1.27` in `go.mod`).
 2. Remove the `portable`, `embedded`, `noinit`, `forcefat`, and `faketime`
@@ -25,7 +44,7 @@ listed below.
 7. Review the [behavior changes](#behavior-changes), and update any expected
    test output that depends on them.
 
-## Build and initialization
+### Build and initialization
 
 All build tags are removed. The package always initializes itself and always
 includes `CactusFast`. The Two-Plus-Two evaluator (and its ~124 MiB lookup
@@ -57,7 +76,7 @@ adds startup time.
 registered types, and like `RegisterType`, must only be called during
 initialization.
 
-## Renames
+### Renames
 
 | v0.16 | New |
 |---|---|
@@ -93,9 +112,9 @@ Repeated shuffles with a pseudo-random source add no randomness, so the
 shuffle count is removed. To reproduce v0.16 output that used a count `n`
 greater than 1, call `Shuffle` `n` times on a deck and pass it to `NewDealer`.
 
-## Patterns
+### Patterns
 
-### Evals and hands
+#### Evals and hands
 
 An `Eval` holds a Hi and a Lo `Hand`:
 
@@ -121,7 +140,7 @@ fmt.Printf("%s %v %v %d\n", ev.Hi, ev.Hi.Best, ev.Hi.Unused, ev.Hi.Rank)
 A `Hand` formats with the same verbs as `EvalDesc`. Use `Hand.Valid()` to
 check for a qualifying Lo, instead of comparing `LoRank` with `Invalid`.
 
-### Ordering and winners
+#### Ordering and winners
 
 `Order(evs, low)` returned an order and a pivot. `HiOrder` and `LoOrder`
 return a `Ranking`, whose `Winners` are the winning positions (`Order` now
@@ -146,7 +165,7 @@ pivot and winners. Positions without a hand (folded, or no qualifying Lo) may
 be ordered differently among the losers. A Lo with no qualifying hands has
 `Pivot == 0` (v0.16 returned a nil order).
 
-### Dealer
+#### Dealer
 
 The `Dealer`'s exported fields, and its embedded `TypeDesc`, are replaced by
 methods, and the `Next`/`NextResult` loops by iterators:
@@ -220,7 +239,7 @@ for i, res := range d.Results() {
 | `d.Runs`, `d.Results` | the `Deal` and `Results` iterators |
 | `d.Deal(street, run)` | removed (internal) |
 
-### Results and wins
+#### Results and wins
 
 `Result.Win(names...)` returned `(*Win, *Win)`. The Hi and Lo wins are now
 fields of the `Result`:
@@ -239,7 +258,7 @@ fields of the `Result`:
 `Win` still formats with the `%d`, `%s`, `%S`, `%v`, and `%V` verbs, where
 `%S` uses the position numbers.
 
-### Calcs
+#### Calcs
 
 `OddsCalc`, `ExpValueCalc`, and their constructors are replaced by functions.
 Options are typed (an option for the wrong calc no longer compiles), and calcs
@@ -274,7 +293,7 @@ odds, err = cardrank.CalcOdds(ctx, typ, runs, cardrank.WithActive(active), cardr
 When the context is done, the partial result is returned along with the
 context's error, as v0.16 returned the partial result with `false`.
 
-### Custom evaluators
+#### Custom evaluators
 
 The `New*Eval` constructors, `EvalFunc`, `EvalType.New`, the `Eval.Hi5` …
 `Eval.Max7` helpers, and the per-type description funcs (`CactusDesc`,
@@ -301,7 +320,7 @@ type Evaluator interface {
 A `TypeDesc.Evaluator` is kept when the built-in evaluators are rebuilt by
 `SetRankCactus` or `RegisterTwoPlusTwo`.
 
-### Combinations
+#### Combinations
 
 ```go
 // v0.16
@@ -326,14 +345,14 @@ are reused between iterations, so clone them (such as with `slices.Clone`) to
 retain them. Collecting the iterator with `slices.Collect` without cloning
 yields the same slice repeatedly.
 
-### Decks
+#### Decks
 
 | v0.16 | New |
 |---|---|
 | `deck.All()` (`[]Card`) | `slices.Collect(deck.All())` (`All` is an `iter.Seq[Card]`) |
 | `typ.Exclude(ex...)` with `[]Card` arguments | unchanged (`Cards` arguments accept `[]Card` values) |
 
-### Removed internals
+#### Removed internals
 
 These had no external use, and are removed without a replacement:
 `(*Odds).Add`, `NewOdds`, `(*Run).Eval`, `(*Run).CalcStart`, `NewResult`,
@@ -341,7 +360,7 @@ These had no external use, and are removed without a replacement:
 through the `Dealer`. Use `Type.Desc()` to inspect a dealer's type
 description.
 
-## Behavior changes
+### Behavior changes
 
 These change results or output for some inputs:
 
@@ -375,7 +394,7 @@ These change results or output for some inputs:
   stop before returning, and uses a fixed number of workers
   (`runtime.GOMAXPROCS`), instead of a goroutine per board.
 
-## Finding remaining usages
+### Finding remaining usages
 
 After `go vet ./...` is clean, search for patterns that still compile but may
 need attention, such as reproducing v0.16 shuffles, or comments and strings

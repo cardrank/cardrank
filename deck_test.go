@@ -270,6 +270,18 @@ func testDealer(t *testing.T, typ Type, count int, seed int64, f dealFunc) {
 				}
 			}
 		}
+		// outs, when the next street deals a single board card
+		if outs, err := d.Outs(ctx); err == nil {
+			t.Logf("    Outs (%s):", outs.Street.Name)
+			for i := range count {
+				if d.Active(i) {
+					t.Logf("      %d: %s", i, outs.Summary(i, false))
+					if outs.Lo != nil {
+						t.Logf("         Lo: %s", outs.Summary(i, true))
+					}
+				}
+			}
+		}
 		if f != nil {
 			f(r, d, i)
 		}

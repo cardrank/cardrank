@@ -629,11 +629,11 @@ func (run *Run) eval(typ Type, active []bool, calc bool) []*Eval {
 // calcStart returns the run's starting odds.
 func (run *Run) calcStart(low bool) (*Odds, *Odds) {
 	count := len(run.Pockets)
-	hi := newOdds(count, nil)
+	hi := newOdds(count)
 	hi.Total = startingTotal
 	var lo *Odds
 	if low {
-		lo = newOdds(count, nil)
+		lo = newOdds(count)
 		lo.Total = startingTotal
 	}
 	for i, pocket := range run.Pockets {
