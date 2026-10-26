@@ -161,23 +161,23 @@ func (rank Rank) PluralName() string {
 func (rank Rank) StraightFlushName() string {
 	switch rank {
 	case Ace:
-		return "Royal"
+		return "Royal Flush"
 	case King:
-		return "Platinum Oxide"
+		return "Platinum Crown"
 	case Queen:
-		return "Silver Tongue"
+		return "Gold Scepter"
 	case Jack:
-		return "Bronze Fist"
+		return "Silver Sword"
 	case Ten:
-		return "Golden Ratio"
+		return "Copper Ring"
 	case Nine:
-		return "Iron Maiden"
+		return "Iron Orb"
 	case Eight:
 		return "Tin Cup"
 	case Seven:
 		return "Brass Axe"
 	case Six:
-		return "Aluminum Window"
+		return "Lead Pipe"
 	case Five:
 		return "Steel Wheel"
 	}

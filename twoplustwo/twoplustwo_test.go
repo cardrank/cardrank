@@ -31,5 +31,5 @@ func Example() {
 	ev := cardrank.Holdem.Eval(pocket, board)
 	fmt.Printf("%s\n", ev)
 	// Output:
-	// Straight Flush, Ace-high, Royal [Ah Kh Qh Jh Th]
+	// Straight Flush, Ace-high, Royal Flush [Ah Kh Qh Jh Th]
 }

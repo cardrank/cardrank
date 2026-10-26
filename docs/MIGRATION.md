@@ -4,6 +4,44 @@ This guide covers migrating code using older versions of `cardrank`. It is
 written for both people and coding agents. To migrate from v0.16, also apply
 the changes for each later version.
 
+## From v0.18
+
+- **Straight flush names changed.** `Rank.StraightFlushName` (and the `%F`
+  card verb, and the long straight flush descriptions) return the new names:
+
+  | Rank | v0.18 | New |
+  |---|---|---|
+  | A | Royal | Royal Flush |
+  | K | Platinum Oxide | Platinum Crown |
+  | Q | Silver Tongue | Gold Scepter |
+  | J | Bronze Fist | Silver Sword |
+  | T | Golden Ratio | Copper Ring |
+  | 9 | Iron Maiden | Iron Orb |
+  | 6 | Aluminum Window | Lead Pipe |
+
+  The 8 (Tin Cup), 7 (Brass Axe), and 5 (Steel Wheel) are unchanged. For
+  example, "Straight Flush, Ace-high, Royal" is now "Straight Flush, Ace-high,
+  Royal Flush".
+- **`EvalRank.Title()` returns "High Card"** (instead of "Nothing") for high
+  card ranks, as do the `%s`, `%S`, `%e`, and `%v` verbs of an `EvalRank`. A
+  hand's description still names a high card by its top card ("Ace-high"), and
+  `EvalRank.Name()` still returns "Nothing".
+
+Update any expected output (such as test fixtures or stored descriptions) that
+uses the old names.
+
+New in this release (no migration needed):
+
+- **Hand catalog.** [`HandCatalog`](https://pkg.go.dev/github.com/cardrank/cardrank#HandCatalog)
+  returns a versioned catalog of every registered type: its deck, streets,
+  blinds, and tracks (the Hi, and the Lo or second board's Hi), the evaluator
+  profiles ranking each track, and their hand levels and variants (such as a
+  straight flush's royal flush), best first, with example hands and labels
+  (stable keys for translation, and the English text). Its `Revision` is the
+  SHA-256 of its JSON encoding. [`Eval.Classes`](https://pkg.go.dev/github.com/cardrank/cardrank#Eval.Classes)
+  (and `HiClass` and `LoClass`) classify an evaluated hand into the catalog:
+  its profile, level, and variant, or a status such as `no_qualifying_low`.
+
 ## From v0.17
 
 - **`Odds.Outs` is removed.** It marked every card of every winning runout,

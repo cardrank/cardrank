@@ -96,7 +96,7 @@ ev := cardrank.Holdem.Eval(pocket, board)
 fmt.Printf("%s - %d\n", ev, ev.Hi.Rank)
 
 // Output:
-// Straight Flush, Ace-high, Royal [Ah Kh Qh Jh Th] - 1
+// Straight Flush, Ace-high, Royal Flush [Ah Kh Qh Jh Th] - 1
 ```
 
 Usually 5, 6, or 7 cards are evaluated, but some types can evaluate fewer
@@ -250,6 +250,45 @@ for run := range d.Deal() {
 for run, res := range d.Results() {
 	fmt.Printf("run %d: %s\n", run, res.Hi.Describe("Alice", "Bob", "Carl", "Dave"))
 }
+```
+
+#### Hand Catalog
+
+[`HandCatalog`][hand-catalog] returns a catalog of every registered type, for
+clients showing hands: each game's deck, streets, blinds, and tracks (the Hi,
+and the Lo or second board's Hi), and the evaluator profiles ranking each track,
+with their hand levels and variants, best first:
+
+```go
+c := cardrank.HandCatalog()
+for _, l := range c.Profiles[0].Levels {
+	fmt.Printf("%s: %s %b\n", l.ID, l.Name.Text, l.Example)
+}
+
+// Output:
+// straight_flush: Straight Flush [K♥ Q♥ J♥ T♥ 9♥]
+// four_of_a_kind: Four of a Kind [9♠ 9♥ 9♦ 9♣ K♦]
+// ...
+// high_card: High Card [A♠ Q♥ 9♦ 6♣ 3♠]
+```
+
+IDs (such as `straight_flush` and its variant `royal_flush`) are stable, and
+every name is a [`Label`][label] with a stable key for translation and its
+English text. The catalog's `Revision` is the SHA-256 of its JSON encoding, so
+it changes whenever anything in the catalog changes.
+
+[`Eval.Classes`][eval.classes] classifies an evaluated hand into the catalog,
+for each of its type's tracks:
+
+```go
+ev := cardrank.OmahaHiLo.Eval(cardrank.Must("Ah 2h Kc Qd"), cardrank.Must("3c 4d 8s Kh Ts"))
+for _, class := range ev.Classes() {
+	fmt.Printf("%s: profile %s, level %s, variant %q\n", class.Track, class.Profile, class.Level, class.Variant)
+}
+
+// Output:
+// hi: profile high, level pair, variant ""
+// lo: profile low_8, level no_pair, variant "eight_low"
 ```
 
 #### Outs
@@ -411,6 +450,9 @@ TESTS=all go test ./...
 [dealer.deal]: https://pkg.go.dev/github.com/cardrank/cardrank#Dealer.Deal
 [dealer.results]: https://pkg.go.dev/github.com/cardrank/cardrank#Dealer.Results
 [calc-outs]: https://pkg.go.dev/github.com/cardrank/cardrank#CalcOuts
+[hand-catalog]: https://pkg.go.dev/github.com/cardrank/cardrank#HandCatalog
+[label]: https://pkg.go.dev/github.com/cardrank/cardrank#Label
+[eval.classes]: https://pkg.go.dev/github.com/cardrank/cardrank#Eval.Classes
 [type.outs]: https://pkg.go.dev/github.com/cardrank/cardrank#Type.Outs
 [dealer.outs]: https://pkg.go.dev/github.com/cardrank/cardrank#Dealer.Outs
 [describe-cards]: https://pkg.go.dev/github.com/cardrank/cardrank#DescribeCards

@@ -87,9 +87,9 @@ func TestEvalComp(t *testing.T) {
 		{Holdem, "As Ks Jc 7h 5d 2d 3c", "As Ks Jc 7h 4d 2d 3c", -1, 6252, "Ace-high, kickers King, Jack, Seven, Five [As Ks Jc 7h 5d]"},
 		{Holdem, "As Ac Ad Ah Kd 2d 3c", "As Ac Ad Ah Qd 2d 3c", -1, 11, "Four of a Kind, Aces, kicker King [Ac Ad Ah As Kd]"},
 		{Holdem, "As Ac Ad Ah Qd 2d 3c", "As Ac Ad Ah Kd 2d 3c", +1, 11, "Four of a Kind, Aces, kicker King [Ac Ad Ah As Kd]"},
-		{Holdem, "As Ks Qs Ts 9s 2s 3s", "Ks Qs Js Ts 9s 2d 3c", +1, 2, "Straight Flush, King-high, Platinum Oxide [Ks Qs Js Ts 9s]"},
+		{Holdem, "As Ks Qs Ts 9s 2s 3s", "Ks Qs Js Ts 9s 2d 3c", +1, 2, "Straight Flush, King-high, Platinum Crown [Ks Qs Js Ts 9s]"},
 		{Holdem, "6s 6c 6d 5d 5c 4s 4s", "5s 5c 5d 6d 6c 4s 4s", -1, 271, "Full House, Sixes full of Fives [6c 6d 6s 5c 5d]"},
-		{Holdem, "Ks Qs Js Ts 9s 2s 3s", "Kd Qd Jd Td 9d 2d 3d", +0, 2, "Straight Flush, King-high, Platinum Oxide [Ks Qs Js Ts 9s]"},
+		{Holdem, "Ks Qs Js Ts 9s 2s 3s", "Kd Qd Jd Td 9d 2d 3d", +0, 2, "Straight Flush, King-high, Platinum Crown [Ks Qs Js Ts 9s]"},
 		{Holdem, "Ks Qs Js 9s 3s Ad Kd", "Kd Qd Jd 9d 2d Ac Kc", -1, 828, "Flush, King-high, kickers Queen, Jack, Nine, Three [Ks Qs Js 9s 3s]"},
 		{Holdem, "Kd Qd Jd 9d 2d Ac Kc", "Ks Qs Js 9s 3s Ad Kd", +1, 828, "Flush, King-high, kickers Queen, Jack, Nine, Three [Ks Qs Js 9s 3s]"},
 		{Soko, "Ah Th 9h 8h 6c Tc 4c", "Th Tc 8h 6h Kh Qc 2s", -1, 5098, "Four Flush, Ace-high, kickers Ten, Nine, Eight, Ten [Ah Th 9h 8h Tc]"},
@@ -236,13 +236,13 @@ func TestEvalRankTitle(t *testing.T) {
 		r   EvalRank
 		exp string
 	}{
-		{0x1c35, "Nothing"},
-		{0x1c1c, "Nothing"},
-		{0x1aa7, "Nothing"},
-		{0x1981, "Nothing"},
-		{0x186c, "Nothing"},
-		{0x1856, "Nothing"},
-		{0x1854, "Nothing"},
+		{0x1c35, "High Card"},
+		{0x1c1c, "High Card"},
+		{0x1aa7, "High Card"},
+		{0x1981, "High Card"},
+		{0x186c, "High Card"},
+		{0x1856, "High Card"},
+		{0x1854, "High Card"},
 		{0x0fec, "Pair"},
 		{0x0d78, "Pair"},
 		{0x0a6d, "Two Pair"},
@@ -391,9 +391,9 @@ func fiveCardTests() []cardTest {
 		{"As Ac Ad Ah 5h", 0x0013, FourOfAKind, "Four of a Kind, Aces, kicker Five [A♣ A♦ A♥ A♠ 5♥] []"},
 		{"As Ac Ad Ah Th", 0x000e, FourOfAKind, "Four of a Kind, Aces, kicker Ten [A♣ A♦ A♥ A♠ T♥] []"},
 		{"3d 5d 2d 4d Ad", 0x000a, StraightFlush, "Straight Flush, Five-high, Steel Wheel [5♦ 4♦ 3♦ 2♦ A♦] []"},
-		{"6♦ 5♦ 4♦ 3♦ 2♦", 0x0009, StraightFlush, "Straight Flush, Six-high, Aluminum Window [6♦ 5♦ 4♦ 3♦ 2♦] []"},
-		{"9♦ 6♦ 8♦ 5♦ 7♦", 0x0006, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♦ 8♦ 7♦ 6♦ 5♦] []"},
-		{"As Ks Qs Js Ts", 0x0001, StraightFlush, "Straight Flush, Ace-high, Royal [A♠ K♠ Q♠ J♠ T♠] []"},
+		{"6♦ 5♦ 4♦ 3♦ 2♦", 0x0009, StraightFlush, "Straight Flush, Six-high, Lead Pipe [6♦ 5♦ 4♦ 3♦ 2♦] []"},
+		{"9♦ 6♦ 8♦ 5♦ 7♦", 0x0006, StraightFlush, "Straight Flush, Nine-high, Iron Orb [9♦ 8♦ 7♦ 6♦ 5♦] []"},
+		{"As Ks Qs Js Ts", 0x0001, StraightFlush, "Straight Flush, Ace-high, Royal Flush [A♠ K♠ Q♠ J♠ T♠] []"},
 	}
 }
 
@@ -415,10 +415,10 @@ func sixCardTests() []cardTest {
 		{"3d As Ac Ad Ah 5h", 0x0013, FourOfAKind, "Four of a Kind, Aces, kicker Five [A♣ A♦ A♥ A♠ 5♥] [3♦]"},
 		{"4d As Ac Ad Ah Th", 0x000e, FourOfAKind, "Four of a Kind, Aces, kicker Ten [A♣ A♦ A♥ A♠ T♥] [4♦]"},
 		{"3d 5d 2d 4d Ad 3s", 0x000a, StraightFlush, "Straight Flush, Five-high, Steel Wheel [5♦ 4♦ 3♦ 2♦ A♦] [3♠]"},
-		{"T♦ 6♦ 5♦ 4♦ 3♦ 2♦", 0x0009, StraightFlush, "Straight Flush, Six-high, Aluminum Window [6♦ 5♦ 4♦ 3♦ 2♦] [T♦]"},
-		{"J♦ 9♦ 6♦ 8♦ 5♦ 7♦", 0x0006, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♦ 8♦ 7♦ 6♦ 5♦] [J♦]"},
-		{"7♦ J♦ 9♦ 6♦ 8♦ 5♦", 0x0006, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♦ 8♦ 7♦ 6♦ 5♦] [J♦]"},
-		{"3d As Ks Qs Js Ts", 0x0001, StraightFlush, "Straight Flush, Ace-high, Royal [A♠ K♠ Q♠ J♠ T♠] [3♦]"},
+		{"T♦ 6♦ 5♦ 4♦ 3♦ 2♦", 0x0009, StraightFlush, "Straight Flush, Six-high, Lead Pipe [6♦ 5♦ 4♦ 3♦ 2♦] [T♦]"},
+		{"J♦ 9♦ 6♦ 8♦ 5♦ 7♦", 0x0006, StraightFlush, "Straight Flush, Nine-high, Iron Orb [9♦ 8♦ 7♦ 6♦ 5♦] [J♦]"},
+		{"7♦ J♦ 9♦ 6♦ 8♦ 5♦", 0x0006, StraightFlush, "Straight Flush, Nine-high, Iron Orb [9♦ 8♦ 7♦ 6♦ 5♦] [J♦]"},
+		{"3d As Ks Qs Js Ts", 0x0001, StraightFlush, "Straight Flush, Ace-high, Royal Flush [A♠ K♠ Q♠ J♠ T♠] [3♦]"},
 	}
 }
 
@@ -441,9 +441,9 @@ func sevenCardTests() []cardTest {
 		{"2d 3d As Ac Ad Ah 5h", 0x0013, FourOfAKind, "Four of a Kind, Aces, kicker Five [A♣ A♦ A♥ A♠ 5♥] [3♦ 2♦]"},
 		{"4d 4s As Ac Ad Ah Th", 0x000e, FourOfAKind, "Four of a Kind, Aces, kicker Ten [A♣ A♦ A♥ A♠ T♥] [4♦ 4♠]"},
 		{"3d 5d 2d 4d Ad 3s 4s", 0x000a, StraightFlush, "Straight Flush, Five-high, Steel Wheel [5♦ 4♦ 3♦ 2♦ A♦] [4♠ 3♠]"},
-		{"J♦ T♦ 6♦ 5♦ 4♦ 3♦ 2♦", 0x0009, StraightFlush, "Straight Flush, Six-high, Aluminum Window [6♦ 5♦ 4♦ 3♦ 2♦] [J♦ T♦]"},
-		{"7♦ J♦ 9♦ 6♦ 8♦ 5♦ 2♦", 0x0006, StraightFlush, "Straight Flush, Nine-high, Iron Maiden [9♦ 8♦ 7♦ 6♦ 5♦] [J♦ 2♦]"},
-		{"2d 3d As Ks Qs Js Ts", 0x0001, StraightFlush, "Straight Flush, Ace-high, Royal [A♠ K♠ Q♠ J♠ T♠] [3♦ 2♦]"},
+		{"J♦ T♦ 6♦ 5♦ 4♦ 3♦ 2♦", 0x0009, StraightFlush, "Straight Flush, Six-high, Lead Pipe [6♦ 5♦ 4♦ 3♦ 2♦] [J♦ T♦]"},
+		{"7♦ J♦ 9♦ 6♦ 8♦ 5♦ 2♦", 0x0006, StraightFlush, "Straight Flush, Nine-high, Iron Orb [9♦ 8♦ 7♦ 6♦ 5♦] [J♦ 2♦]"},
+		{"2d 3d As Ks Qs Js Ts", 0x0001, StraightFlush, "Straight Flush, Ace-high, Royal Flush [A♠ K♠ Q♠ J♠ T♠] [3♦ 2♦]"},
 	}
 }
 
@@ -456,7 +456,7 @@ func TestCactusEvalFlop(t *testing.T) {
 		lo     string
 	}{
 		{Holdem, "3d 6c", "4d 7h 4c", "Pair, Fours, kickers Seven, Six, Three [4c 4d 7h 6c 3d]", ""},
-		{Holdem, "Ah Kh", "Qh Jh Th", "Straight Flush, Ace-high, Royal [Ah Kh Qh Jh Th]", ""},
+		{Holdem, "Ah Kh", "Qh Jh Th", "Straight Flush, Ace-high, Royal Flush [Ah Kh Qh Jh Th]", ""},
 		{Split, "Ah 2c", "3d 4s 8h", "Ace-high, kickers Eight, Four, Three, Two [Ah 8h 4s 3d 2c]", "Eight, Four, Three, Two, Ace-low [8h 4s 3d 2c Ah]"},
 		{DrawHiLo, "Ah 2c 3d 4s 8h", "", "Ace-high, kickers Eight, Four, Three, Two [Ah 8h 4s 3d 2c]", "Eight, Four, Three, Two, Ace-low [8h 4s 3d 2c Ah]"},
 	}

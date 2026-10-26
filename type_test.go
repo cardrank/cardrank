@@ -117,10 +117,10 @@ func TestShort(t *testing.T) {
 		r EvalRank
 		s string
 	}{
-		{"9d 8d 7d 6d Ad Tc Jc", "9d 8d 7d 6d Ad", "Jc Tc", 6, "Straight Flush, Nine-high, Iron Maiden [9♦ 8♦ 7♦ 6♦ A♦]"},
-		{"9c 8c 7c 6c Ac Th Qh", "9c 8c 7c 6c Ac", "Qh Th", 6, "Straight Flush, Nine-high, Iron Maiden [9♣ 8♣ 7♣ 6♣ A♣]"},
-		{"9h 8h 7h 6h Ah Tc Kd", "9h 8h 7h 6h Ah", "Kd Tc", 6, "Straight Flush, Nine-high, Iron Maiden [9♥ 8♥ 7♥ 6♥ A♥]"},
-		{"9s 8s 7s 6s As 9c 8c", "9s 8s 7s 6s As", "9c 8c", 6, "Straight Flush, Nine-high, Iron Maiden [9♠ 8♠ 7♠ 6♠ A♠]"},
+		{"9d 8d 7d 6d Ad Tc Jc", "9d 8d 7d 6d Ad", "Jc Tc", 6, "Straight Flush, Nine-high, Iron Orb [9♦ 8♦ 7♦ 6♦ A♦]"},
+		{"9c 8c 7c 6c Ac Th Qh", "9c 8c 7c 6c Ac", "Qh Th", 6, "Straight Flush, Nine-high, Iron Orb [9♣ 8♣ 7♣ 6♣ A♣]"},
+		{"9h 8h 7h 6h Ah Tc Kd", "9h 8h 7h 6h Ah", "Kd Tc", 6, "Straight Flush, Nine-high, Iron Orb [9♥ 8♥ 7♥ 6♥ A♥]"},
+		{"9s 8s 7s 6s As 9c 8c", "9s 8s 7s 6s As", "9c 8c", 6, "Straight Flush, Nine-high, Iron Orb [9♠ 8♠ 7♠ 6♠ A♠]"},
 		{"9d 8d 7d 6d Ac 8h 8s", "9d 8d 7d 6d Ac", "8h 8s", 1605, "Straight, Nine-high [9♦ 8♦ 7♦ 6♦ A♣]"},
 		{"9c 8c 7c 6c Ad Kh Jh", "9c 8c 7c 6c Ad", "Kh Jh", 1605, "Straight, Nine-high [9♣ 8♣ 7♣ 6♣ A♦]"},
 		{"9h 8h 7h 6h As Kd Jd", "9h 8h 7h 6h As", "Kd Jd", 1605, "Straight, Nine-high [9♥ 8♥ 7♥ 6♥ A♠]"},
@@ -158,10 +158,10 @@ func TestManila(t *testing.T) {
 		r EvalRank
 		s string
 	}{
-		{"Td 9d 8d 7d Ad Tc Jc", "Td 9d 8d 7d Ad", "Jc Tc", 5, "Straight Flush, Ten-high, Golden Ratio [T♦ 9♦ 8♦ 7♦ A♦]"},
-		{"Tc 9c 8c 7c Ac Th Qh", "Tc 9c 8c 7c Ac", "Qh Th", 5, "Straight Flush, Ten-high, Golden Ratio [T♣ 9♣ 8♣ 7♣ A♣]"},
-		{"Th 9h 8h 7h Ah Tc Kd", "Th 9h 8h 7h Ah", "Kd Tc", 5, "Straight Flush, Ten-high, Golden Ratio [T♥ 9♥ 8♥ 7♥ A♥]"},
-		{"Ts 9s 8s 7s As 9c 8c", "Ts 9s 8s 7s As", "9c 8c", 5, "Straight Flush, Ten-high, Golden Ratio [T♠ 9♠ 8♠ 7♠ A♠]"},
+		{"Td 9d 8d 7d Ad Tc Jc", "Td 9d 8d 7d Ad", "Jc Tc", 5, "Straight Flush, Ten-high, Copper Ring [T♦ 9♦ 8♦ 7♦ A♦]"},
+		{"Tc 9c 8c 7c Ac Th Qh", "Tc 9c 8c 7c Ac", "Qh Th", 5, "Straight Flush, Ten-high, Copper Ring [T♣ 9♣ 8♣ 7♣ A♣]"},
+		{"Th 9h 8h 7h Ah Tc Kd", "Th 9h 8h 7h Ah", "Kd Tc", 5, "Straight Flush, Ten-high, Copper Ring [T♥ 9♥ 8♥ 7♥ A♥]"},
+		{"Ts 9s 8s 7s As 9c 8c", "Ts 9s 8s 7s As", "9c 8c", 5, "Straight Flush, Ten-high, Copper Ring [T♠ 9♠ 8♠ 7♠ A♠]"},
 		{"Td 9d 8d 7d Ac 8h 8s", "Td 9d 8d 7d Ac", "8h 8s", 1604, "Straight, Ten-high [T♦ 9♦ 8♦ 7♦ A♣]"},
 		{"Tc 9c 8c 7c Ad Kh Qh", "Tc 9c 8c 7c Ad", "Kh Qh", 1604, "Straight, Ten-high [T♣ 9♣ 8♣ 7♣ A♦]"},
 		{"Th 9h 8h 7h As Kd Qd", "Th 9h 8h 7h As", "Kd Qd", 1604, "Straight, Ten-high [T♥ 9♥ 8♥ 7♥ A♠]"},
@@ -437,7 +437,7 @@ func TestDescType(t *testing.T) {
 		s   string
 		exp string
 	}{
-		{Holdem, "Ah Kh Qh Jh Th", "%s", "Straight Flush, Ace-high, Royal"},
+		{Holdem, "Ah Kh Qh Jh Th", "%s", "Straight Flush, Ace-high, Royal Flush"},
 		{Holdem, "Ah Kh Qh Jh Th", "%S", "Straight Flush, Ace-high"},
 		{Holdem, "Ah Kh Qh Jh Th", "%e", "Straight Flush"},
 		{Short, "Qh Qd Qc Qh Ah", "%s", "Four of a Kind, Queens, kicker Ace"},

@@ -84,7 +84,7 @@ func ExampleSpanish_Eval() {
 	ev := cardrank.Spanish.Eval(d.Draw(2), d.Draw(5))
 	fmt.Printf("%b\n", ev)
 	// Output:
-	// Straight Flush, Jack-high, Bronze Fist [J♦ T♦ 9♦ 8♦ A♦]
+	// Straight Flush, Jack-high, Silver Sword [J♦ T♦ 9♦ 8♦ A♦]
 }
 
 func Example() {
@@ -493,9 +493,9 @@ func ExampleType_holdem() {
 	// Result:   Players 1, 2 push with Pair, Twos, kickers Queen, Jack, Ten
 	// ------ Holdem 2 ------
 	// Board:    [8♠ 9♠ J♠ 9♣ T♠]
-	// Player 1: [7♠ 6♦] Straight Flush, Jack-high, Bronze Fist [J♠ T♠ 9♠ 8♠ 7♠] [9♣ 6♦]
-	// Player 2: [T♣ Q♠] Straight Flush, Queen-high, Silver Tongue [Q♠ J♠ T♠ 9♠ 8♠] [T♣ 9♣]
-	// Result:   Player 2 wins with Straight Flush, Queen-high, Silver Tongue
+	// Player 1: [7♠ 6♦] Straight Flush, Jack-high, Silver Sword [J♠ T♠ 9♠ 8♠ 7♠] [9♣ 6♦]
+	// Player 2: [T♣ Q♠] Straight Flush, Queen-high, Gold Scepter [Q♠ J♠ T♠ 9♠ 8♠] [T♣ 9♣]
+	// Result:   Player 2 wins with Straight Flush, Queen-high, Gold Scepter
 	// ------ Holdem 3 ------
 	// Board:    [A♠ T♣ K♠ J♣ 6♥]
 	// Player 1: [T♥ 5♦] Pair, Tens, kickers Ace, King, Jack [T♣ T♥ A♠ K♠ J♣] [6♥ 5♦]
@@ -535,13 +535,13 @@ func ExampleType_holdem() {
 	// Result:   Player 2 wins with Four of a Kind, Aces, kicker Ten
 	// ------ Holdem 8 ------
 	// Board:    [Q♥ T♥ T♠ J♥ K♥]
-	// Player 1: [A♥ 8♥] Straight Flush, Ace-high, Royal [A♥ K♥ Q♥ J♥ T♥] [T♠ 8♥]
+	// Player 1: [A♥ 8♥] Straight Flush, Ace-high, Royal Flush [A♥ K♥ Q♥ J♥ T♥] [T♠ 8♥]
 	// Player 2: [9♠ 8♦] Straight, King-high [K♥ Q♥ J♥ T♥ 9♠] [T♠ 8♦]
 	// Player 3: [Q♣ 4♦] Two Pair, Queens over Tens, kicker King [Q♣ Q♥ T♥ T♠ K♥] [J♥ 4♦]
 	// Player 4: [2♠ Q♦] Two Pair, Queens over Tens, kicker King [Q♦ Q♥ T♥ T♠ K♥] [J♥ 2♠]
 	// Player 5: [6♥ A♦] Flush, King-high, kickers Queen, Jack, Ten, Six [K♥ Q♥ J♥ T♥ 6♥] [A♦ T♠]
 	// Player 6: [3♦ T♣] Three of a Kind, Tens, kickers King, Queen [T♣ T♥ T♠ K♥ Q♥] [J♥ 3♦]
-	// Result:   Player 1 wins with Straight Flush, Ace-high, Royal
+	// Result:   Player 1 wins with Straight Flush, Ace-high, Royal Flush
 	// ------ Holdem 9 ------
 	// Board:    [A♣ 2♣ 4♣ 5♣ 9♥]
 	// Player 1: [T♣ 6♠] Flush, Ace-high, kickers Ten, Five, Four, Two [A♣ T♣ 5♣ 4♣ 2♣] [9♥ 6♠]
@@ -633,9 +633,9 @@ func ExampleType_short() {
 	// Board:    [T♦ 9♣ 9♦ Q♦ 8♦]
 	// Player 1: [J♠ 9♥] Straight, Queen-high [Q♦ J♠ T♦ 9♣ 8♦] [9♦ 9♥]
 	// Player 2: [T♥ 8♠] Two Pair, Tens over Nines, kicker Queen [T♦ T♥ 9♣ 9♦ Q♦] [8♦ 8♠]
-	// Player 3: [6♣ J♦] Straight Flush, Queen-high, Silver Tongue [Q♦ J♦ T♦ 9♦ 8♦] [9♣ 6♣]
+	// Player 3: [6♣ J♦] Straight Flush, Queen-high, Gold Scepter [Q♦ J♦ T♦ 9♦ 8♦] [9♣ 6♣]
 	// Player 4: [A♣ A♦] Flush, Ace-high, kickers Queen, Ten, Nine, Eight [A♦ Q♦ T♦ 9♦ 8♦] [A♣ 9♣]
-	// Result:   Player 3 wins with Straight Flush, Queen-high, Silver Tongue
+	// Result:   Player 3 wins with Straight Flush, Queen-high, Gold Scepter
 	// ------ Short 5 ------
 	// Board:    [6♠ A♣ 7♦ A♠ 6♦]
 	// Player 1: [9♣ T♦] Two Pair, Aces over Sixes, kicker Ten [A♣ A♠ 6♦ 6♠ T♦] [9♣ 7♦]
@@ -645,9 +645,9 @@ func ExampleType_short() {
 	// ------ Short 6 ------
 	// Board:    [A♣ 6♣ 9♣ T♦ 8♣]
 	// Player 1: [6♥ 9♠] Two Pair, Nines over Sixes, kicker Ace [9♣ 9♠ 6♣ 6♥ A♣] [T♦ 8♣]
-	// Player 2: [7♣ J♥] Straight Flush, Nine-high, Iron Maiden [9♣ 8♣ 7♣ 6♣ A♣] [J♥ T♦]
+	// Player 2: [7♣ J♥] Straight Flush, Nine-high, Iron Orb [9♣ 8♣ 7♣ 6♣ A♣] [J♥ T♦]
 	// Player 3: [6♠ Q♠] Pair, Sixes, kickers Ace, Queen, Ten [6♣ 6♠ A♣ Q♠ T♦] [9♣ 8♣]
-	// Result:   Player 2 wins with Straight Flush, Nine-high, Iron Maiden
+	// Result:   Player 2 wins with Straight Flush, Nine-high, Iron Orb
 	// ------ Short 7 ------
 	// Board:    [K♥ K♦ K♠ K♣ J♣]
 	// Player 1: [7♦ 8♦] Four of a Kind, Kings, kicker Jack [K♣ K♦ K♥ K♠ J♣] [8♦ 7♦]
@@ -1434,7 +1434,7 @@ func ExampleCombinationsUnused() {
 		fmt.Println(cardrank.Holdem.Eval(best, nil), unused)
 	}
 	// Output:
-	// Straight Flush, Ace-high, Royal [Ah Kh Qh Jh Th] [2c]
+	// Straight Flush, Ace-high, Royal Flush [Ah Kh Qh Jh Th] [2c]
 	// Ace-high, kickers King, Queen, Jack, Two [Ah Kh Qh Jh 2c] [Th]
 	// Ace-high, kickers King, Queen, Ten, Two [Ah Kh Qh Th 2c] [Jh]
 	// Ace-high, kickers King, Jack, Ten, Two [Ah Kh Jh Th 2c] [Qh]
@@ -1545,4 +1545,43 @@ func ExampleDescribeCards() {
 	// 8♠ 7♠ 6♠ 5♠ 4♠
 	// any 7
 	// 7♥ 7♦
+}
+
+func ExampleHandCatalog() {
+	c := cardrank.HandCatalog()
+	fmt.Println("games:", len(c.Games), "decks:", len(c.Decks), "profiles:", len(c.Profiles))
+	for _, g := range c.Games[:2] {
+		fmt.Printf("%s (%s):", g.ID, g.Name.Text)
+		for _, track := range g.Tracks {
+			fmt.Printf(" %s=%s", track.ID, track.Profile)
+		}
+		fmt.Println()
+	}
+	for _, l := range c.Profiles[0].Levels {
+		fmt.Printf("  %s: %s %b\n", l.ID, l.Name.Text, l.Example)
+	}
+	// Output:
+	// games: 35 decks: 5 profiles: 10
+	// holdem (Holdem): hi=high
+	// split (Split): hi=high lo=low_8
+	//   straight_flush: Straight Flush [K♥ Q♥ J♥ T♥ 9♥]
+	//   four_of_a_kind: Four of a Kind [9♠ 9♥ 9♦ 9♣ K♦]
+	//   full_house: Full House [K♠ K♥ K♦ 7♣ 7♠]
+	//   flush: Flush [A♥ J♥ 8♥ 5♥ 2♥]
+	//   straight: Straight [T♠ 9♥ 8♦ 7♣ 6♠]
+	//   three_of_a_kind: Three of a Kind [Q♠ Q♥ Q♦ 9♣ 4♠]
+	//   two_pair: Two Pair [J♠ J♥ 6♦ 6♣ A♠]
+	//   pair: Pair [T♠ T♥ A♦ 8♣ 3♠]
+	//   high_card: High Card [A♠ Q♥ 9♦ 6♣ 3♠]
+}
+
+func ExampleEval_Classes() {
+	pocket, board := cardrank.Must("Ah 2h Kc Qd"), cardrank.Must("3c 4d 8s Kh Ts")
+	ev := cardrank.OmahaHiLo.Eval(pocket, board)
+	for _, class := range ev.Classes() {
+		fmt.Printf("%s: profile %s, level %s, variant %q\n", class.Track, class.Profile, class.Level, class.Variant)
+	}
+	// Output:
+	// hi: profile high, level pair, variant ""
+	// lo: profile low_8, level no_pair, variant "eight_low"
 }

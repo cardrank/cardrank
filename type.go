@@ -1411,8 +1411,8 @@ func (typ DescType) Desc(f fmt.State, verb rune, rank EvalRank, best, unused []C
 //
 // Examples:
 //
-//	Straight Flush, Ace-high, Royal
-//	Straight Flush, King-high, Platinum Oxide
+//	Straight Flush, Ace-high, Royal Flush
+//	Straight Flush, King-high, Platinum Crown
 //	Straight Flush, Five-high, Steel Wheel
 //	Four of a Kind, Nines, kicker Jack
 //	Full House, Sixes full of Fours

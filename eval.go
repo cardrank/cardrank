@@ -134,7 +134,7 @@ func (r EvalRank) Title() string {
 	case Pair:
 		return "Pair"
 	case Nothing:
-		return "Nothing"
+		return "High Card"
 	}
 	return "Invalid"
 }

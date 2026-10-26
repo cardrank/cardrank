@@ -18,6 +18,10 @@
 // better. Hands are compared with [Hand.Compare], and winners are determined
 // with [HiOrder] and [LoOrder].
 //
+// [HandCatalog] describes every registered type and the hands it evaluates
+// (with stable IDs and labels, for clients showing hands), and
+// [Eval.Classes] classifies an evaluated hand into it.
+//
 // Ranks are calculated with pure Go implementations of well-known poker hand
 // evaluators: [Cactus], [CactusFast], and the Two-Plus-Two lookup table (see
 // [NewTwoPlusTwoEval]). A type's [Evaluator] can be replaced with

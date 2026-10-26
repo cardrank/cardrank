@@ -568,7 +568,7 @@ func TestWinValid(t *testing.T) {
 	if !win.Valid() {
 		t.Errorf("expected win to be valid")
 	}
-	if s, exp := win.Describe("alice"), "alice wins with Straight Flush, Ace-high, Royal"; s != exp {
+	if s, exp := win.Describe("alice"), "alice wins with Straight Flush, Ace-high, Royal Flush"; s != exp {
 		t.Errorf("expected %q, got: %q", exp, s)
 	}
 }
