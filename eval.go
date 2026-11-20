@@ -746,28 +746,47 @@ func newBadugiEval(normalize bool) evalFunc {
 			}
 			return cmp.Compare(a[0].AceRank(), b[0].AceRank())
 		})
-		var best, unused []Card
-		count, rank := 4, 0
+		var q []Card
 		for i := range 4 {
 			slices.SortFunc(s[i], func(a, b Card) int {
 				return cmp.Compare(a.AceRank(), b.AceRank())
 			})
-			captured, r := false, 0
-			for j := range len(s[i]) {
-				if r = 1 << s[i][j].AceRank(); rank&r == 0 && !captured {
-					captured, best = true, append(best, s[i][j])
-					rank |= r
-					count--
-				} else {
-					unused = append(unused, s[i][j])
+			q = append(q, s[i]...)
+		}
+		count, rank, mask := 4, 0, 0
+		best := EvalRank(4 << 13)
+		for m := 1; m < 1<<len(q); m++ {
+			ranks, suits, n := 0, 0, 0
+			for i := range q {
+				if m&(1<<i) != 0 {
+					rb, sb := 1<<q[i].AceRank(), 1<<q[i].SuitIndex()
+					if ranks&rb != 0 || suits&sb != 0 {
+						n = -1
+						break
+					}
+					ranks, suits, n = ranks|rb, suits|sb, n+1
 				}
+			}
+			if n < 0 {
+				continue
+			}
+			if r := EvalRank((4-n)<<13 | ranks); r < best {
+				best, count, rank, mask = r, 4-n, ranks, m
+			}
+		}
+		var bestCards, unused []Card
+		for i := range q {
+			if mask&(1<<i) != 0 {
+				bestCards = append(bestCards, q[i])
+			} else {
+				unused = append(unused, q[i])
 			}
 		}
 		if normalize {
-			bestAceLow(best)
+			bestAceLow(bestCards)
 			bestAceHigh(unused)
 		}
-		ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused = EvalRank(count<<13|rank), best, unused
+		ev.Hi.Rank, ev.Hi.Best, ev.Hi.Unused = EvalRank(count<<13|rank), bestCards, unused
 	}
 }
 
