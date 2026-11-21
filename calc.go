@@ -435,7 +435,7 @@ type binGen[T any] struct {
 func newBinGen[T any](s []T, k int) *binGen[T] {
 	// calculate iterations
 	i, n, l := -1, len(s), k
-	if 0 <= n && 0 <= k && k < n {
+	if 0 <= n && 0 <= k && k <= n {
 		if n/2 < k {
 			l = n - k
 		}
