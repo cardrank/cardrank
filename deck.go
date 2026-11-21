@@ -475,7 +475,7 @@ func (d *Dealer) ChangeRuns(runs int) error {
 	case d.r != 0,
 		d.n != 1,
 		len(d.runs) != 1,
-		len(d.desc.Streets) <= d.s,
+		len(d.desc.Streets) <= d.s+1,
 		!d.hasActive(),
 		runs < 1:
 		return ErrInvalidState
